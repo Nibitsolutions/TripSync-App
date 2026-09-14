@@ -9,35 +9,23 @@ export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
-  if (!mounted) return <div className="h-8 w-[68px]" />;
+  if (!mounted) return <div className="h-8 w-8 rounded-xl bg-gray-100 dark:bg-gray-800" />;
 
   const currentTheme = theme === "system" ? resolvedTheme : theme;
-
-  const options = [
-    { value: "light", icon: Sun, label: "Light" },
-    { value: "dark", icon: Moon, label: "Dark" },
-  ];
+  const isDark = currentTheme === "dark";
 
   return (
-    <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
-      {options.map((opt) => {
-        const Icon = opt.icon;
-        const isActive = currentTheme === opt.value;
-        return (
-          <button
-            key={opt.value}
-            onClick={() => setTheme(opt.value)}
-            className={`flex items-center justify-center h-7 w-8 rounded-md transition-all ${
-              isActive
-                ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-            }`}
-            title={opt.label}
-          >
-            <Icon className="h-3.5 w-3.5" strokeWidth={2} />
-          </button>
-        );
-      })}
-    </div>
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className="flex items-center justify-center h-8 w-8 rounded-xl bg-gray-100 dark:bg-[#1a1a1d] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition-all shadow-xs cursor-pointer"
+      title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+    >
+      {isDark ? (
+        <Sun className="h-4 w-4 text-amber-400 hover:rotate-45 transition-transform" strokeWidth={2} />
+      ) : (
+        <Moon className="h-4 w-4 text-slate-700 dark:text-slate-200 hover:-rotate-12 transition-transform" strokeWidth={2} />
+      )}
+    </button>
   );
 }
