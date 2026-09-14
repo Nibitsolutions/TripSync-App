@@ -747,8 +747,28 @@ export default function InvoicesPage() {
 
   async function postInvoice(id: string) {
     const res = await fetch(`/api/invoices/${id}/post`, { method: "POST" });
-    if (res.ok) loadInvoices();
-    else { const d = await res.json(); alert(d.error); }
+    if (res.ok) {
+      if (editInvoiceId === id) {
+        setEditDocStatus("Posted");
+      }
+      loadInvoices();
+    } else {
+      const d = await res.json();
+      alert(d.error || "Failed to post invoice");
+    }
+  }
+
+  async function unpostInvoice(id: string) {
+    const res = await fetch(`/api/invoices/${id}/unpost`, { method: "POST" });
+    if (res.ok) {
+      if (editInvoiceId === id) {
+        setEditDocStatus("Draft");
+      }
+      loadInvoices();
+    } else {
+      const d = await res.json();
+      alert(d.error || "Failed to unpost invoice");
+    }
   }
 
   async function voidInvoice() {
@@ -2444,6 +2464,14 @@ export default function InvoicesPage() {
 
                     {status === "Posted" && (
                       <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 gap-1.5 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-500/10 border-amber-300 dark:border-amber-800"
+                          onClick={() => unpostInvoice(editInvoiceId)}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" /> Unpost Invoice
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
