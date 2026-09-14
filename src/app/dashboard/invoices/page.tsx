@@ -2275,17 +2275,13 @@ export default function InvoicesPage() {
                               key={idx}
                               onClick={() => setActiveTicketTab(idx)}
                               title={`${paxName}${tktNum ? ` (${tktNum})` : ""}`}
-                              className={`flex items-center justify-center p-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all border ${
+                              className={`h-9 w-9 rounded-xl flex items-center justify-center text-xs font-extrabold cursor-pointer transition-all mx-auto border ${
                                 isSelected
-                                  ? "bg-primary text-primary-foreground border-primary shadow-sm font-semibold"
-                                  : "bg-white dark:bg-[#161619] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800"
+                                  ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/30"
+                                  : "bg-white dark:bg-[#161619] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-slate-800"
                               }`}
                             >
-                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10.5px] font-bold ${
-                                isSelected ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                              }`}>
-                                {idx + 1}
-                              </span>
+                              {idx + 1}
                             </div>
                           );
                         }
@@ -2588,17 +2584,13 @@ export default function InvoicesPage() {
                                     key={idx}
                                     onClick={() => setActiveEditTicketTab(idx)}
                                     title={`${paxName}${tktNum ? ` (${tktNum})` : ""}`}
-                                    className={`flex items-center justify-center p-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all border ${
+                                    className={`h-9 w-9 rounded-xl flex items-center justify-center text-xs font-extrabold cursor-pointer transition-all mx-auto border ${
                                       isSelected
-                                        ? "bg-primary text-primary-foreground border-primary shadow-sm font-semibold"
-                                        : "bg-white dark:bg-[#161619] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800"
+                                        ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/30"
+                                        : "bg-white dark:bg-[#161619] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-slate-800"
                                     }`}
                                   >
-                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10.5px] font-bold ${
-                                      isSelected ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                                    }`}>
-                                      {idx + 1}
-                                    </span>
+                                    {idx + 1}
                                   </div>
                                 );
                               }
