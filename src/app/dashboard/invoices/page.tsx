@@ -193,6 +193,7 @@ export default function InvoicesPage() {
   // Double-submission protection states
   const [isCreating, setIsCreating] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Action dialogs state
   const [voidDialog, setVoidDialog] = useState<string | null>(null);
@@ -720,15 +721,17 @@ export default function InvoicesPage() {
           adj_date: newAdjDate,
           our_xo: newOurXo,
           client_xo: newClientXo,
-          status: newDocStatus,
+          status: newDocStatus || "Draft",
           line_items: lineItems,
         }),
       });
       if (res.ok) {
+        const data = await res.json();
+        const createdInv = data.invoice;
         setShowNew(false);
-        setNewCustomerId("");
-        setLineItems([defaultType === "Ticket" ? createDefaultTicketItem() : { service_type: defaultType, description: "", amount: "", commission_override_rate: "", tax_code_id: "" }]);
-        setActiveTicketTab(0);
+        if (createdInv && createdInv._id) {
+          openEditDialog(createdInv);
+        }
         loadInvoices();
       } else {
         const d = await res.json();
@@ -892,7 +895,8 @@ export default function InvoicesPage() {
         }),
       });
       if (!res.ok) { const d = await res.json(); alert(d.error || "Failed to save"); return; }
-      setEditInvoiceId(null);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
       loadInvoices();
     } catch (err) {
       console.error(err);
@@ -2788,9 +2792,13 @@ export default function InvoicesPage() {
 
                   <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                     <Button variant="outline" onClick={() => setEditInvoiceId(null)}>Cancel</Button>
-                    <Button onClick={saveEditInvoice} disabled={isSavingEdit} className="gap-2">
-                      {isSavingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                      {isSavingEdit ? "Saving..." : "Save Changes"}
+                    <Button
+                      onClick={saveEditInvoice}
+                      disabled={isSavingEdit}
+                      className={`gap-2 transition-all ${saveSuccess ? "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" : ""}`}
+                    >
+                      {isSavingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : saveSuccess ? <Check className="h-4 w-4" /> : null}
+                      {isSavingEdit ? "Saving..." : saveSuccess ? "Saved ✓" : "Save Changes"}
                     </Button>
                   </div>
                 </div>
