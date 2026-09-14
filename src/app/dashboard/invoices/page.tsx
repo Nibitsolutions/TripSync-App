@@ -2402,11 +2402,21 @@ export default function InvoicesPage() {
             <Card className="mb-6 border-blue-300 dark:border-blue-800/80 bg-white dark:bg-[#111113] shadow-lg">
               <CardHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between bg-blue-50/50 dark:bg-blue-950/20">
                 <CardTitle className="text-base font-bold flex items-center gap-2 text-blue-700 dark:text-blue-300">
-                  <Pencil className="h-5 w-5 text-primary" /> Edit Ticket Invoice
+                  <Pencil className="h-5 w-5 text-primary" /> Invoice Details / Edit
                 </CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => setEditInvoiceId(null)} className="h-8 w-8 p-0">
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1.5 text-xs bg-white dark:bg-[#161619]"
+                    onClick={() => window.open(`/dashboard/invoices/${editInvoiceId}/print`, "_blank")}
+                  >
+                    <Printer className="h-3.5 w-3.5" /> Print Invoice
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setEditInvoiceId(null)} className="h-8 w-8 p-0">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="p-5">
               {editLoading ? (
@@ -2896,18 +2906,22 @@ export default function InvoicesPage() {
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 text-right">Due Balance</TableHead>
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Pay Mode</TableHead>
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Date</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {invoices.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-12 text-[13px] text-gray-400">
+                      <TableCell colSpan={9} className="text-center py-12 text-[13px] text-gray-400">
                         {hasActiveFilters ? "No invoices found matching your filters. Try clearing filters." : "No invoices recorded yet."}
                       </TableCell>
                     </TableRow>
                   ) : invoices.map((inv) => (
-                    <TableRow key={inv._id} className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-50/50 dark:hover:bg-[#151517]">
+                    <TableRow
+                      key={inv._id}
+                      onClick={() => openEditDialog(inv)}
+                      className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-100/80 dark:hover:bg-[#1a1a1d] cursor-pointer transition-colors"
+                      title="Click to view/edit invoice details"
+                    >
                       <TableCell className="font-mono text-[13px] font-semibold text-gray-900 dark:text-gray-100">
                         {inv.invoice_number}
                       </TableCell>
@@ -2945,56 +2959,6 @@ export default function InvoicesPage() {
                       </TableCell>
                       <TableCell><Badge variant="outline" className="text-[10px] font-mono">{inv.payment_mode || "CR"}</Badge></TableCell>
                       <TableCell className="text-[12px] text-gray-500">{new Date(inv.created_at).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1.5 flex-wrap">
-                          {inv.status === "Draft" && (
-                            <>
-                              <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px]" onClick={() => postInvoice(inv._id)}>
-                                <Send className="h-3 w-3" /> Post
-                              </Button>
-                              <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px]" onClick={() => openEditDialog(inv)}>
-                                <Pencil className="h-3 w-3" /> Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 gap-1 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                                onClick={() => setDeleteInvoiceId(inv._id)}
-                              >
-                                <Trash2 className="h-3 w-3" /> Delete
-                              </Button>
-                            </>
-                          )}
-                          {inv.status === "Posted" && (
-                            <>
-                              <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10" onClick={() => setVoidDialog(inv._id)}>
-                                <Ban className="h-3 w-3" /> Void
-                              </Button>
-                              <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px]" onClick={() => setCreditDialog(inv._id)}>
-                                <CreditCard className="h-3 w-3" /> Credit Note
-                              </Button>
-                            </>
-                          )}
-                          {inv.status === "Voided" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 gap-1 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                              onClick={() => setDeleteInvoiceId(inv._id)}
-                            >
-                              <Trash2 className="h-3 w-3" /> Delete
-                            </Button>
-                          )}
-                          <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px]" onClick={() => window.open(`/dashboard/invoices/${inv._id}/print`, "_blank")}>
-                            <Printer className="h-3 w-3" /> Print
-                          </Button>
-                          {isManager && (
-                            <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px] cursor-pointer" onClick={() => loadAuditLogs(inv)}>
-                              <History className="h-3 w-3" /> Logs
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
