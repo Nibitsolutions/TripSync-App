@@ -27,6 +27,7 @@ import {
   LogOut,
   Settings,
   ChevronRight,
+  ChevronLeft,
   Menu,
   UserCheck,
   Building2,
@@ -130,6 +131,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("tripsync_sidebar_collapsed");
+    if (saved === "true") {
+      setIsCollapsed(true);
+    }
+  }, []);
+
+  const toggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("tripsync_sidebar_collapsed", String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -161,49 +178,77 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const user = session.user;
   const initials = user.name?.split(" ").map((n) => n[0]).join("") || "U";
 
-  function renderSidebar() {
+  function renderSidebar(collapsed: boolean = false) {
     return (
       <>
         {/* Logo */}
-        <div className="px-5 h-16 flex items-center gap-2.5 border-b border-gray-200/80 dark:border-[#1e1e21]">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm">
-            <span className="text-primary-foreground font-bold text-sm tracking-tight">TS</span>
+        <div className={`h-16 flex items-center border-b border-gray-200/80 dark:border-[#1e1e21] transition-all ${
+          collapsed ? "px-2 justify-between" : "px-3.5 justify-between"
+        }`}>
+          <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm flex-shrink-0">
+              <span className="text-primary-foreground font-bold text-xs tracking-tight">TS</span>
+            </div>
+            {!collapsed && (
+              <div className="truncate">
+                <h1 className="text-[14px] font-semibold tracking-tight text-gray-900 dark:text-gray-50 truncate leading-none">TripSync</h1>
+                <p className="text-[9.5px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wider truncate mt-0.5">Finance &amp; ERP</p>
+              </div>
+            )}
           </div>
-          <div>
-            <h1 className="text-[15px] font-semibold tracking-tight text-gray-900 dark:text-gray-50">TripSync</h1>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wider">Finance &amp; ERP</p>
-          </div>
+          
+          <button
+            onClick={toggleCollapse}
+            className="hidden lg:flex items-center justify-center h-7 w-7 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a1a1d] transition-colors flex-shrink-0"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <nav className={`flex-1 py-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
+          collapsed ? "px-2" : "px-3"
+        }`}>
           <Suspense fallback={<div className="text-xs text-gray-400 px-3">Loading menu...</div>}>
-            <SidebarNav pathname={pathname} />
+            <SidebarNav pathname={pathname} collapsed={collapsed} />
           </Suspense>
         </nav>
 
         {/* Theme Toggle */}
-        <div className="px-4 py-3 border-t border-gray-200/80 dark:border-[#1e1e21] flex items-center justify-between">
-          <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Theme</span>
+        <div className={`py-3 border-t border-gray-200/80 dark:border-[#1e1e21] flex items-center ${
+          collapsed ? "px-1 justify-center" : "px-4 justify-between"
+        }`}>
+          {!collapsed && (
+            <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Theme</span>
+          )}
           <ThemeToggle />
         </div>
 
         {/* User */}
-        <div className="px-3 py-3 border-t border-gray-200/80 dark:border-[#1e1e21]">
+        <div className={`py-3 border-t border-gray-200/80 dark:border-[#1e1e21] ${
+          collapsed ? "px-1.5" : "px-3"
+        }`}>
           <DropdownMenu>
-            <DropdownMenuTrigger className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-[#1a1a1d] transition-colors cursor-pointer">
-              <Avatar className="h-9 w-9 ring-2 ring-gray-100 dark:ring-[#1e1e21]">
+            <DropdownMenuTrigger className={`w-full flex items-center rounded-xl hover:bg-gray-50 dark:hover:bg-[#1a1a1d] transition-colors cursor-pointer ${
+              collapsed ? "justify-center py-2 px-0" : "gap-2.5 px-3 py-2.5"
+            }`} title={user.name || undefined}>
+              <Avatar className="h-8 w-8 ring-2 ring-gray-100 dark:ring-[#1e1e21] flex-shrink-0">
                 <AvatarFallback className="text-xs bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="text-left flex-1 min-w-0">
-                <p className="text-[13px] font-semibold leading-none truncate text-gray-900 dark:text-gray-100">{user.name}</p>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1 font-medium">{(user as Record<string, unknown>).role as string}</p>
-              </div>
-              <Settings className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+              {!collapsed && (
+                <>
+                  <div className="text-left flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold leading-none truncate text-gray-900 dark:text-gray-100">{user.name}</p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1 font-medium truncate">{(user as Record<string, unknown>).role as string}</p>
+                  </div>
+                  <Settings className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                </>
+              )}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[230px]">
+            <DropdownMenuContent align="start" side={collapsed ? "right" : "bottom"} className="w-[220px]">
               <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })} className="gap-2.5 text-red-500 focus:text-red-500">
                 <LogOut className="h-4 w-4" />
                 Sign Out
@@ -226,7 +271,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </SheetTrigger>
             <SheetContent side="left" className="w-[200px] p-0 border-none bg-transparent">
               <aside className="w-[200px] h-full bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] flex flex-col">
-                {renderSidebar()}
+                {renderSidebar(false)}
               </aside>
             </SheetContent>
           </Sheet>
@@ -239,12 +284,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="w-[200px] bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] hidden lg:flex flex-col fixed inset-y-0 left-0 z-30">
-        {renderSidebar()}
+      <aside className={`bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 transition-[width] duration-300 ease-in-out ${
+        isCollapsed ? "w-16" : "w-[200px]"
+      }`}>
+        {renderSidebar(isCollapsed)}
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 lg:ml-[200px] min-h-screen">
+      <main className={`flex-1 min-h-screen transition-[margin-left] duration-300 ease-in-out ${
+        isCollapsed ? "lg:ml-16" : "lg:ml-[200px]"
+      }`}>
         <div className="w-full px-3 md:px-6 py-5">
           {children}
         </div>
@@ -253,17 +302,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 }
 
-function SidebarNav({ pathname }: { pathname: string }) {
+function SidebarNav({ pathname, collapsed }: { pathname: string; collapsed?: boolean }) {
   const searchParams = useSearchParams();
   return (
     <div className="space-y-4">
-      {navSections.map((section) => (
+      {navSections.map((section, idx) => (
         <div key={section.title}>
-          <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-            {section.title}
-          </p>
+          {collapsed ? (
+            idx > 0 && <div className="my-2 border-t border-gray-200/60 dark:border-gray-800/60 mx-1" />
+          ) : (
+            <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              {section.title}
+            </p>
+          )}
           <div className="space-y-0.5">
-            {section.items.map((item) => renderNavItem(item, pathname, searchParams))}
+            {section.items.map((item) => renderNavItem(item, pathname, searchParams, collapsed))}
           </div>
         </div>
       ))}
@@ -300,7 +353,8 @@ function checkIsChildActive(child: NavChild, searchParams: { get: (k: string) =>
 function renderNavItem(
   item: NavItem,
   pathname: string,
-  searchParams: { get: (key: string) => string | null }
+  searchParams: { get: (key: string) => string | null },
+  collapsed?: boolean
 ) {
   const Icon = item.icon;
   const isActive = checkIsItemActive(item.href, pathname, searchParams);
@@ -308,6 +362,20 @@ function renderNavItem(
   const parentClass = isActive
     ? "bg-[#1a1a1d] text-white shadow-sm font-semibold"
     : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#1a1a1d] hover:text-gray-900 dark:hover:text-gray-200 font-medium";
+
+  if (collapsed) {
+    return (
+      <div key={item.href} className="flex justify-center my-0.5">
+        <Link
+          href={item.href}
+          title={item.children ? `${item.label} (${item.children.map(c => c.label).join(", ")})` : item.label}
+          className={`flex items-center justify-center h-9 w-9 rounded-xl transition-all ${parentClass}`}
+        >
+          <Icon className="h-[17px] w-[17px] flex-shrink-0" strokeWidth={isActive ? 2 : 1.7} />
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div key={item.href} className="space-y-0.5">
