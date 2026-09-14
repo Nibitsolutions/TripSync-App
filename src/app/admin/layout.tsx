@@ -142,8 +142,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <SheetTrigger render={<Button variant="ghost" size="icon" className="-ml-2 h-9 w-9 text-gray-500 dark:text-gray-400" />}>
               <Menu className="h-5 w-5" />
             </SheetTrigger>
-            <SheetContent side="left" className="w-[260px] p-0 border-none bg-transparent">
-              <aside className="w-[260px] h-full bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] flex flex-col">
+            <SheetContent side="left" className="w-[200px] p-0 border-none bg-transparent">
+              <aside className="w-[200px] h-full bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] flex flex-col">
                 {renderSidebar()}
               </aside>
             </SheetContent>
@@ -157,12 +157,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="w-[260px] bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] hidden lg:flex flex-col fixed inset-y-0 left-0 z-30">
+      <aside className="w-[200px] bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] hidden lg:flex flex-col fixed inset-y-0 left-0 z-30">
         {renderSidebar()}
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 lg:ml-[260px] min-h-screen">
+      <main className="flex-1 lg:ml-[200px] min-h-screen">
         <div className="max-w-[1400px] mx-auto p-4 md:p-8">
           {children}
         </div>

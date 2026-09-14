@@ -224,8 +224,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <SheetTrigger render={<Button variant="ghost" size="icon" className="-ml-2 h-9 w-9 text-gray-500 dark:text-gray-400" />}>
               <Menu className="h-5 w-5" />
             </SheetTrigger>
-            <SheetContent side="left" className="w-[260px] p-0 border-none bg-transparent">
-              <aside className="w-[260px] h-full bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] flex flex-col">
+            <SheetContent side="left" className="w-[200px] p-0 border-none bg-transparent">
+              <aside className="w-[200px] h-full bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] flex flex-col">
                 {renderSidebar()}
               </aside>
             </SheetContent>
@@ -239,13 +239,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="w-[260px] bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] hidden lg:flex flex-col fixed inset-y-0 left-0 z-30">
+      <aside className="w-[200px] bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] hidden lg:flex flex-col fixed inset-y-0 left-0 z-30">
         {renderSidebar()}
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 lg:ml-[260px] min-h-screen">
-        <div className="w-full px-4 md:px-8 py-6">
+      <main className="flex-1 lg:ml-[200px] min-h-screen">
+        <div className="w-full px-3 md:px-6 py-5">
           {children}
         </div>
       </main>
@@ -313,10 +313,10 @@ function renderNavItem(
     <div key={item.href} className="space-y-0.5">
       <Link
         href={item.href}
-        className={`group flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] transition-all ${parentClass}`}
+        className={`group flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-[12.5px] transition-all ${parentClass}`}
       >
-        <Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={isActive ? 2 : 1.7} />
-        <span className="flex-1 truncate">{item.label}</span>
+        <Icon className="h-[17px] w-[17px] flex-shrink-0" strokeWidth={isActive ? 2 : 1.7} />
+        <span className="flex-1 truncate leading-tight">{item.label}</span>
         {item.children ? (
           <ChevronRight
             className={`h-3.5 w-3.5 opacity-60 transition-transform ${
