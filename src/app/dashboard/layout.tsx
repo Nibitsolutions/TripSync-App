@@ -132,6 +132,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("tripsync_sidebar_collapsed");
@@ -154,6 +155,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     setOpen(false);
+    setIsHovered(false);
   }, [pathname]);
 
   if (status === "loading") {
@@ -178,48 +180,60 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const user = session.user;
   const initials = user.name?.split(" ").map((n) => n[0]).join("") || "U";
 
+  const isExpandedView = !isCollapsed || isHovered;
+
   function renderSidebar(collapsed: boolean = false) {
+    const isFullView = !collapsed;
     return (
       <>
         {/* Logo */}
         <div className={`h-16 flex items-center border-b border-gray-200/80 dark:border-[#1e1e21] transition-all ${
-          collapsed ? "px-2 justify-between" : "px-3.5 justify-between"
+          isFullView ? "px-3.5 justify-between" : "px-0 justify-center"
         }`}>
-          <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
-            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm flex-shrink-0">
+          {isFullView ? (
+            <>
+              <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
+                <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm flex-shrink-0">
+                  <span className="text-primary-foreground font-bold text-xs tracking-tight">TS</span>
+                </div>
+                <div className="truncate">
+                  <h1 className="text-[14px] font-semibold tracking-tight text-gray-900 dark:text-gray-50 truncate leading-none">TripSync</h1>
+                  <p className="text-[9.5px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wider truncate mt-0.5">Finance &amp; ERP</p>
+                </div>
+              </div>
+              <button
+                onClick={toggleCollapse}
+                className="hidden lg:flex items-center justify-center h-7 w-7 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a1a1d] transition-colors flex-shrink-0"
+                title={isCollapsed ? "Pin expanded sidebar" : "Collapse sidebar"}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            </>
+          ) : (
+            <div
+              className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm flex-shrink-0 cursor-pointer"
+              title="Hover to expand sidebar"
+              onClick={toggleCollapse}
+            >
               <span className="text-primary-foreground font-bold text-xs tracking-tight">TS</span>
             </div>
-            {!collapsed && (
-              <div className="truncate">
-                <h1 className="text-[14px] font-semibold tracking-tight text-gray-900 dark:text-gray-50 truncate leading-none">TripSync</h1>
-                <p className="text-[9.5px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wider truncate mt-0.5">Finance &amp; ERP</p>
-              </div>
-            )}
-          </div>
-          
-          <button
-            onClick={toggleCollapse}
-            className="hidden lg:flex items-center justify-center h-7 w-7 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1a1a1d] transition-colors flex-shrink-0"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </button>
+          )}
         </div>
 
         {/* Navigation */}
         <nav className={`flex-1 py-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
-          collapsed ? "px-2" : "px-3"
+          isFullView ? "px-3" : "px-2"
         }`}>
           <Suspense fallback={<div className="text-xs text-gray-400 px-3">Loading menu...</div>}>
-            <SidebarNav pathname={pathname} collapsed={collapsed} />
+            <SidebarNav pathname={pathname} collapsed={!isFullView} />
           </Suspense>
         </nav>
 
         {/* Theme Toggle */}
         <div className={`py-3 border-t border-gray-200/80 dark:border-[#1e1e21] flex items-center ${
-          collapsed ? "px-1 justify-center" : "px-4 justify-between"
+          isFullView ? "px-4 justify-between" : "px-1 justify-center"
         }`}>
-          {!collapsed && (
+          {isFullView && (
             <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Theme</span>
           )}
           <ThemeToggle />
@@ -227,18 +241,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* User */}
         <div className={`py-3 border-t border-gray-200/80 dark:border-[#1e1e21] ${
-          collapsed ? "px-1.5" : "px-3"
+          isFullView ? "px-3" : "px-1.5"
         }`}>
           <DropdownMenu>
             <DropdownMenuTrigger className={`w-full flex items-center rounded-xl hover:bg-gray-50 dark:hover:bg-[#1a1a1d] transition-colors cursor-pointer ${
-              collapsed ? "justify-center py-2 px-0" : "gap-2.5 px-3 py-2.5"
+              isFullView ? "gap-2.5 px-3 py-2.5" : "justify-center py-2 px-0"
             }`} title={user.name || undefined}>
               <Avatar className="h-8 w-8 ring-2 ring-gray-100 dark:ring-[#1e1e21] flex-shrink-0">
                 <AvatarFallback className="text-xs bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              {!collapsed && (
+              {isFullView && (
                 <>
                   <div className="text-left flex-1 min-w-0">
                     <p className="text-[13px] font-semibold leading-none truncate text-gray-900 dark:text-gray-100">{user.name}</p>
@@ -248,7 +262,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </>
               )}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side={collapsed ? "right" : "bottom"} className="w-[220px]">
+            <DropdownMenuContent align="start" side={isFullView ? "bottom" : "right"} className="w-[220px]">
               <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })} className="gap-2.5 text-red-500 focus:text-red-500">
                 <LogOut className="h-4 w-4" />
                 Sign Out
@@ -284,10 +298,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className={`bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 transition-[width] duration-300 ease-in-out ${
-        isCollapsed ? "w-16" : "w-[200px]"
-      }`}>
-        {renderSidebar(isCollapsed)}
+      <aside
+        onMouseEnter={() => {
+          if (isCollapsed) setIsHovered(true);
+        }}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`bg-white dark:bg-[#111113] border-r border-gray-200/80 dark:border-[#1e1e21] hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 transition-[width,box-shadow] duration-300 ease-in-out ${
+          isExpandedView ? "w-[200px]" : "w-16"
+        } ${isCollapsed && isHovered ? "shadow-2xl z-40 border-r-gray-300 dark:border-r-gray-800" : ""}`}
+      >
+        {renderSidebar(!isExpandedView)}
       </aside>
 
       {/* Main content */}

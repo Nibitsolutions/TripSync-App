@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Plus, Send, Ban, CreditCard, Trash2, History, Loader2, Pencil,
   Printer, Plane, FileText, Calculator, Search, X, RotateCcw, AlertTriangle, Check, Layers,
-  ArrowLeft, Copy, CheckCircle2, Save
+  ArrowLeft, Copy, CheckCircle2, Save, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { CITY_AIRPORT_CODES, formatTicketNumber, getAirlineByTicketNumber } from "@/lib/iataAirlines";
 
@@ -174,6 +174,10 @@ export default function InvoicesPage() {
   const [staffUsers, setStaffUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+
+  // Ticket sidebar collapse states
+  const [isTicketSidebarCollapsed, setIsTicketSidebarCollapsed] = useState(false);
+  const [isEditTicketSidebarCollapsed, setIsEditTicketSidebarCollapsed] = useState(false);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
@@ -2193,25 +2197,70 @@ export default function InvoicesPage() {
               <div className="space-y-3">
                 <div className="flex flex-col md:flex-row gap-3 items-start">
                   {/* Left Sidebar List of Tickets */}
-                  <div className="w-full md:w-52 flex-shrink-0 bg-slate-50 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between px-2 py-1 border-b border-slate-200 dark:border-slate-800">
-                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                        <Plane className="h-3.5 w-3.5 text-primary" /> Tickets ({lineItems.length})
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
-                        title="Add Ticket"
-                        onClick={() => {
-                          const newTicket = createDefaultTicketItem();
-                          setLineItems((prev) => [...prev, newTicket]);
-                          setActiveTicketTab(lineItems.length);
-                        }}
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
+                  <div className={`flex-shrink-0 bg-slate-50 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 transition-all duration-300 ${
+                    isTicketSidebarCollapsed ? "w-full md:w-14" : "w-full md:w-52"
+                  }`}>
+                    <div className="flex items-center justify-between px-1 py-1 border-b border-slate-200 dark:border-slate-800">
+                      {!isTicketSidebarCollapsed ? (
+                        <>
+                          <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 truncate">
+                            <Plane className="h-3.5 w-3.5 text-primary flex-shrink-0" /> Tickets ({lineItems.length})
+                          </span>
+                          <div className="flex items-center gap-0.5">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
+                              title="Add Ticket"
+                              onClick={() => {
+                                const newTicket = createDefaultTicketItem();
+                                setLineItems((prev) => [...prev, newTicket]);
+                                setActiveTicketTab(lineItems.length);
+                              }}
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                              title="Collapse sidebar"
+                              onClick={() => setIsTicketSidebarCollapsed(true)}
+                            >
+                              <ChevronLeft className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center justify-between w-full">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
+                            title="Add Ticket"
+                            onClick={() => {
+                              const newTicket = createDefaultTicketItem();
+                              setLineItems((prev) => [...prev, newTicket]);
+                              setActiveTicketTab(lineItems.length);
+                            }}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            title="Expand sidebar"
+                            onClick={() => setIsTicketSidebarCollapsed(false)}
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-1.5 max-h-[550px] overflow-y-auto pr-0.5">
@@ -2219,6 +2268,28 @@ export default function InvoicesPage() {
                         const isSelected = activeTicketTab === idx;
                         const paxName = li.pax_name || `Ticket ${idx + 1}`;
                         const tktNum = li.ticket_number || "";
+
+                        if (isTicketSidebarCollapsed) {
+                          return (
+                            <div
+                              key={idx}
+                              onClick={() => setActiveTicketTab(idx)}
+                              title={`${paxName}${tktNum ? ` (${tktNum})` : ""}`}
+                              className={`flex items-center justify-center p-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all border ${
+                                isSelected
+                                  ? "bg-primary text-primary-foreground border-primary shadow-sm font-semibold"
+                                  : "bg-white dark:bg-[#161619] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800"
+                              }`}
+                            >
+                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10.5px] font-bold ${
+                                isSelected ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                              }`}>
+                                {idx + 1}
+                              </span>
+                            </div>
+                          );
+                        }
+
                         return (
                           <div
                             key={idx}
@@ -2266,20 +2337,6 @@ export default function InvoicesPage() {
                         );
                       })}
                     </div>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-8 text-xs gap-1.5 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-[#161619] hover:bg-primary/5 hover:border-primary"
-                      onClick={() => {
-                        const newTicket = createDefaultTicketItem();
-                        setLineItems((prev) => [...prev, newTicket]);
-                        setActiveTicketTab(lineItems.length);
-                      }}
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Add Ticket
-                    </Button>
                   </div>
 
                   {/* Right Active Ticket Form */}
@@ -2453,25 +2510,70 @@ export default function InvoicesPage() {
                     <div className="space-y-3">
                       <div className="flex flex-col md:flex-row gap-3 items-start">
                         {/* Left Sidebar List of Tickets */}
-                        <div className="w-full md:w-52 flex-shrink-0 bg-slate-50 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                          <div className="flex items-center justify-between px-2 py-1 border-b border-slate-200 dark:border-slate-800">
-                            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                              <Plane className="h-3.5 w-3.5 text-primary" /> Tickets ({editLineItems.length})
-                            </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
-                              title="Add Ticket"
-                              onClick={() => {
-                                const newTicket = createDefaultTicketItem();
-                                setEditLineItems((prev) => [...prev, newTicket]);
-                                setActiveEditTicketTab(editLineItems.length);
-                              }}
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                            </Button>
+                        <div className={`flex-shrink-0 bg-slate-50 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 transition-all duration-300 ${
+                          isEditTicketSidebarCollapsed ? "w-full md:w-14" : "w-full md:w-52"
+                        }`}>
+                          <div className="flex items-center justify-between px-1 py-1 border-b border-slate-200 dark:border-slate-800">
+                            {!isEditTicketSidebarCollapsed ? (
+                              <>
+                                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 truncate">
+                                  <Plane className="h-3.5 w-3.5 text-primary flex-shrink-0" /> Tickets ({editLineItems.length})
+                                </span>
+                                <div className="flex items-center gap-0.5">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
+                                    title="Add Ticket"
+                                    onClick={() => {
+                                      const newTicket = createDefaultTicketItem();
+                                      setEditLineItems((prev) => [...prev, newTicket]);
+                                      setActiveEditTicketTab(editLineItems.length);
+                                    }}
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                    title="Collapse sidebar"
+                                    onClick={() => setIsEditTicketSidebarCollapsed(true)}
+                                  >
+                                    <ChevronLeft className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex items-center justify-between w-full">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
+                                  title="Add Ticket"
+                                  onClick={() => {
+                                    const newTicket = createDefaultTicketItem();
+                                    setEditLineItems((prev) => [...prev, newTicket]);
+                                    setActiveEditTicketTab(editLineItems.length);
+                                  }}
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                  title="Expand sidebar"
+                                  onClick={() => setIsEditTicketSidebarCollapsed(false)}
+                                >
+                                  <ChevronRight className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            )}
                           </div>
 
                           <div className="space-y-1.5 max-h-[550px] overflow-y-auto pr-0.5">
@@ -2479,6 +2581,28 @@ export default function InvoicesPage() {
                               const isSelected = activeEditTicketTab === idx;
                               const paxName = li.pax_name || `Ticket ${idx + 1}`;
                               const tktNum = li.ticket_number || "";
+
+                              if (isEditTicketSidebarCollapsed) {
+                                return (
+                                  <div
+                                    key={idx}
+                                    onClick={() => setActiveEditTicketTab(idx)}
+                                    title={`${paxName}${tktNum ? ` (${tktNum})` : ""}`}
+                                    className={`flex items-center justify-center p-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all border ${
+                                      isSelected
+                                        ? "bg-primary text-primary-foreground border-primary shadow-sm font-semibold"
+                                        : "bg-white dark:bg-[#161619] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800"
+                                    }`}
+                                  >
+                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10.5px] font-bold ${
+                                      isSelected ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                                    }`}>
+                                      {idx + 1}
+                                    </span>
+                                  </div>
+                                );
+                              }
+
                               return (
                                 <div
                                   key={idx}
