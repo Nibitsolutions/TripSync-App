@@ -2330,8 +2330,8 @@ export default function InvoicesPage() {
                               title={`${paxName}${tktNum ? ` (${tktNum})` : ""}`}
                               className={`h-9 w-9 rounded-xl flex items-center justify-center text-xs font-extrabold cursor-pointer transition-all mx-auto border ${
                                 isSelected
-                                  ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/30"
-                                  : "bg-white dark:bg-[#161619] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-slate-800"
+                                  ? "bg-blue-600 text-white border-blue-500 shadow-md ring-2 ring-blue-500/40 dark:bg-blue-600 dark:text-white dark:border-blue-400"
+                                  : "bg-white dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
                               }`}
                             >
                               {idx + 1}
@@ -2343,22 +2343,28 @@ export default function InvoicesPage() {
                           <div
                             key={idx}
                             onClick={() => setActiveTicketTab(idx)}
-                            className={`group relative flex items-center justify-between p-2 rounded-lg text-xs font-medium cursor-pointer transition-all border ${
+                            className={`group relative flex items-center justify-between p-2.5 rounded-xl text-xs cursor-pointer transition-all border ${
                               isSelected
-                                ? "bg-primary text-primary-foreground border-primary shadow-sm font-semibold"
-                                : "bg-white dark:bg-[#161619] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800"
+                                ? "bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:text-white dark:border-blue-500 shadow-md font-semibold"
+                                : "bg-white dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/70 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700/80"
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-                                isSelected ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                                isSelected ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
                               }`}>
                                 {idx + 1}
                               </span>
                               <div className="truncate min-w-0">
-                                <p className="truncate text-[11.5px] leading-tight font-bold">{paxName}</p>
+                                <p className={`truncate text-[11.5px] leading-tight font-bold ${
+                                  isSelected ? "text-white" : "text-slate-800 dark:text-slate-200"
+                                }`}>
+                                  {paxName}
+                                </p>
                                 {tktNum && (
-                                  <p className={`text-[9.5px] truncate font-mono mt-0.5 ${isSelected ? "text-primary-foreground/80" : "text-slate-400"}`}>
+                                  <p className={`text-[9.5px] truncate font-mono mt-0.5 ${
+                                    isSelected ? "text-white/80" : "text-slate-400 dark:text-slate-400"
+                                  }`}>
                                     {tktNum}
                                   </p>
                                 )}
@@ -2743,68 +2749,74 @@ export default function InvoicesPage() {
                               const paxName = li.pax_name || `Ticket ${idx + 1}`;
                               const tktNum = li.ticket_number || "";
 
-                              if (isEditTicketSidebarCollapsed) {
+                                if (isEditTicketSidebarCollapsed) {
+                                  return (
+                                    <div
+                                      key={idx}
+                                      onClick={() => setActiveEditTicketTab(idx)}
+                                      title={`${paxName}${tktNum ? ` (${tktNum})` : ""}`}
+                                      className={`h-9 w-9 rounded-xl flex items-center justify-center text-xs font-extrabold cursor-pointer transition-all mx-auto border ${
+                                        isSelected
+                                          ? "bg-blue-600 text-white border-blue-500 shadow-md ring-2 ring-blue-500/40 dark:bg-blue-600 dark:text-white dark:border-blue-400"
+                                          : "bg-white dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                                      }`}
+                                    >
+                                      {idx + 1}
+                                    </div>
+                                  );
+                                }
+
                                 return (
                                   <div
                                     key={idx}
                                     onClick={() => setActiveEditTicketTab(idx)}
-                                    title={`${paxName}${tktNum ? ` (${tktNum})` : ""}`}
-                                    className={`h-9 w-9 rounded-xl flex items-center justify-center text-xs font-extrabold cursor-pointer transition-all mx-auto border ${
+                                    className={`group relative flex items-center justify-between p-2.5 rounded-xl text-xs cursor-pointer transition-all border ${
                                       isSelected
-                                        ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/30"
-                                        : "bg-white dark:bg-[#161619] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-slate-800"
+                                        ? "bg-blue-600 text-white border-blue-600 dark:bg-blue-600 dark:text-white dark:border-blue-500 shadow-md font-semibold"
+                                        : "bg-white dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/70 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700/80"
                                     }`}
                                   >
-                                    {idx + 1}
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+                                        isSelected ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                      }`}>
+                                        {idx + 1}
+                                      </span>
+                                      <div className="truncate min-w-0">
+                                        <p className={`truncate text-[11.5px] leading-tight font-bold ${
+                                          isSelected ? "text-white" : "text-slate-800 dark:text-slate-200"
+                                        }`}>
+                                          {paxName}
+                                        </p>
+                                        {tktNum && (
+                                          <p className={`text-[9.5px] truncate font-mono mt-0.5 ${
+                                            isSelected ? "text-white/80" : "text-slate-400 dark:text-slate-400"
+                                          }`}>
+                                            {tktNum}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {editLineItems.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const updated = editLineItems.filter((_, i) => i !== idx);
+                                          setEditLineItems(updated);
+                                          if (activeEditTicketTab >= updated.length) setActiveEditTicketTab(Math.max(0, updated.length - 1));
+                                        }}
+                                        className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
+                                          isSelected ? "hover:bg-white/20 text-white" : "hover:bg-red-100 dark:hover:bg-red-950/50 text-slate-400 hover:text-red-600"
+                                        }`}
+                                        title="Delete ticket"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    )}
                                   </div>
                                 );
-                              }
-
-                              return (
-                                <div
-                                  key={idx}
-                                  onClick={() => setActiveEditTicketTab(idx)}
-                                  className={`group relative flex items-center justify-between p-2 rounded-lg text-xs font-medium cursor-pointer transition-all border ${
-                                    isSelected
-                                      ? "bg-primary text-primary-foreground border-primary shadow-sm font-semibold"
-                                      : "bg-[#161619] bg-white hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-                                      isSelected ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                                    }`}>
-                                      {idx + 1}
-                                    </span>
-                                    <div className="truncate min-w-0">
-                                      <p className="truncate text-[11.5px] leading-tight font-bold">{paxName}</p>
-                                      {tktNum && (
-                                        <p className={`text-[9.5px] truncate font-mono mt-0.5 ${isSelected ? "text-primary-foreground/80" : "text-slate-400"}`}>
-                                          {tktNum}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {editLineItems.length > 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const updated = editLineItems.filter((_, i) => i !== idx);
-                                        setEditLineItems(updated);
-                                        if (activeEditTicketTab >= updated.length) setActiveEditTicketTab(Math.max(0, updated.length - 1));
-                                      }}
-                                      className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
-                                        isSelected ? "hover:bg-white/20 text-white" : "hover:bg-red-100 dark:hover:bg-red-950/50 text-slate-400 hover:text-red-600"
-                                      }`}
-                                      title="Delete ticket"
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </button>
-                                  )}
-                                </div>
-                              );
                             })}
                           </div>
 
