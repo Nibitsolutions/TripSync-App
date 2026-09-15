@@ -3035,9 +3035,9 @@ export default function InvoicesPage() {
                   ) : invoices.map((inv) => (
                     <TableRow
                       key={inv._id}
-                      onClick={() => openEditDialog(inv)}
-                      className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-100/80 dark:hover:bg-[#1a1a1d] cursor-pointer transition-colors"
-                      title="Click to view/edit invoice details"
+                      onDoubleClick={() => openEditDialog(inv)}
+                      className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-100/80 dark:hover:bg-[#1a1a1d] cursor-pointer transition-colors select-none"
+                      title="Double-click to view/edit invoice details"
                     >
                       <TableCell className="font-mono text-[13px] font-semibold text-gray-900 dark:text-gray-100">
                         {inv.invoice_number}
