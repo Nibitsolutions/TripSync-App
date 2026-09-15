@@ -983,9 +983,9 @@ export default function InvoicesPage() {
             <span className="font-mono text-primary font-bold">{item.airline_name || "Airline Booking"}</span>
           </div>
 
-          {/* Row 1: Pax, Pax Type, PP No, PP Issue Dt */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="space-y-1">
+          {/* Row 1: Pax, Pax Type, GDS, PP No, PP Issue Dt */}
+          <div className="grid grid-cols-12 gap-2.5">
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Pax *</Label>
               <Input
                 placeholder="MR. First Name Last Name"
@@ -994,7 +994,7 @@ export default function InvoicesPage() {
                 className="h-8 text-[12px] uppercase font-semibold bg-white dark:bg-[#161619]"
               />
             </div>
-            <div className="space-y-1">
+            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Pax Type *</Label>
               <Select value={item.pax_type || "A"} onValueChange={(v) => updateTicketLineItem(itemIdx, "pax_type", v || "A", isEdit)}>
                 <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
@@ -1009,47 +1009,7 @@ export default function InvoicesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP No.</Label>
-              <Input
-                placeholder="e.g. AB1234567"
-                value={item.passport_no || ""}
-                onChange={(e) => updateTicketLineItem(itemIdx, "passport_no", e.target.value.toUpperCase(), isEdit)}
-                className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP Issue Dt</Label>
-              <Input
-                type="date"
-                value={item.passport_issue_date || ""}
-                onChange={(e) => updateTicketLineItem(itemIdx, "passport_issue_date", e.target.value, isEdit)}
-                className="h-8 text-[12px] bg-white dark:bg-[#161619]"
-              />
-            </div>
-          </div>
-
-          {/* Row 2: Ticket No, PNR, GDS, Airline, Supplier/BSP, Sector, Doc, Type */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2.5">
-            <div className="space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Ticket No. (3-4-3-3) *</Label>
-              <Input
-                placeholder="000-0000-000-000"
-                value={item.ticket_number || ""}
-                onChange={(e) => updateTicketLineItem(itemIdx, "ticket_number", e.target.value, isEdit)}
-                className="h-8 text-[12px] font-mono font-bold bg-white dark:bg-[#161619]"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PNR</Label>
-              <Input
-                placeholder="e.g. ABC123"
-                value={item.gds_pnr || ""}
-                onChange={(e) => updateTicketLineItem(itemIdx, "gds_pnr", e.target.value.toUpperCase(), isEdit)}
-                className="h-8 text-[12px] font-mono uppercase font-bold text-blue-600 bg-white dark:bg-[#161619]"
-              />
-            </div>
-            <div className="space-y-1">
+            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">GDS</Label>
               <Select value={item.gds_name || "Amadeus"} onValueChange={(v) => updateTicketLineItem(itemIdx, "gds_name", v || "Amadeus", isEdit)}>
                 <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
@@ -1064,7 +1024,47 @@ export default function InvoicesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="col-span-6 sm:col-span-3 lg:col-span-3 space-y-1">
+              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP No.</Label>
+              <Input
+                placeholder="e.g. AB1234567"
+                value={item.passport_no || ""}
+                onChange={(e) => updateTicketLineItem(itemIdx, "passport_no", e.target.value.toUpperCase(), isEdit)}
+                className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
+              />
+            </div>
+            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
+              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP Issue Dt</Label>
+              <Input
+                type="date"
+                value={item.passport_issue_date || ""}
+                onChange={(e) => updateTicketLineItem(itemIdx, "passport_issue_date", e.target.value, isEdit)}
+                className="h-8 text-[12px] bg-white dark:bg-[#161619]"
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Ticket No (Wider), PNR, Airline, Supplier/BSP */}
+          <div className="grid grid-cols-12 gap-2.5">
+            <div className="col-span-12 sm:col-span-6 lg:col-span-4 space-y-1">
+              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Ticket No. (3-4-3-3) *</Label>
+              <Input
+                placeholder="000-0000-000-000"
+                value={item.ticket_number || ""}
+                onChange={(e) => updateTicketLineItem(itemIdx, "ticket_number", e.target.value, isEdit)}
+                className="h-8 text-[12px] font-mono font-bold tracking-tight bg-white dark:bg-[#161619] min-w-[160px]"
+              />
+            </div>
+            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
+              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PNR</Label>
+              <Input
+                placeholder="e.g. ABC123"
+                value={item.gds_pnr || ""}
+                onChange={(e) => updateTicketLineItem(itemIdx, "gds_pnr", e.target.value.toUpperCase(), isEdit)}
+                className="h-8 text-[12px] font-mono uppercase font-bold text-blue-600 bg-white dark:bg-[#161619]"
+              />
+            </div>
+            <div className="col-span-6 sm:col-span-3 lg:col-span-3 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Airline *</Label>
               <Input
                 placeholder="Auto-detected or QATAR"
@@ -1073,7 +1073,7 @@ export default function InvoicesPage() {
                 className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
               />
             </div>
-            <div className="space-y-1">
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Supplier / BSP *</Label>
               <Select
                 value={item.supplier_id || (isEdit ? editSupplierId : newSupplierId) || ""}
@@ -1098,7 +1098,11 @@ export default function InvoicesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+          </div>
+
+          {/* Row 3: Sector, Doc, Type */}
+          <div className="grid grid-cols-12 gap-2.5">
+            <div className="col-span-4 sm:col-span-4 lg:col-span-4 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Sector *</Label>
               <Input
                 placeholder="ORG / ORG-DST"
@@ -1107,7 +1111,7 @@ export default function InvoicesPage() {
                 className="h-8 text-[12px] uppercase font-mono bg-white dark:bg-[#161619]"
               />
             </div>
-            <div className="space-y-1">
+            <div className="col-span-4 sm:col-span-4 lg:col-span-4 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Doc *</Label>
               <Select value={item.doc_type || "BSPD"} onValueChange={(v) => updateTicketLineItem(itemIdx, "doc_type", v || "BSPD", isEdit)}>
                 <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
@@ -1120,7 +1124,7 @@ export default function InvoicesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="col-span-4 sm:col-span-4 lg:col-span-4 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Type *</Label>
               <Select value={item.trip_type || "International"} onValueChange={(v) => updateTicketLineItem(itemIdx, "trip_type", v || "International", isEdit)}>
                 <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
