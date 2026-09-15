@@ -2255,41 +2255,12 @@ export default function InvoicesPage() {
                   <div className={`flex-shrink-0 bg-slate-50 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 transition-all duration-300 ${
                     isTicketSidebarCollapsed ? "w-full md:w-14" : "w-full md:w-52"
                   }`}>
-                    <div className="flex items-center justify-between px-1 py-1 border-b border-slate-200 dark:border-slate-800">
-                      {!isTicketSidebarCollapsed ? (
-                        <>
-                          <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 truncate">
-                            <Plane className="h-3.5 w-3.5 text-primary flex-shrink-0" /> Tickets ({lineItems.length})
-                          </span>
-                          <div className="flex items-center gap-0.5">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
-                              title="Add Ticket"
-                              onClick={() => {
-                                const newTicket = createDefaultTicketItem();
-                                setLineItems((prev) => [...prev, newTicket]);
-                                setActiveTicketTab(lineItems.length);
-                              }}
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                              title="Collapse sidebar"
-                              onClick={() => setIsTicketSidebarCollapsed(true)}
-                            >
-                              <ChevronLeft className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex items-center justify-between w-full">
+                    {!isTicketSidebarCollapsed ? (
+                      <div className="flex items-center justify-between px-1 py-1 border-b border-slate-200 dark:border-slate-800">
+                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 truncate">
+                          <Plane className="h-3.5 w-3.5 text-primary flex-shrink-0" /> Tickets ({lineItems.length})
+                        </span>
+                        <div className="flex items-center gap-0.5">
                           <Button
                             type="button"
                             variant="ghost"
@@ -2309,14 +2280,41 @@ export default function InvoicesPage() {
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                            title="Expand sidebar"
-                            onClick={() => setIsTicketSidebarCollapsed(false)}
+                            title="Collapse sidebar"
+                            onClick={() => setIsTicketSidebarCollapsed(true)}
                           >
-                            <ChevronRight className="h-3.5 w-3.5" />
+                            <ChevronLeft className="h-3.5 w-3.5" />
                           </Button>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 pb-2 border-b border-slate-200 dark:border-slate-800">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          title="Expand sidebar"
+                          onClick={() => setIsTicketSidebarCollapsed(false)}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 hover:bg-primary/10 text-primary"
+                          title="Add Ticket"
+                          onClick={() => {
+                            const newTicket = createDefaultTicketItem();
+                            setLineItems((prev) => [...prev, newTicket]);
+                            setActiveTicketTab(lineItems.length);
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
 
                     <div className="space-y-1.5 max-h-[550px] overflow-y-auto pr-0.5">
                       {lineItems.map((li, idx) => {
@@ -2678,68 +2676,66 @@ export default function InvoicesPage() {
                         <div className={`flex-shrink-0 bg-slate-50 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 transition-all duration-300 ${
                           isEditTicketSidebarCollapsed ? "w-full md:w-14" : "w-full md:w-52"
                         }`}>
-                          <div className="flex items-center justify-between px-1 py-1 border-b border-slate-200 dark:border-slate-800">
-                            {!isEditTicketSidebarCollapsed ? (
-                              <>
-                                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 truncate">
-                                  <Plane className="h-3.5 w-3.5 text-primary flex-shrink-0" /> Tickets ({editLineItems.length})
-                                </span>
-                                <div className="flex items-center gap-0.5">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
-                                    title="Add Ticket"
-                                    onClick={() => {
-                                      const newTicket = createDefaultTicketItem();
-                                      setEditLineItems((prev) => [...prev, newTicket]);
-                                      setActiveEditTicketTab(editLineItems.length);
-                                    }}
-                                  >
-                                    <Plus className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                                    title="Collapse sidebar"
-                                    onClick={() => setIsEditTicketSidebarCollapsed(true)}
-                                  >
-                                    <ChevronLeft className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="flex items-center justify-between w-full">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
-                                  title="Add Ticket"
-                                  onClick={() => {
-                                    const newTicket = createDefaultTicketItem();
-                                    setEditLineItems((prev) => [...prev, newTicket]);
-                                    setActiveEditTicketTab(editLineItems.length);
-                                  }}
-                                >
-                                  <Plus className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                                  title="Expand sidebar"
-                                  onClick={() => setIsEditTicketSidebarCollapsed(false)}
-                                >
-                                  <ChevronRight className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
+                    {!isEditTicketSidebarCollapsed ? (
+                      <div className="flex items-center justify-between px-1 py-1 border-b border-slate-200 dark:border-slate-800">
+                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 truncate">
+                          <Plane className="h-3.5 w-3.5 text-primary flex-shrink-0" /> Tickets ({editLineItems.length})
+                        </span>
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
+                            title="Add Ticket"
+                            onClick={() => {
+                              const newTicket = createDefaultTicketItem();
+                              setEditLineItems((prev) => [...prev, newTicket]);
+                              setActiveEditTicketTab(editLineItems.length);
+                            }}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            title="Collapse sidebar"
+                            onClick={() => setIsEditTicketSidebarCollapsed(true)}
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 pb-2 border-b border-slate-200 dark:border-slate-800">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          title="Expand sidebar"
+                          onClick={() => setIsEditTicketSidebarCollapsed(false)}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 hover:bg-primary/10 text-primary"
+                          title="Add Ticket"
+                          onClick={() => {
+                            const newTicket = createDefaultTicketItem();
+                            setEditLineItems((prev) => [...prev, newTicket]);
+                            setActiveEditTicketTab(editLineItems.length);
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
 
                           <div className="space-y-1.5 max-h-[550px] overflow-y-auto pr-0.5">
                             {editLineItems.map((li, idx) => {
