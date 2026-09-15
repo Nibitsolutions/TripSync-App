@@ -131,12 +131,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("tripsync_sidebar_collapsed");
-    if (saved === "true") {
+    if (saved === "false") {
+      setIsCollapsed(false);
+    } else {
       setIsCollapsed(true);
     }
   }, []);
