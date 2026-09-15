@@ -698,6 +698,25 @@ export default function InvoicesPage() {
     else setLineItems(list);
   }
 
+  function duplicateTicket(itemIdx: number, isEdit = false) {
+    const list = isEdit ? editLineItems : lineItems;
+    const sourceItem = list[itemIdx];
+    if (!sourceItem) return;
+
+    const cloned: LineItemInput = JSON.parse(JSON.stringify(sourceItem));
+    cloned.pax_name = "";
+    cloned.ticket_number = "";
+    cloned.conjunction_ticket_no = "";
+
+    if (isEdit) {
+      setEditLineItems((prev) => [...prev, cloned]);
+      setActiveEditTicketTab(list.length);
+    } else {
+      setLineItems((prev) => [...prev, cloned]);
+      setActiveTicketTab(list.length);
+    }
+  }
+
   async function createInvoice() {
     if (isCreating) return;
     setIsCreating(true);
@@ -947,8 +966,20 @@ export default function InvoicesPage() {
       <div className="space-y-4 text-[12px] bg-slate-50/50 dark:bg-[#0c0c0e] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner">
         {/* Passenger & Ticket Main Details */}
         <div className="p-3 bg-white dark:bg-[#111113] rounded-lg border border-slate-200 dark:border-slate-800 space-y-3">
-          <div className="font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-slate-300 border-b pb-1 flex justify-between">
-            <span>Passenger &amp; Ticketing Information</span>
+          <div className="font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-slate-300 border-b pb-1 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span>Passenger &amp; Ticketing Information</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-[11px] font-semibold gap-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                onClick={() => duplicateTicket(itemIdx, isEdit)}
+                title="Duplicate active ticket data to a new ticket (excluding passenger name and ticket number)"
+              >
+                <Copy className="h-3 w-3" /> Duplicate Ticket
+              </Button>
+            </div>
             <span className="font-mono text-primary font-bold">{item.airline_name || "Airline Booking"}</span>
           </div>
 
@@ -2235,6 +2266,16 @@ export default function InvoicesPage() {
                               type="button"
                               variant="ghost"
                               size="sm"
+                              className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-amber-600 dark:text-amber-400"
+                              title="Duplicate Active Ticket"
+                              onClick={() => duplicateTicket(activeTicketTab, false)}
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
                               className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
                               title="Add Ticket"
                               onClick={() => {
@@ -2259,6 +2300,16 @@ export default function InvoicesPage() {
                         </>
                       ) : (
                         <div className="flex items-center justify-between w-full">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-amber-600 dark:text-amber-400"
+                            title="Duplicate Active Ticket"
+                            onClick={() => duplicateTicket(activeTicketTab, false)}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
                           <Button
                             type="button"
                             variant="ghost"
@@ -2357,6 +2408,34 @@ export default function InvoicesPage() {
                         );
                       })}
                     </div>
+
+                    {!isTicketSidebarCollapsed && (
+                      <div className="pt-1 flex items-center gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 h-8 text-[11px] px-1.5 gap-1 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-[#161619] hover:bg-primary/5 hover:border-primary"
+                          onClick={() => {
+                            const newTicket = createDefaultTicketItem();
+                            setLineItems((prev) => [...prev, newTicket]);
+                            setActiveTicketTab(lineItems.length);
+                          }}
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Add Ticket
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-[11px] px-2 gap-1 border-amber-300 dark:border-amber-700/60 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                          onClick={() => duplicateTicket(activeTicketTab, false)}
+                          title="Duplicate active ticket"
+                        >
+                          <Copy className="h-3.5 w-3.5" /> Duplicate
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Active Ticket Form */}
@@ -2642,6 +2721,16 @@ export default function InvoicesPage() {
                                     type="button"
                                     variant="ghost"
                                     size="sm"
+                                    className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-amber-600 dark:text-amber-400"
+                                    title="Duplicate Active Ticket"
+                                    onClick={() => duplicateTicket(activeEditTicketTab, true)}
+                                  >
+                                    <Copy className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
                                     className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800"
                                     title="Add Ticket"
                                     onClick={() => {
@@ -2666,6 +2755,16 @@ export default function InvoicesPage() {
                               </>
                             ) : (
                               <div className="flex items-center justify-between w-full">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 hover:bg-slate-200 dark:hover:bg-slate-800 text-amber-600 dark:text-amber-400"
+                                  title="Duplicate Active Ticket"
+                                  onClick={() => duplicateTicket(activeEditTicketTab, true)}
+                                >
+                                  <Copy className="h-3.5 w-3.5" />
+                                </Button>
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -2765,19 +2864,33 @@ export default function InvoicesPage() {
                             })}
                           </div>
 
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="w-full h-8 text-xs gap-1.5 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-[#161619] hover:bg-primary/5 hover:border-primary"
-                            onClick={() => {
-                              const newTicket = createDefaultTicketItem();
-                              setEditLineItems((prev) => [...prev, newTicket]);
-                              setActiveEditTicketTab(editLineItems.length);
-                            }}
-                          >
-                            <Plus className="h-3.5 w-3.5" /> Add Ticket
-                          </Button>
+                          {!isEditTicketSidebarCollapsed && (
+                            <div className="pt-1 flex items-center gap-1.5">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 h-8 text-[11px] px-1.5 gap-1 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-[#161619] hover:bg-primary/5 hover:border-primary"
+                                onClick={() => {
+                                  const newTicket = createDefaultTicketItem();
+                                  setEditLineItems((prev) => [...prev, newTicket]);
+                                  setActiveEditTicketTab(editLineItems.length);
+                                }}
+                              >
+                                <Plus className="h-3.5 w-3.5" /> Add Ticket
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-[11px] px-2 gap-1 border-amber-300 dark:border-amber-700/60 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                                onClick={() => duplicateTicket(activeEditTicketTab, true)}
+                                title="Duplicate active ticket"
+                              >
+                                <Copy className="h-3.5 w-3.5" /> Duplicate
+                              </Button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Right Active Ticket Form */}
