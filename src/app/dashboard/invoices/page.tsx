@@ -984,8 +984,8 @@ export default function InvoicesPage() {
           </div>
 
           {/* Row 1: Pax, Pax Type, GDS, PP No, PP Issue Dt */}
-          <div className="grid grid-cols-12 gap-2.5">
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3 space-y-1">
+          <div className="grid grid-cols-12 gap-2">
+            <div className="col-span-12 sm:col-span-6 lg:col-span-4 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Pax *</Label>
               <Input
                 placeholder="MR. First Name Last Name"
@@ -1024,7 +1024,7 @@ export default function InvoicesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-6 sm:col-span-3 lg:col-span-3 space-y-1">
+            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP No.</Label>
               <Input
                 placeholder="e.g. AB1234567"
@@ -1044,18 +1044,18 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          {/* Row 2: Ticket No (Wider), PNR, Airline, Supplier/BSP */}
-          <div className="grid grid-cols-12 gap-2.5">
-            <div className="col-span-12 sm:col-span-6 lg:col-span-4 space-y-1">
+          {/* Row 2: All 7 Ticketing Fields in Single Row */}
+          <div className="grid grid-cols-12 gap-2">
+            <div className="col-span-12 sm:col-span-4 lg:col-span-3 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Ticket No. (3-4-3-3) *</Label>
               <Input
                 placeholder="000-0000-000-000"
                 value={item.ticket_number || ""}
                 onChange={(e) => updateTicketLineItem(itemIdx, "ticket_number", e.target.value, isEdit)}
-                className="h-8 text-[12px] font-mono font-bold tracking-tight bg-white dark:bg-[#161619] min-w-[160px]"
+                className="h-8 text-[12px] font-mono font-bold tracking-tight bg-white dark:bg-[#161619]"
               />
             </div>
-            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
+            <div className="col-span-6 sm:col-span-2 lg:col-span-1 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PNR</Label>
               <Input
                 placeholder="e.g. ABC123"
@@ -1064,7 +1064,7 @@ export default function InvoicesPage() {
                 className="h-8 text-[12px] font-mono uppercase font-bold text-blue-600 bg-white dark:bg-[#161619]"
               />
             </div>
-            <div className="col-span-6 sm:col-span-3 lg:col-span-3 space-y-1">
+            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Airline *</Label>
               <Input
                 placeholder="Auto-detected or QATAR"
@@ -1073,7 +1073,7 @@ export default function InvoicesPage() {
                 className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
               />
             </div>
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3 space-y-1">
+            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Supplier / BSP *</Label>
               <Select
                 value={item.supplier_id || (isEdit ? editSupplierId : newSupplierId) || ""}
@@ -1098,11 +1098,7 @@ export default function InvoicesPage() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Row 3: Sector, Doc, Type */}
-          <div className="grid grid-cols-12 gap-2.5">
-            <div className="col-span-4 sm:col-span-4 lg:col-span-4 space-y-1">
+            <div className="col-span-6 sm:col-span-4 lg:col-span-2 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Sector *</Label>
               <Input
                 placeholder="ORG / ORG-DST"
@@ -1111,10 +1107,10 @@ export default function InvoicesPage() {
                 className="h-8 text-[12px] uppercase font-mono bg-white dark:bg-[#161619]"
               />
             </div>
-            <div className="col-span-4 sm:col-span-4 lg:col-span-4 space-y-1">
+            <div className="col-span-3 sm:col-span-2 lg:col-span-1 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Doc *</Label>
               <Select value={item.doc_type || "BSPD"} onValueChange={(v) => updateTicketLineItem(itemIdx, "doc_type", v || "BSPD", isEdit)}>
-                <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
+                <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619] px-2 text-[11px]">
                   <SelectValue>{(val) => val || "BSPD"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -1124,10 +1120,10 @@ export default function InvoicesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-4 sm:col-span-4 lg:col-span-4 space-y-1">
+            <div className="col-span-3 sm:col-span-2 lg:col-span-1 space-y-1">
               <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Type *</Label>
               <Select value={item.trip_type || "International"} onValueChange={(v) => updateTicketLineItem(itemIdx, "trip_type", v || "International", isEdit)}>
-                <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
+                <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619] px-2 text-[11px]">
                   <SelectValue>{(val) => val === "International" ? "I (Int)" : "D (Dom)"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
