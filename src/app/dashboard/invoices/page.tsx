@@ -442,7 +442,7 @@ export default function InvoicesPage() {
   }
 
   // Dual-Sided Travel Accounting Calculations (Live auto-calculation)
-  function calculateTicketTotals(item: LineItemInput): LineItemInput {
+  function calculateTicketTotals(item: LineItemInput, lastEditedField?: string): LineItemInput {
     const baseFare = parseFloat(item.base_fare || "0") || 0;
     
     // Dynamic Airline City Tax Sum (Liability)
@@ -498,67 +498,65 @@ export default function InvoicesPage() {
 
     const grossFare = baseFare + taxes;
     
-    // Commission on Base Fare (COM)
-    const commPct = parseFloat(item.commission_percent || "0") || 0;
-    let commAmt = (baseFare * commPct) / 100;
-    if (commPct === 0 && item.commission_amount && parseFloat(item.commission_amount) > 0) {
-      commAmt = parseFloat(item.commission_amount);
-    }
+    const updated = { ...item };
 
-    // Withholding Tax on Commission (WHT)
-    const whtPct = parseFloat(item.wht_percent || "0") || 0;
-    let whtAmt = (commAmt * whtPct) / 100;
-    if (whtPct === 0 && item.wht_amount && parseFloat(item.wht_amount) > 0) {
-      whtAmt = parseFloat(item.wht_amount);
-    }
+    // Helper for bidirectional calculation (% <-> Amount)
+    const calcPair = (
+      pctField: keyof LineItemInput,
+      amtField: keyof LineItemInput,
+      base: number
+    ) => {
+      const u = updated as Record<string, any>;
+      let pct = parseFloat(String(u[pctField] || "0")) || 0;
+      let amt = parseFloat(String(u[amtField] || "0")) || 0;
 
-    // Discount 1 (DIS)
-    const disPct = parseFloat(item.discount_percent || "0") || 0;
-    let disAmt = (grossFare * disPct) / 100;
-    if (disPct === 0 && item.discount_amount && parseFloat(item.discount_amount) > 0) {
-      disAmt = parseFloat(item.discount_amount);
-    }
+      if (lastEditedField === amtField) {
+        pct = base > 0 ? (amt / base) * 100 : 0;
+        u[pctField] = pct > 0 ? (pct % 1 === 0 ? pct.toString() : pct.toFixed(2)) : "";
+      } else if (lastEditedField === pctField) {
+        amt = (base * pct) / 100;
+        u[amtField] = amt > 0 ? amt.toFixed(2) : "0.00";
+      } else {
+        if (pct === 0 && amt > 0) {
+          pct = base > 0 ? (amt / base) * 100 : 0;
+          u[pctField] = pct > 0 ? (pct % 1 === 0 ? pct.toString() : pct.toFixed(2)) : "";
+        } else {
+          amt = (base * pct) / 100;
+          u[amtField] = amt > 0 ? amt.toFixed(2) : "0.00";
+        }
+      }
+      return { pct, amt };
+    };
 
-    // Discount 2 (DIS2)
-    const dis2Pct = parseFloat(item.discount2_percent || "0") || 0;
-    let dis2Amt = (grossFare * dis2Pct) / 100;
-    if (dis2Pct === 0 && item.discount2_amount && parseFloat(item.discount2_amount) > 0) {
-      dis2Amt = parseFloat(item.discount2_amount);
-    }
+    // 1. Commission on Base Fare (COM)
+    const { amt: commAmt } = calcPair("commission_percent", "commission_amount", baseFare);
 
-    // Passenger Service Fee % (PSF/P)
-    const psfPPct = parseFloat(item.psf_p_percent || "0") || 0;
-    let psfPAmt = (grossFare * psfPPct) / 100;
-    if (psfPPct === 0 && item.psf_p_amount && parseFloat(item.psf_p_amount) > 0) {
-      psfPAmt = parseFloat(item.psf_p_amount);
-    }
+    // 2. Withholding Tax on Commission (WHT)
+    const { amt: whtAmt } = calcPair("wht_percent", "wht_amount", commAmt);
+
+    // 3. Discount 1 (DIS)
+    const { amt: disAmt } = calcPair("discount_percent", "discount_amount", grossFare);
+
+    // 4. Discount 2 (DIS2)
+    const { amt: dis2Amt } = calcPair("discount2_percent", "discount2_amount", grossFare);
+
+    // 5. Passenger Service Fee % (PSF/P)
+    const { amt: psfPAmt } = calcPair("psf_p_percent", "psf_p_amount", grossFare);
 
     // Passenger Service Fee Flat (PSF)
-    const psfFlat = parseFloat(item.psf_amount || "0") || 0;
-    const psfPct = parseFloat(item.psf_percent || "0") || 0;
+    const psfFlat = parseFloat(updated.psf_amount || "0") || 0;
+    const psfPct = parseFloat(updated.psf_percent || "0") || 0;
     const psfPctAmt = (grossFare * psfPct) / 100;
     const totalPsf = psfFlat + psfPAmt + psfPctAmt;
 
-    // GST on PSF/service fee
-    const gstPct = parseFloat(item.gst_percent || "0") || 0;
-    let gstAmt = (totalPsf * gstPct) / 100;
-    if (gstPct === 0 && item.gst_amount && parseFloat(item.gst_amount) > 0) {
-      gstAmt = parseFloat(item.gst_amount);
-    }
+    // 6. GST on PSF/service fee (GST)
+    const { amt: gstAmt } = calcPair("gst_percent", "gst_amount", totalPsf);
 
-    // SEG (Segment Fee)
-    const segPct = parseFloat(item.seg_percent || "0") || 0;
-    let segAmt = (grossFare * segPct) / 100;
-    if (segPct === 0 && item.seg_amount && parseFloat(item.seg_amount) > 0) {
-      segAmt = parseFloat(item.seg_amount);
-    }
+    // 7. SEG (Segment Fee)
+    const { amt: segAmt } = calcPair("seg_percent", "seg_amount", grossFare);
 
-    // WHT_C (Customer Withholding Tax)
-    const whtCPct = parseFloat(item.wht_c_percent || "0") || 0;
-    let whtCAmt = (grossFare * whtCPct) / 100;
-    if (whtCPct === 0 && item.wht_c_amount && parseFloat(item.wht_c_amount) > 0) {
-      whtCAmt = parseFloat(item.wht_c_amount);
-    }
+    // 8. WHT_C (Customer Withholding Tax)
+    const { amt: whtCAmt } = calcPair("wht_c_percent", "wht_c_amount", grossFare);
 
     const customerGross = grossFare + totalPsf + segAmt;
     const customerNet = customerGross - disAmt - dis2Amt + gstAmt + whtCAmt;
@@ -570,15 +568,7 @@ export default function InvoicesPage() {
     const margin = customerNet - supplierNet;
 
     return {
-      ...item,
-      commission_amount: commAmt.toFixed(2),
-      wht_amount: whtAmt.toFixed(2),
-      discount_amount: disAmt.toFixed(2),
-      discount2_amount: dis2Amt.toFixed(2),
-      psf_p_amount: psfPAmt.toFixed(2),
-      gst_amount: gstAmt.toFixed(2),
-      seg_amount: segAmt.toFixed(2),
-      wht_c_amount: whtCAmt.toFixed(2),
+      ...updated,
       customer_gross: Math.round(customerGross),
       customer_net: Math.round(customerNet),
       supplier_gross: Math.round(supplierGross),
@@ -609,7 +599,7 @@ export default function InvoicesPage() {
     }
 
     if (item.auto_update !== false) {
-      item = calculateTicketTotals(item);
+      item = calculateTicketTotals(item, field);
     }
     list[index] = item;
     if (isEdit) setEditLineItems(list);
@@ -1718,9 +1708,11 @@ export default function InvoicesPage() {
                         </td>
                         <td className="p-0.5">
                           <Input
-                            readOnly
-                            value={item.commission_amount || "0.00"}
-                            className="h-5 text-[10px] font-mono bg-slate-50 dark:bg-slate-900 text-right p-0.5"
+                            type="number"
+                            placeholder="0.00"
+                            value={item.commission_amount || ""}
+                            onChange={(e) => updateTicketLineItem(itemIdx, "commission_amount", e.target.value, isEdit)}
+                            className="h-5 text-[10px] font-mono text-right p-0.5"
                           />
                         </td>
                         <td className="py-0.5 px-1.5 font-bold text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">WHT</td>
@@ -1735,9 +1727,11 @@ export default function InvoicesPage() {
                         </td>
                         <td className="p-0.5">
                           <Input
-                            readOnly
-                            value={item.wht_amount || "0.00"}
-                            className="h-5 text-[10px] font-mono bg-slate-50 dark:bg-slate-900 text-right p-0.5"
+                            type="number"
+                            placeholder="0.00"
+                            value={item.wht_amount || ""}
+                            onChange={(e) => updateTicketLineItem(itemIdx, "wht_amount", e.target.value, isEdit)}
+                            className="h-5 text-[10px] font-mono text-right p-0.5"
                           />
                         </td>
                       </tr>
@@ -1756,9 +1750,11 @@ export default function InvoicesPage() {
                         </td>
                         <td className="p-0.5">
                           <Input
-                            readOnly
-                            value={item.discount_amount || "0.00"}
-                            className="h-5 text-[10px] font-mono bg-slate-50 dark:bg-slate-900 text-right p-0.5"
+                            type="number"
+                            placeholder="0.00"
+                            value={item.discount_amount || ""}
+                            onChange={(e) => updateTicketLineItem(itemIdx, "discount_amount", e.target.value, isEdit)}
+                            className="h-5 text-[10px] font-mono text-right p-0.5"
                           />
                         </td>
                         <td className="py-0.5 px-1.5 font-bold text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">DIS2</td>
@@ -1773,9 +1769,11 @@ export default function InvoicesPage() {
                         </td>
                         <td className="p-0.5">
                           <Input
-                            readOnly
-                            value={item.discount2_amount || "0.00"}
-                            className="h-5 text-[10px] font-mono bg-slate-50 dark:bg-slate-900 text-right p-0.5"
+                            type="number"
+                            placeholder="0.00"
+                            value={item.discount2_amount || ""}
+                            onChange={(e) => updateTicketLineItem(itemIdx, "discount2_amount", e.target.value, isEdit)}
+                            className="h-5 text-[10px] font-mono text-right p-0.5"
                           />
                         </td>
                       </tr>
@@ -1794,9 +1792,11 @@ export default function InvoicesPage() {
                         </td>
                         <td className="p-0.5">
                           <Input
-                            readOnly
-                            value={item.psf_p_amount || "0.00"}
-                            className="h-5 text-[10px] font-mono bg-slate-50 dark:bg-slate-900 text-right p-0.5"
+                            type="number"
+                            placeholder="0.00"
+                            value={item.psf_p_amount || ""}
+                            onChange={(e) => updateTicketLineItem(itemIdx, "psf_p_amount", e.target.value, isEdit)}
+                            className="h-5 text-[10px] font-mono text-right p-0.5"
                           />
                         </td>
                         <td className="py-0.5 px-1.5 font-bold text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">PSF</td>
@@ -1834,9 +1834,11 @@ export default function InvoicesPage() {
                         </td>
                         <td className="p-0.5">
                           <Input
-                            readOnly
-                            value={item.gst_amount || "0.00"}
-                            className="h-5 text-[10px] font-mono bg-slate-50 dark:bg-slate-900 text-right p-0.5"
+                            type="number"
+                            placeholder="0.00"
+                            value={item.gst_amount || ""}
+                            onChange={(e) => updateTicketLineItem(itemIdx, "gst_amount", e.target.value, isEdit)}
+                            className="h-5 text-[10px] font-mono text-right p-0.5"
                           />
                         </td>
                         <td className="py-0.5 px-1.5 font-bold text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40">SEG</td>
@@ -1851,9 +1853,11 @@ export default function InvoicesPage() {
                         </td>
                         <td className="p-0.5">
                           <Input
-                            readOnly
-                            value={item.seg_amount || "0.00"}
-                            className="h-5 text-[10px] font-mono bg-slate-50 dark:bg-slate-900 text-right p-0.5"
+                            type="number"
+                            placeholder="0.00"
+                            value={item.seg_amount || ""}
+                            onChange={(e) => updateTicketLineItem(itemIdx, "seg_amount", e.target.value, isEdit)}
+                            className="h-5 text-[10px] font-mono text-right p-0.5"
                           />
                         </td>
                       </tr>
@@ -1872,9 +1876,11 @@ export default function InvoicesPage() {
                         </td>
                         <td className="p-0.5">
                           <Input
-                            readOnly
-                            value={item.wht_c_amount || "0.00"}
-                            className="h-5 text-[10px] font-mono bg-slate-50 dark:bg-slate-900 text-right p-0.5"
+                            type="number"
+                            placeholder="0.00"
+                            value={item.wht_c_amount || ""}
+                            onChange={(e) => updateTicketLineItem(itemIdx, "wht_c_amount", e.target.value, isEdit)}
+                            className="h-5 text-[10px] font-mono text-right p-0.5"
                           />
                         </td>
                         <td className="bg-slate-50/50 dark:bg-slate-900/30"></td>
