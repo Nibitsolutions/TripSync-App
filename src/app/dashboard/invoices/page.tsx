@@ -2026,6 +2026,15 @@ export default function InvoicesPage() {
                   <>
                     <Pencil className="h-4 w-4 text-primary" />
                     Editing Invoice #{invoices.find((i) => i._id === editInvoiceId)?.invoice_number || "..."}
+                    {(() => {
+                      const curInv = invoices.find((i) => i._id === editInvoiceId);
+                      const st = curInv?.status || editDocStatus || "Draft";
+                      return (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ml-1 ${statusStyles[st] || ""}`}>
+                          {st}
+                        </span>
+                      );
+                    })()}
                   </>
                 ) : (
                   <>
@@ -2078,23 +2087,113 @@ export default function InvoicesPage() {
                 <Copy className="h-3.5 w-3.5 text-blue-600" /> Copy Full Inv
               </Button>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs gap-1.5 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-100"
-                onClick={() => {
-                  if (editInvoiceId) {
-                    setEditDocStatus("Confirmed");
-                    saveEditInvoice();
-                  } else {
+              {/* Status-specific action buttons for Edit mode */}
+              {editInvoiceId && (() => {
+                const curInv = invoices.find((i) => i._id === editInvoiceId);
+                const st = curInv?.status || editDocStatus || "Draft";
+                return (
+                  <>
+                    {st === "Draft" && (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                          onClick={() => postInvoice(editInvoiceId)}
+                        >
+                          <Send className="h-3.5 w-3.5" /> Post Invoice
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10 border-slate-300 dark:border-slate-700"
+                          onClick={() => {
+                            setDeleteInvoiceId(editInvoiceId);
+                            setEditInvoiceId(null);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                        </Button>
+                      </>
+                    )}
+
+                    {st === "Posted" && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs gap-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-500/10 border-amber-300 dark:border-amber-800"
+                          onClick={() => unpostInvoice(editInvoiceId)}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" /> Unpost Invoice
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10 border-slate-300 dark:border-slate-700"
+                          onClick={() => setVoidDialog(editInvoiceId)}
+                        >
+                          <Ban className="h-3.5 w-3.5" /> Void
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs gap-1.5 border-slate-300 dark:border-slate-700 bg-white dark:bg-[#161619]"
+                          onClick={() => setCreditDialog(editInvoiceId)}
+                        >
+                          <CreditCard className="h-3.5 w-3.5" /> Credit Note
+                        </Button>
+                      </>
+                    )}
+
+                    {st === "Voided" && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10 border-slate-300 dark:border-slate-700"
+                        onClick={() => {
+                          setDeleteInvoiceId(editInvoiceId);
+                          setEditInvoiceId(null);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                      </Button>
+                    )}
+
+                    {isManager && curInv && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 border-slate-300 dark:border-slate-700 bg-white dark:bg-[#161619]"
+                        onClick={() => loadAuditLogs(curInv)}
+                      >
+                        <History className="h-3.5 w-3.5" /> Logs
+                      </Button>
+                    )}
+                  </>
+                );
+              })()}
+
+              {!editInvoiceId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-100"
+                  onClick={() => {
                     setNewDocStatus("Confirmed");
                     createInvoice();
-                  }
-                }}
-              >
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Post
-              </Button>
+                  }}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Post
+                </Button>
+              )}
 
               <Button
                 type="button"
@@ -2520,113 +2619,10 @@ export default function InvoicesPage() {
           {/* Inline Edit Invoice Form Card */}
           {!!editInvoiceId && (() => {
             const currentEditInv = invoices.find((i) => i._id === editInvoiceId);
-            const status = currentEditInv?.status || editDocStatus || "Draft";
 
             return (
               <Card className="mb-6 border-blue-300 dark:border-blue-800/80 bg-white dark:bg-[#111113] shadow-lg">
-                <CardHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-blue-50/50 dark:bg-blue-950/20">
-                  <div className="flex items-center gap-2.5">
-                    <CardTitle className="text-base font-bold flex items-center gap-2 text-blue-700 dark:text-blue-300">
-                      <Pencil className="h-5 w-5 text-primary" /> Invoice {currentEditInv?.invoice_number || "Details"}
-                    </CardTitle>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusStyles[status] || ""}`}>
-                      {status}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {status === "Draft" && (
-                      <>
-                        <Button
-                          size="sm"
-                          className="h-8 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
-                          onClick={() => postInvoice(editInvoiceId)}
-                        >
-                          <Send className="h-3.5 w-3.5" /> Post Invoice
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 gap-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                          onClick={() => {
-                            setDeleteInvoiceId(editInvoiceId);
-                            setEditInvoiceId(null);
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" /> Delete
-                        </Button>
-                      </>
-                    )}
-
-                    {status === "Posted" && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 gap-1.5 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-500/10 border-amber-300 dark:border-amber-800"
-                          onClick={() => unpostInvoice(editInvoiceId)}
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" /> Unpost Invoice
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 gap-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                          onClick={() => setVoidDialog(editInvoiceId)}
-                        >
-                          <Ban className="h-3.5 w-3.5" /> Void
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 gap-1.5 text-xs bg-white dark:bg-[#161619]"
-                          onClick={() => setCreditDialog(editInvoiceId)}
-                        >
-                          <CreditCard className="h-3.5 w-3.5" /> Credit Note
-                        </Button>
-                      </>
-                    )}
-
-                    {status === "Voided" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 gap-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                        onClick={() => {
-                          setDeleteInvoiceId(editInvoiceId);
-                          setEditInvoiceId(null);
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" /> Delete
-                      </Button>
-                    )}
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 gap-1.5 text-xs bg-white dark:bg-[#161619]"
-                      onClick={() => window.open(`/dashboard/invoices/${editInvoiceId}/print`, "_blank")}
-                    >
-                      <Printer className="h-3.5 w-3.5" /> Print
-                    </Button>
-
-                    {isManager && currentEditInv && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 gap-1.5 text-xs bg-white dark:bg-[#161619] cursor-pointer"
-                        onClick={() => loadAuditLogs(currentEditInv)}
-                      >
-                        <History className="h-3.5 w-3.5" /> Logs
-                      </Button>
-                    )}
-
-                    <Button variant="ghost" size="sm" onClick={() => setEditInvoiceId(null)} className="h-8 w-8 p-0">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-              <CardContent className="p-5">
+                <CardContent className="p-5">
               {editLoading ? (
                 <div className="flex items-center justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
               ) : (
