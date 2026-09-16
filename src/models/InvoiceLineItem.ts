@@ -31,6 +31,12 @@ export interface IInvoiceLineItem extends Document {
   ticket_number: string;
   conjunction_ticket_no: string;
   conjunction_route: string;
+  conjunction_city: string;
+  conjunction_flight_no: string;
+  conjunction_booking_class: string;
+  conjunction_dep_date: string;
+  conjunction_dep_time: string;
+  conjunction_arr_time: string;
   gds_pnr: string;
   gds_name: string;
   airline_name: string;
@@ -40,12 +46,15 @@ export interface IInvoiceLineItem extends Document {
   doc_type: string; // 'BSPD' | 'E-Ticket'
   tour_code: string;
   issue_date: string;
+  customer_remarks: string;
+  our_xo: string;
   
   // Flight Segments
   flight_segments: IFlightSegment[];
   
   // Airfare & IATA Taxes
   base_fare: number;
+  tax_sp: number;
   tax_dof: number;
   tax_yq: number;
   tax_yr: number;
@@ -62,6 +71,9 @@ export interface IInvoiceLineItem extends Document {
   tax_city: number;
   tax_airline_city: number;
   other_taxes: number;
+  tax_ced: number;
+  tax_gst_dom: number;
+  tax_ast: number;
   airline_city_taxes: Array<{ code: string; amount: number }>;
   city_taxes: Array<{ code: string; amount: number }>;
   
@@ -72,10 +84,18 @@ export interface IInvoiceLineItem extends Document {
   commission_amount: number;
   discount_percent: number;
   discount_amount: number;
+  discount2_percent: number;
+  discount2_amount: number;
+  psf_p_percent: number;
+  psf_p_amount: number;
   psf_percent: number;
   psf_amount: number;
   gst_percent: number;
   gst_amount: number;
+  seg_percent: number;
+  seg_amount: number;
+  wht_c_percent: number;
+  wht_c_amount: number;
   auto_update: boolean;
   cancellation_charges_self: number;
   cancellation_charges_supplier: number;
@@ -86,6 +106,7 @@ export interface IInvoiceLineItem extends Document {
   customer_net: number;
   supplier_gross: number;
   supplier_net: number;
+  supplier_gross_wo_wht: number;
   agency_margin: number;
 
   created_at: Date;
@@ -112,6 +133,12 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
     ticket_number: { type: String, default: "" },
     conjunction_ticket_no: { type: String, default: "" },
     conjunction_route: { type: String, default: "" },
+    conjunction_city: { type: String, default: "" },
+    conjunction_flight_no: { type: String, default: "" },
+    conjunction_booking_class: { type: String, default: "" },
+    conjunction_dep_date: { type: String, default: "" },
+    conjunction_dep_time: { type: String, default: "" },
+    conjunction_arr_time: { type: String, default: "" },
     gds_pnr: { type: String, default: "" },
     gds_name: { type: String, default: "" },
     airline_name: { type: String, default: "" },
@@ -121,6 +148,8 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
     doc_type: { type: String, default: "BSPD" },
     tour_code: { type: String, default: "" },
     issue_date: { type: String, default: "" },
+    customer_remarks: { type: String, default: "" },
+    our_xo: { type: String, default: "" },
 
     // Flight Segments
     flight_segments: [
@@ -137,6 +166,7 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
 
     // Airfare & IATA Taxes
     base_fare: { type: Number, default: 0 },
+    tax_sp: { type: Number, default: 0 },
     tax_dof: { type: Number, default: 0 },
     tax_yq: { type: Number, default: 0 },
     tax_yr: { type: Number, default: 0 },
@@ -153,6 +183,9 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
     tax_city: { type: Number, default: 0 },
     tax_airline_city: { type: Number, default: 0 },
     other_taxes: { type: Number, default: 0 },
+    tax_ced: { type: Number, default: 0 },
+    tax_gst_dom: { type: Number, default: 0 },
+    tax_ast: { type: Number, default: 0 },
     airline_city_taxes: [
       {
         code: { type: String, default: "XT" },
@@ -173,10 +206,18 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
     commission_amount: { type: Number, default: 0 },
     discount_percent: { type: Number, default: 0 },
     discount_amount: { type: Number, default: 0 },
+    discount2_percent: { type: Number, default: 0 },
+    discount2_amount: { type: Number, default: 0 },
+    psf_p_percent: { type: Number, default: 0 },
+    psf_p_amount: { type: Number, default: 0 },
     psf_percent: { type: Number, default: 0 },
     psf_amount: { type: Number, default: 0 },
     gst_percent: { type: Number, default: 0 },
     gst_amount: { type: Number, default: 0 },
+    seg_percent: { type: Number, default: 0 },
+    seg_amount: { type: Number, default: 0 },
+    wht_c_percent: { type: Number, default: 0 },
+    wht_c_amount: { type: Number, default: 0 },
     auto_update: { type: Boolean, default: true },
     cancellation_charges_self: { type: Number, default: 0 },
     cancellation_charges_supplier: { type: Number, default: 0 },
@@ -187,6 +228,7 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
     customer_net: { type: Number, default: 0 },
     supplier_gross: { type: Number, default: 0 },
     supplier_net: { type: Number, default: 0 },
+    supplier_gross_wo_wht: { type: Number, default: 0 },
     agency_margin: { type: Number, default: 0 },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }

@@ -880,10 +880,18 @@ export default function InvoicesPage() {
       commission_amount: String(li.commission_amount || "0"),
       discount_percent: String(li.discount_percent || "0"),
       discount_amount: String(li.discount_amount || "0"),
+      discount2_percent: String(li.discount2_percent || "0"),
+      discount2_amount: String(li.discount2_amount || "0"),
+      psf_p_percent: String(li.psf_p_percent || "0"),
+      psf_p_amount: String(li.psf_p_amount || "0"),
       psf_percent: String(li.psf_percent || "0"),
       psf_amount: String(li.psf_amount || "0"),
       gst_percent: String(li.gst_percent || "5"),
       gst_amount: String(li.gst_amount || "0"),
+      seg_percent: String(li.seg_percent || "0"),
+      seg_amount: String(li.seg_amount || "0"),
+      wht_c_percent: String(li.wht_c_percent || "0"),
+      wht_c_amount: String(li.wht_c_amount || "0"),
       auto_update: li.auto_update !== undefined ? Boolean(li.auto_update) : true,
       cancellation_charges_self: String(li.cancellation_charges_self || "0"),
       cancellation_charges_supplier: String(li.cancellation_charges_supplier || "0"),
@@ -2156,7 +2164,7 @@ export default function InvoicesPage() {
             <div className="space-y-3.5 pt-1">
               {/* Top Invoice Header — Single Row: all fields in one line */}
               <div className="p-3 bg-slate-100/70 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-[12px] mb-4">
-                <div className="grid gap-2" style={{ gridTemplateColumns: "120px 120px 1fr 1fr 130px 110px 110px 100px 1fr" }}>
+                <div className="grid gap-2" style={{ gridTemplateColumns: "115px 115px 1fr 1fr 120px 105px 100px 95px 1fr 1fr" }}>
                   {/* Inv. Date */}
                   <div className="space-y-1">
                     <Label className="text-[11px] font-semibold">Inv. Date *</Label>
@@ -2267,6 +2275,16 @@ export default function InvoicesPage() {
                       placeholder="Internal notes..."
                       value={newInternalRemarks}
                       onChange={(e) => setNewInternalRemarks(e.target.value)}
+                      className="h-8 text-[11px] bg-white dark:bg-[#161619]"
+                    />
+                  </div>
+                  {/* Customer Remarks */}
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold">Customer Remarks</Label>
+                    <Input
+                      placeholder="Customer notes..."
+                      value={newCustomerRemarks}
+                      onChange={(e) => setNewCustomerRemarks(e.target.value)}
                       className="h-8 text-[11px] bg-white dark:bg-[#161619]"
                     />
                   </div>
@@ -2615,10 +2633,14 @@ export default function InvoicesPage() {
                 <div className="space-y-3.5 pt-1">
                   {/* Top Header Grid for Edit Modal — Single Row */}
                   <div className="p-3 bg-slate-100/70 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-[12px] mb-4">
-                    <div className="grid gap-2" style={{ gridTemplateColumns: "120px 120px 1fr 1fr 130px 110px 110px 100px 1fr" }}>
+                    <div className="grid gap-2" style={{ gridTemplateColumns: "115px 115px 1fr 1fr 120px 105px 100px 95px 1fr 1fr" }}>
                       <div className="space-y-1">
                         <Label className="text-[11px] font-semibold">Inv. Date</Label>
-                        <Input type="date" value={editAdjDate} onChange={(e) => setEditAdjDate(e.target.value)} className="h-8 text-[11px] bg-white dark:bg-[#161619] px-1.5" />
+                        <Input
+                          readOnly
+                          value={currentEditInv?.created_at ? new Date(currentEditInv.created_at).toISOString().split("T")[0] : editAdjDate}
+                          className="h-8 text-[11px] bg-slate-100 dark:bg-[#161619] px-1.5 font-mono text-slate-500"
+                        />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[11px] font-semibold">Adj. Date</Label>
@@ -2717,6 +2739,15 @@ export default function InvoicesPage() {
                           placeholder="Internal notes..."
                           value={editInternalRemarks}
                           onChange={(e) => setEditInternalRemarks(e.target.value)}
+                          className="h-8 text-[11px] bg-white dark:bg-[#161619]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-semibold">Customer Remarks</Label>
+                        <Input
+                          placeholder="Customer notes..."
+                          value={editCustomerRemarks}
+                          onChange={(e) => setEditCustomerRemarks(e.target.value)}
                           className="h-8 text-[11px] bg-white dark:bg-[#161619]"
                         />
                       </div>
