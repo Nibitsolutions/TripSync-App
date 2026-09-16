@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Invoice, InvoiceLineItem } from "@/models";
+import { resolveOrCreateCustomer } from "@/lib/customer-utils";
 import mongoose from "mongoose";
 
 // GET /api/invoices/[id]
@@ -8,7 +9,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   return withAuth(async (user) => {
     const { id } = await params;
     const invoice = await Invoice.findOne({ _id: id, tenant_id: user.tenant_id })
-      .populate("customer_id", "name email phone")
+      .populate("customer_id", "name code email phone")
       .populate("supplier_id", "name code")
       .populate("spo_id", "name email")
       .lean();
@@ -36,7 +37,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       print_name, cost_center, adj_date, our_xo, client_xo,
     } = body;
 
-    if (customer_id) invoice.customer_id = new mongoose.Types.ObjectId(customer_id);
+    if (customer_id) {
+      invoice.customer_id = await resolveOrCreateCustomer(user.tenant_id, customer_id, user.user_id);
+    }
     if (currency) invoice.currency = currency;
     if (bsp_flag !== undefined) invoice.bsp_flag = bsp_flag;
     if (bsp_billing_period !== undefined) invoice.bsp_billing_period = bsp_billing_period;

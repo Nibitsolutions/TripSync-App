@@ -12,6 +12,7 @@ import { Plus, BookOpen, ArrowUpRight, ArrowDownRight } from "lucide-react";
 interface Customer {
   _id: string;
   name: string;
+  code?: string;
   contact_info: { phone?: string; email?: string };
   credit_limit: number | null;
   current_balance: number;
@@ -22,6 +23,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [name, setName] = useState("");
+  const [code, setCode] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [creditLimit, setCreditLimit] = useState("");
@@ -40,9 +42,9 @@ export default function CustomersPage() {
   async function create() {
     const res = await fetch("/api/customers", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, contact_info: { phone, email }, credit_limit: creditLimit ? parseFloat(creditLimit) : null }),
+      body: JSON.stringify({ name, code: code || undefined, contact_info: { phone, email }, credit_limit: creditLimit ? parseFloat(creditLimit) : null }),
     });
-    if (res.ok) { setShowNew(false); setName(""); setPhone(""); setEmail(""); setCreditLimit(""); load(); }
+    if (res.ok) { setShowNew(false); setName(""); setCode(""); setPhone(""); setEmail(""); setCreditLimit(""); load(); }
   }
 
   async function viewLedger(id: string) {
@@ -65,7 +67,10 @@ export default function CustomersPage() {
           <DialogContent>
             <DialogHeader><DialogTitle className="text-lg font-semibold">Add Customer</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-2">
-              <div className="space-y-1.5"><Label className="text-[13px]">Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10" placeholder="Customer name" /></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5"><Label className="text-[13px]">Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10" placeholder="Customer name" /></div>
+                <div className="space-y-1.5"><Label className="text-[13px]">Customer Code / ID</Label><Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} className="h-10 font-mono" placeholder="Auto-generated (e.g. CUST-000001)" /></div>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5"><Label className="text-[13px]">Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-10" placeholder="Phone number" /></div>
                 <div className="space-y-1.5"><Label className="text-[13px]">Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} className="h-10" placeholder="Email address" /></div>
@@ -87,6 +92,7 @@ export default function CustomersPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-gray-100 dark:border-[#1e1e21]">
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Customer ID</TableHead>
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Name</TableHead>
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Phone</TableHead>
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Email</TableHead>
@@ -97,9 +103,10 @@ export default function CustomersPage() {
                 </TableHeader>
                 <TableBody>
                   {customers.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-12 text-[13px] text-gray-400">No customers yet</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-12 text-[13px] text-gray-400">No customers yet</TableCell></TableRow>
                   ) : customers.map((c) => (
                     <TableRow key={c._id} className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-50/50 dark:hover:bg-[#151517]">
+                      <TableCell className="text-[12px] font-mono font-bold text-primary">{c.code || "-"}</TableCell>
                       <TableCell className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{c.name}</TableCell>
                       <TableCell className="text-[13px] text-gray-500">{c.contact_info?.phone || "-"}</TableCell>
                       <TableCell className="text-[13px] text-gray-500">{c.contact_info?.email || "-"}</TableCell>

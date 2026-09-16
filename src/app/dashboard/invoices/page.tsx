@@ -38,7 +38,7 @@ interface Invoice {
   created_at: string;
 }
 
-interface Customer { _id: string; name: string; }
+interface Customer { _id: string; name: string; code?: string; }
 interface Supplier { _id: string; name: string; code?: string; }
 interface UserItem { _id: string; name: string; role: string; }
 
@@ -389,16 +389,20 @@ export default function InvoicesPage() {
     return () => clearTimeout(timer);
   }, [loadInvoices]);
 
-  useEffect(() => {
+  const loadCustomers = useCallback(() => {
     fetch("/api/customers").then((r) => r.json()).then((d) => setCustomers(d.customers || []));
+  }, []);
+
+  useEffect(() => {
+    loadCustomers();
     fetch("/api/suppliers").then((r) => r.json()).then((d) => setSuppliers(d.suppliers || []));
     fetch("/api/users").then((r) => r.json()).then((d) => setStaffUsers(d.users || []));
-  }, []);
+  }, [loadCustomers]);
 
   // Helper functions to resolve display names
   const getCustomerName = (id: string) => {
-    const c = customers.find((item) => item._id === id);
-    return c ? c.name : id ? id : "Select Customer";
+    const c = customers.find((item) => item._id === id || item.name === id);
+    return c ? `${c.name}${c.code ? ` (${c.code})` : ''}` : id ? id : "";
   };
 
   const getSupplierName = (id: string) => {
@@ -2166,19 +2170,36 @@ export default function InvoicesPage() {
                   {/* Customer */}
                   <div className="space-y-1">
                     <Label className="text-[11px] font-semibold">Customer *</Label>
-                    <Select value={newCustomerId} onValueChange={(v) => {
-                      const val = v || "";
-                      setNewCustomerId(val);
-                      const cust = customers.find(c => c._id === val);
-                      if (cust) setNewPrintName(cust.name);
-                    }}>
-                      <SelectTrigger className="h-8 text-[11px] bg-white dark:bg-[#161619]">
-                        <SelectValue placeholder="Select Customer">
-                          {(val) => getCustomerName(val)}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>{customers.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <Input
+                      type="text"
+                      placeholder="Type or select customer..."
+                      value={getCustomerName(newCustomerId)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const matched = customers.find(
+                          (c) =>
+                            c.name.toLowerCase() === val.trim().toLowerCase() ||
+                            (c.code && c.code.toLowerCase() === val.trim().toLowerCase()) ||
+                            c._id === val
+                        );
+                        if (matched) {
+                          setNewCustomerId(matched._id);
+                          setNewPrintName(matched.name);
+                        } else {
+                          setNewCustomerId(val);
+                          setNewPrintName(val);
+                        }
+                      }}
+                      className="h-8 text-[11px] bg-white dark:bg-[#161619]"
+                      list="new-customers-list"
+                    />
+                    <datalist id="new-customers-list">
+                      {customers.map((c) => (
+                        <option key={c._id} value={c.name}>
+                          {c.code ? `${c.code} - ${c.name}` : c.name}
+                        </option>
+                      ))}
+                    </datalist>
                   </div>
                   {/* Print Name */}
                   <div className="space-y-1">
@@ -2605,14 +2626,36 @@ export default function InvoicesPage() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[11px] font-semibold">Customer *</Label>
-                        <Select value={editCustomerId} onValueChange={(v) => setEditCustomerId(v || "")}>
-                          <SelectTrigger className="h-8 text-[11px] bg-white dark:bg-[#161619]">
-                            <SelectValue placeholder="Select Customer">
-                              {(val) => getCustomerName(val)}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>{customers.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <Input
+                          type="text"
+                          placeholder="Type or select customer..."
+                          value={getCustomerName(editCustomerId)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const matched = customers.find(
+                              (c) =>
+                                c.name.toLowerCase() === val.trim().toLowerCase() ||
+                                (c.code && c.code.toLowerCase() === val.trim().toLowerCase()) ||
+                                c._id === val
+                            );
+                            if (matched) {
+                              setEditCustomerId(matched._id);
+                              setEditPrintName(matched.name);
+                            } else {
+                              setEditCustomerId(val);
+                              setEditPrintName(val);
+                            }
+                          }}
+                          className="h-8 text-[11px] bg-white dark:bg-[#161619]"
+                          list="edit-customers-list"
+                        />
+                        <datalist id="edit-customers-list">
+                          {customers.map((c) => (
+                            <option key={c._id} value={c.name}>
+                              {c.code ? `${c.code} - ${c.name}` : c.name}
+                            </option>
+                          ))}
+                        </datalist>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[11px] font-semibold">Print Name *</Label>

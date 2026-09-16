@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Invoice, InvoiceLineItem, Tenant, Customer, PaymentAllocation, CreditNote } from "@/models";
 import { logChanges } from "@/lib/audit";
+import { resolveOrCreateCustomer } from "@/lib/customer-utils";
 
 // GET /api/invoices - List invoices with search & filters
 export async function GET(req: NextRequest) {
@@ -70,7 +71,10 @@ export async function GET(req: NextRequest) {
     if (search) {
       const matchingCustomers = await Customer.find({
         tenant_id: user.tenant_id,
-        name: { $regex: search, $options: "i" },
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { code: { $regex: search, $options: "i" } },
+        ],
       }).select("_id").lean();
       const custIds = matchingCustomers.map((c) => c._id);
 
@@ -95,7 +99,7 @@ export async function GET(req: NextRequest) {
 
     const [invoices, total] = await Promise.all([
       Invoice.find(filter)
-        .populate("customer_id", "name")
+        .populate("customer_id", "name code")
         .sort({ created_at: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -164,6 +168,9 @@ export async function POST(req: NextRequest) {
       return errorResponse("customer_id and line_items are required");
     }
 
+    // Resolve or Auto-Create Customer in DB if typed custom customer name
+    const resolvedCustomerId = await resolveOrCreateCustomer(user.tenant_id, customer_id, user.user_id);
+
     // 1. Duplicate Ticket Number Protection across non-voided invoices
     for (const item of line_items) {
       if (item.ticket_number && String(item.ticket_number).trim()) {
@@ -200,7 +207,7 @@ export async function POST(req: NextRequest) {
     // 2. Anti-Rapid Duplicate / Double-Click Protection (within 3 seconds)
     const recentDuplicate = await Invoice.findOne({
       tenant_id: user.tenant_id,
-      customer_id,
+      customer_id: resolvedCustomerId,
       total_amount,
       created_by: user.user_id,
       created_at: { $gte: new Date(Date.now() - 3000) },
@@ -229,7 +236,7 @@ export async function POST(req: NextRequest) {
 
     const invoice = await Invoice.create({
       tenant_id: user.tenant_id,
-      customer_id,
+      customer_id: resolvedCustomerId,
       invoice_number,
       status: finalStatus,
       currency: currency || tenant.base_currency,
