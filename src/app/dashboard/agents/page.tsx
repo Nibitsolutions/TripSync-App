@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { UserCog, Loader2 } from "lucide-react";
+import { UserCog, Loader2, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 interface User {
@@ -67,12 +66,65 @@ export default function AgentsPage() {
   const isManager = currentUserRole === "Owner" || currentUserRole === "Accountant";
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">Team & Agents</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">Team &amp; Agents</h1>
         <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Manage agency team members, permissions, and agent default commission rates</p>
       </div>
 
+      {/* Inline Edit User Form Card */}
+      {editingUser && (
+        <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111113] shadow-md">
+          <CardHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+              <UserCog className="h-5 w-5 text-primary" /> Edit Team Member — {editingUser.name}
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setEditingUser(null)} className="h-8 w-8 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="p-5">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-[12px] text-gray-400 font-medium uppercase">Name</Label>
+                  <p className="text-[14px] font-semibold text-gray-900 dark:text-gray-100 mt-0.5">{editingUser.name}</p>
+                </div>
+                <div>
+                  <Label className="text-[12px] text-gray-400 font-medium uppercase">Email</Label>
+                  <p className="text-[14px] font-medium text-gray-500 mt-0.5">{editingUser.email}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[13px] font-semibold">Role *</Label>
+                  <Select value={role} onValueChange={(v) => v && setRole(v)}>
+                    <SelectTrigger className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["Owner", "Accountant", "Agent", "Viewer"].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {role === "Agent" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-[13px] font-semibold">Default Commission Rate (%)</Label>
+                    <Input type="number" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 5" className="h-10 font-mono text-[13px]" />
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 justify-end pt-2 border-t border-gray-100 dark:border-[#1e1e21]">
+                <Button variant="outline" onClick={() => setEditingUser(null)} disabled={submitting}>Cancel</Button>
+                <Button onClick={update} disabled={submitting} className="gap-2">
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Main Team Members Table Card */}
       <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">
         <CardHeader className="px-6 pt-5 pb-3">
           <CardTitle className="text-[15px] font-semibold text-gray-900 dark:text-gray-50">Team Members</CardTitle>
@@ -123,48 +175,6 @@ export default function AgentsPage() {
           )}
         </CardContent>
       </Card>
-
-      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Edit Team Member</DialogTitle>
-          </DialogHeader>
-          {editingUser && (
-            <div className="space-y-4 pt-2">
-              <div>
-                <Label className="text-[12px] text-gray-400 font-medium uppercase">Name</Label>
-                <p className="text-[14px] font-semibold text-gray-900 dark:text-gray-100 mt-0.5">{editingUser.name}</p>
-              </div>
-              <div>
-                <Label className="text-[12px] text-gray-400 font-medium uppercase">Email</Label>
-                <p className="text-[14px] font-medium text-gray-500 mt-0.5">{editingUser.email}</p>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-[13px]">Role</Label>
-                <Select value={role} onValueChange={(v) => v && setRole(v)}>
-                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {["Owner", "Accountant", "Agent", "Viewer"].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              {role === "Agent" && (
-                <div className="space-y-1.5">
-                  <Label className="text-[13px]">Default Commission Rate (%)</Label>
-                  <Input type="number" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 5" className="h-10 font-mono" />
-                </div>
-              )}
-              <div className="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-[#1e1e21] mt-4">
-                <Button variant="outline" onClick={() => setEditingUser(null)} disabled={submitting}>Cancel</Button>
-                <Button onClick={update} disabled={submitting} className="gap-2">
-                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Save Changes
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

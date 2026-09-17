@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Wallet, Coins, Loader2, Printer } from "lucide-react";
+import { Plus, Wallet, Coins, Loader2, Printer, X, ArrowLeft } from "lucide-react";
 
 interface Payment {
   _id: string;
@@ -98,6 +97,7 @@ export default function PaymentsPage() {
 
   // Load unpaid invoices and their current allocations for the customer
   const startAllocation = async (payment: Payment) => {
+    setShowNew(false);
     setAllocatingPayment(payment);
     setLoadingInvoices(true);
     setAllocationRows([]);
@@ -112,7 +112,6 @@ export default function PaymentsPage() {
       
       // Calculate balance for each invoice
       const rows: InvoiceAllocationRow[] = invoices.map((inv: LedgerEntry) => {
-        // Sum allocations for this invoice
         const invoiceAllocated = allocations
           .filter((a: AllocationEntry) => a.invoice_id === inv.id)
           .reduce((sum: number, a: AllocationEntry) => sum + a.allocated_amount, 0);
@@ -149,7 +148,6 @@ export default function PaymentsPage() {
     if (!allocatingPayment) return;
     setSubmittingAllocation(true);
     
-    // Filter out rows with empty or zero values
     const allocationsToSubmit = allocationRows
       .map(row => ({
         invoice_id: row.invoice_id,
@@ -197,116 +195,96 @@ export default function PaymentsPage() {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">Payments</h1>
           <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Track and record customer payments</p>
         </div>
-        <Dialog open={showNew} onOpenChange={setShowNew}>
-          <DialogTrigger className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors">
+        {!showNew && !allocatingPayment && (
+          <Button
+            onClick={() => { setShowNew(true); setAllocatingPayment(null); }}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors cursor-pointer"
+          >
             <Plus className="h-4 w-4" /> Record Payment
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="text-lg font-semibold">Record Payment</DialogTitle></DialogHeader>
-            <div className="space-y-4 pt-2">
+          </Button>
+        )}
+      </div>
+
+      {/* Inline Record Payment Form Card */}
+      {showNew && (
+        <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111113] shadow-md">
+          <CardHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+              <Wallet className="h-5 w-5 text-primary" /> Record New Payment
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setShowNew(false)} className="h-8 w-8 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="p-5">
+            <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-[13px]">Customer</Label>
+                <Label className="text-[13px] font-semibold">Customer *</Label>
                 <Select value={customerId} onValueChange={(v) => v && setCustomerId(v)}>
-                  <SelectTrigger className="h-10"><SelectValue placeholder="Select customer" /></SelectTrigger>
+                  <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder="Select customer" /></SelectTrigger>
                   <SelectContent>{customers.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label className="text-[13px]">Amount</Label><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-10 font-mono" placeholder="0" /></div>
                 <div className="space-y-1.5">
-                  <Label className="text-[13px]">Currency</Label>
+                  <Label className="text-[13px] font-semibold">Amount *</Label>
+                  <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-10 font-mono text-[13px]" placeholder="0" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[13px] font-semibold">Currency</Label>
                   <Select value={currency} onValueChange={(v) => v && setCurrency(v)}>
-                    <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
                     <SelectContent>{["PKR", "USD", "GBP", "SAR", "AED"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[13px]">Payment Method</Label>
+                <Label className="text-[13px] font-semibold">Payment Method *</Label>
                 <Select value={method} onValueChange={(v) => v && setMethod(v)}>
-                  <SelectTrigger className="h-10"><SelectValue placeholder="Select method" /></SelectTrigger>
+                  <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder="Select method" /></SelectTrigger>
                   <SelectContent>{["Cash", "Bank Transfer", "Cheque", "Online"].map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <Button onClick={create} disabled={!customerId || !amount || !method} className="w-full h-10 gap-2"><Wallet className="h-4 w-4" /> Record Payment</Button>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
+                <Button onClick={create} disabled={!customerId || !amount || !method} className="gap-2">
+                  <Wallet className="h-4 w-4" /> Record Payment
+                </Button>
+              </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </CardContent>
+        </Card>
+      )}
 
-      <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">
-        <CardHeader className="px-6 pt-5 pb-3"><CardTitle className="text-[15px] font-semibold text-gray-900 dark:text-gray-50">All Payments</CardTitle></CardHeader>
-        <CardContent className="px-6 pb-5">
-          {loading ? (
-            <div className="flex items-center justify-center py-12"><div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-gray-100 dark:border-[#1e1e21]">
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Customer</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 text-right">Amount</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Currency</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Method</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Status</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Date</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-12 text-[13px] text-gray-400">No payments yet</TableCell></TableRow>
-                  ) : payments.map((p) => (
-                    <TableRow key={p._id} className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-50/50 dark:hover:bg-[#151517]">
-                      <TableCell className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{typeof p.customer_id === "object" ? p.customer_id.name : "-"}</TableCell>
-                      <TableCell className="text-right font-mono text-[13px]">
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">{p.amount.toLocaleString()}</div>
-                        {p.allocated_amount > 0 && (
-                          <div className="text-[10px] text-gray-400 mt-0.5">
-                            Allocated: {p.allocated_amount.toLocaleString()} | Left: {p.unallocated_amount.toLocaleString()}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-[13px] text-gray-500">{p.currency}</TableCell>
-                      <TableCell className="text-[13px] text-gray-600 dark:text-gray-300">{p.payment_method}</TableCell>
-                      <TableCell><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusStyles[p.status] || ""}`}>{p.status}</span></TableCell>
-                      <TableCell className="text-[13px] text-gray-500">{new Date(p.created_at).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1.5">
-                          {p.status === "Posted" && p.unallocated_amount > 0 && (
-                            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-[12px] cursor-pointer" onClick={() => startAllocation(p)}>
-                              <Coins className="h-3 w-3" /> Allocate
-                            </Button>
-                          )}
-                          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-[12px]" onClick={() => window.open(`/dashboard/payments/${p._id}/print`, "_blank")}>
-                            <Printer className="h-3.5 w-3.5" /> Print Receipt
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+      {/* Inline Allocate Payment Card */}
+      {allocatingPayment && (
+        <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111113] shadow-md">
+          <CardHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAllocatingPayment(null)}
+                className="h-8 gap-1.5 text-xs font-semibold cursor-pointer border-slate-300 dark:border-slate-700"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back to Payments
+              </Button>
+              <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                <Coins className="h-5 w-5 text-primary" /> Allocate Payment
+              </CardTitle>
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Allocate Payment Dialog */}
-      <Dialog open={!!allocatingPayment} onOpenChange={(open) => !open && setAllocatingPayment(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Allocate Payment</DialogTitle>
-          </DialogHeader>
-          
-          {allocatingPayment && (
-            <div className="space-y-5 pt-2">
+            <Button variant="ghost" size="sm" onClick={() => setAllocatingPayment(null)} className="h-8 w-8 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="p-5">
+            <div className="space-y-5">
               <div className="p-4 rounded-xl bg-gray-50 dark:bg-[#0e0e10]/30 border border-gray-100 dark:border-[#1e1e21] grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Customer</p>
@@ -384,9 +362,68 @@ export default function PaymentsPage() {
                 </Button>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Main Payments Table Card */}
+      <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">
+        <CardHeader className="px-6 pt-5 pb-3"><CardTitle className="text-[15px] font-semibold text-gray-900 dark:text-gray-50">All Payments</CardTitle></CardHeader>
+        <CardContent className="px-6 pb-5">
+          {loading ? (
+            <div className="flex items-center justify-center py-12"><div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-100 dark:border-[#1e1e21]">
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Customer</TableHead>
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 text-right">Amount</TableHead>
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Currency</TableHead>
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Method</TableHead>
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Status</TableHead>
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Date</TableHead>
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payments.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-12 text-[13px] text-gray-400">No payments yet</TableCell></TableRow>
+                  ) : payments.map((p) => (
+                    <TableRow key={p._id} className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-50/50 dark:hover:bg-[#151517]">
+                      <TableCell className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{typeof p.customer_id === "object" ? p.customer_id.name : "-"}</TableCell>
+                      <TableCell className="text-right font-mono text-[13px]">
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">{p.amount.toLocaleString()}</div>
+                        {p.allocated_amount > 0 && (
+                          <div className="text-[10px] text-gray-400 mt-0.5">
+                            Allocated: {p.allocated_amount.toLocaleString()} | Left: {p.unallocated_amount.toLocaleString()}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-[13px] text-gray-500">{p.currency}</TableCell>
+                      <TableCell className="text-[13px] text-gray-600 dark:text-gray-300">{p.payment_method}</TableCell>
+                      <TableCell><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusStyles[p.status] || ""}`}>{p.status}</span></TableCell>
+                      <TableCell className="text-[13px] text-gray-500">{new Date(p.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1.5">
+                          {p.status === "Posted" && p.unallocated_amount > 0 && (
+                            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-[12px] cursor-pointer" onClick={() => startAllocation(p)}>
+                              <Coins className="h-3 w-3" /> Allocate
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-[12px]" onClick={() => window.open(`/dashboard/payments/${p._id}/print`, "_blank")}>
+                            <Printer className="h-3.5 w-3.5" /> Print Receipt
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
   );
 }

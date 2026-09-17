@@ -7,10 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Plus, FileText, Trash2 } from "lucide-react";
+import { Calendar, Plus, FileText, Trash2, X } from "lucide-react";
 
 interface Customer { _id: string; name: string; }
 interface Supplier { _id: string; name: string; }
@@ -132,33 +131,47 @@ export default function BookingsPage() {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">Bookings &amp; Reservations</h1>
           <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Manage flight bookings, hotel reservations, package deals, and visas</p>
         </div>
-        <Dialog open={showNew} onOpenChange={setShowNew}>
-          <DialogTrigger className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors">
+        {!showNew && (
+          <Button
+            onClick={() => setShowNew(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors cursor-pointer"
+          >
             <Plus className="h-4 w-4" /> Add Booking
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-semibold">New Booking</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
+          </Button>
+        )}
+      </div>
+
+      {/* Inline Create Booking Form Card */}
+      {showNew && (
+        <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111113] shadow-md">
+          <CardHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+              <Calendar className="h-5 w-5 text-primary" /> New Booking
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setShowNew(false)} className="h-8 w-8 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="p-5">
+            <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-[13px]">Customer</Label>
+                  <Label className="text-[13px] font-semibold">Customer *</Label>
                   <Select value={customerId} onValueChange={(v) => v && setCustomerId(v)}>
-                    <SelectTrigger className="h-10"><SelectValue placeholder="Select customer" /></SelectTrigger>
+                    <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder="Select customer" /></SelectTrigger>
                     <SelectContent>{customers.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[13px]">Supplier / Vendor</Label>
+                  <Label className="text-[13px] font-semibold">Supplier / Vendor *</Label>
                   <Select value={supplierId} onValueChange={(v) => v && setSupplierId(v)}>
-                    <SelectTrigger className="h-10"><SelectValue placeholder="Select supplier" /></SelectTrigger>
+                    <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder="Select supplier" /></SelectTrigger>
                     <SelectContent>{suppliers.map((s) => <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
@@ -166,65 +179,71 @@ export default function BookingsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-[13px]">Service Type</Label>
+                  <Label className="text-[13px] font-semibold">Service Type</Label>
                   <Select value={serviceType} onValueChange={(v) => v && setServiceType(v)}>
-                    <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
                     <SelectContent>{["Ticket", "Hotel", "Package", "Umrah", "Visa", "Other"].map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[13px]">Booking Status</Label>
+                  <Label className="text-[13px] font-semibold">Booking Status</Label>
                   <Select value={status} onValueChange={(v) => v && setStatus(v)}>
-                    <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
                     <SelectContent>{["Draft", "Confirmed", "Ticketed", "Cancelled"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[13px]">GDS PNR / Locator</Label>
-                  <Input value={pnr} onChange={(e) => setPnr(e.target.value)} placeholder="e.g. AB12CD" />
+                  <Label className="text-[13px] font-semibold">GDS PNR / Locator</Label>
+                  <Input value={pnr} onChange={(e) => setPnr(e.target.value)} placeholder="e.g. AB12CD" className="h-10 text-[13px]" />
                 </div>
               </div>
 
               {/* Pricing */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl border border-gray-100 dark:border-[#1e1e21] bg-gray-50/30 dark:bg-[#0e0e10]/30">
                 <div className="space-y-1.5">
-                  <Label className="text-[13px]">Cost Amount (Vendor Billing)</Label>
-                  <Input type="number" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0" className="h-10 font-mono" />
+                  <Label className="text-[13px] font-semibold">Cost Amount (Vendor Billing) *</Label>
+                  <Input type="number" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0" className="h-10 font-mono text-[13px]" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[13px]">Price Amount (Customer Billing)</Label>
-                  <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0" className="h-10 font-mono" />
+                  <Label className="text-[13px] font-semibold">Price Amount (Customer Billing) *</Label>
+                  <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0" className="h-10 font-mono text-[13px]" />
                 </div>
               </div>
 
               {/* Passenger list */}
               <div className="space-y-2">
-                <Label className="text-[13px] block">Passengers</Label>
+                <Label className="text-[13px] font-semibold block">Passengers</Label>
                 <div className="space-y-2">
                   {passengers.map((p, idx) => (
                     <div key={idx} className="flex gap-2 items-center">
-                      <Input value={p.name} onChange={(e) => updatePassenger(idx, "name", e.target.value)} placeholder="Passenger Name" className="h-9 flex-1" />
-                      <Input value={p.ticket_number} onChange={(e) => updatePassenger(idx, "ticket_number", e.target.value)} placeholder="Ticket #" className="h-9 w-[130px] font-mono" />
+                      <Input value={p.name} onChange={(e) => updatePassenger(idx, "name", e.target.value)} placeholder="Passenger Name" className="h-9 flex-1 text-[13px]" />
+                      <Input value={p.ticket_number || ""} onChange={(e) => updatePassenger(idx, "ticket_number", e.target.value)} placeholder="Ticket #" className="h-9 w-[130px] font-mono text-[13px]" />
                       {passengers.length > 1 && (
-                        <button onClick={() => setPassengers(passengers.filter((_, i) => i !== idx))} className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => setPassengers(passengers.filter((_, i) => i !== idx))} className="h-9 w-9 flex items-center justify-center text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
                       )}
                     </div>
                   ))}
                 </div>
-                <Button variant="outline" size="sm" onClick={addPassenger} className="gap-1 text-[12px]"><Plus className="h-3 w-3" /> Add Passenger</Button>
+                <Button type="button" variant="outline" size="sm" onClick={addPassenger} className="gap-1 text-[12px]"><Plus className="h-3 w-3" /> Add Passenger</Button>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[13px]">Itinerary / Booking Details</Label>
+                <Label className="text-[13px] font-semibold">Itinerary / Booking Details</Label>
                 <Textarea value={itinerary} onChange={(e) => setItinerary(e.target.value)} placeholder="Flight itinerary / Hotel check-in notes..." className="min-h-[80px] text-[13px]" />
               </div>
 
-              <Button onClick={create} disabled={!customerId || !supplierId || !cost || !price} className="w-full h-10 gap-2"><Calendar className="h-4 w-4" /> Save Booking</Button>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
+                <Button onClick={create} disabled={!customerId || !supplierId || !cost || !price} className="gap-2">
+                  <Calendar className="h-4 w-4" /> Save Booking
+                </Button>
+              </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </CardContent>
+        </Card>
+      )}
 
+      {/* Main Bookings Table Card */}
       <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">
         <CardHeader className="px-6 pt-5 pb-3">
           <CardTitle className="text-[15px] font-semibold text-gray-900 dark:text-gray-50">All Bookings</CardTitle>

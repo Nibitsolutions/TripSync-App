@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Receipt, ShieldCheck } from "lucide-react";
+import { Plus, Receipt, ShieldCheck, X } from "lucide-react";
 
 interface Expense {
   _id: string;
@@ -58,65 +57,122 @@ export default function ExpensesPage() {
   };
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">Expenses</h1>
           <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Track and manage business expenses</p>
         </div>
         <div className="flex items-center gap-2.5">
-          <Dialog open={showNewType} onOpenChange={setShowNewType}>
-            <DialogTrigger className="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-[#1e1e21] bg-white dark:bg-[#111113] px-4 py-2.5 text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#151517] shadow-sm transition-colors cursor-pointer">
+          {!showNewType && (
+            <Button
+              variant="outline"
+              onClick={() => { setShowNewType(true); setShowNew(false); }}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-[#1e1e21] bg-white dark:bg-[#111113] px-4 py-2.5 text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#151517] shadow-sm transition-colors cursor-pointer"
+            >
               <Plus className="h-4 w-4" /> New Expense Type
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle className="text-lg font-semibold">Add Expense Type</DialogTitle></DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div className="space-y-1.5"><Label className="text-[13px]">Type Name</Label><Input value={newTypeName} onChange={(e) => setNewTypeName(e.target.value)} placeholder="e.g. Office Refreshments" className="h-10" /></div>
-                <label className="flex items-center gap-2.5 cursor-pointer py-1">
+            </Button>
+          )}
+
+          {!showNew && (
+            <Button
+              onClick={() => { setShowNew(true); setShowNewType(false); }}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors cursor-pointer"
+            >
+              <Plus className="h-4 w-4" /> Add Expense
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Inline Add Expense Type Card */}
+      {showNewType && (
+        <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111113] shadow-md">
+          <CardHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+              <ShieldCheck className="h-5 w-5 text-primary" /> Add Expense Type
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setShowNewType(false)} className="h-8 w-8 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="p-5">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                <div className="space-y-1.5">
+                  <Label className="text-[13px] font-semibold">Type Name *</Label>
+                  <Input value={newTypeName} onChange={(e) => setNewTypeName(e.target.value)} placeholder="e.g. Office Refreshments" className="h-10 text-[13px]" />
+                </div>
+                <label className="flex items-center gap-2.5 cursor-pointer pb-2.5">
                   <input type="checkbox" checked={requiresApproval} onChange={(e) => setRequiresApproval(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
                   <span className="text-[13px] font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
                     Requires Manager Approval
                     <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
                   </span>
                 </label>
-                <Button onClick={createType} disabled={!newTypeName} className="w-full h-10 gap-2">Create Type</Button>
               </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={showNew} onOpenChange={setShowNew}>
-            <DialogTrigger className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors cursor-pointer">
-              <Plus className="h-4 w-4" /> Add Expense
-            </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="text-lg font-semibold">Add Expense</DialogTitle></DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-1.5">
-                <Label className="text-[13px]">Expense Type</Label>
-                <Select value={typeId} onValueChange={(v) => v && setTypeId(v)}>
-                  <SelectTrigger className="h-10"><SelectValue placeholder="Select type" /></SelectTrigger>
-                  <SelectContent>
-                    {types.map((t) => (
-                      <SelectItem key={t._id} value={t._id}>
-                        <span className="flex items-center gap-2">
-                          {t.name}
-                          {t.requires_approval && <ShieldCheck className="h-3 w-3 text-amber-500" />}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <Button variant="outline" onClick={() => setShowNewType(false)}>Cancel</Button>
+                <Button onClick={createType} disabled={!newTypeName} className="gap-2">
+                  Create Type
+                </Button>
               </div>
-              <div className="space-y-1.5"><Label className="text-[13px]">Amount</Label><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-10 font-mono" placeholder="0" /></div>
-              <div className="space-y-1.5"><Label className="text-[13px]">Description</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} className="h-10" placeholder="What is this expense for?" /></div>
-              <Button onClick={create} disabled={!typeId || !amount} className="w-full h-10 gap-2"><Receipt className="h-4 w-4" /> Submit Expense</Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-      </div>
+          </CardContent>
+        </Card>
+      )}
 
+      {/* Inline Add Expense Card */}
+      {showNew && (
+        <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111113] shadow-md">
+          <CardHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
+              <Receipt className="h-5 w-5 text-primary" /> Record New Expense
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setShowNew(false)} className="h-8 w-8 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="p-5">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[13px] font-semibold">Expense Type *</Label>
+                  <Select value={typeId} onValueChange={(v) => v && setTypeId(v)}>
+                    <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      {types.map((t) => (
+                        <SelectItem key={t._id} value={t._id}>
+                          <span className="flex items-center gap-2">
+                            {t.name}
+                            {t.requires_approval && <ShieldCheck className="h-3 w-3 text-amber-500" />}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[13px] font-semibold">Amount *</Label>
+                  <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-10 font-mono text-[13px]" placeholder="0" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[13px] font-semibold">Description</Label>
+                <Input value={description} onChange={(e) => setDescription(e.target.value)} className="h-10 text-[13px]" placeholder="What is this expense for?" />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
+                <Button onClick={create} disabled={!typeId || !amount} className="gap-2">
+                  <Receipt className="h-4 w-4" /> Submit Expense
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Main Expenses Table Card */}
       <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">
         <CardHeader className="px-6 pt-5 pb-3"><CardTitle className="text-[15px] font-semibold text-gray-900 dark:text-gray-50">All Expenses</CardTitle></CardHeader>
         <CardContent className="px-6 pb-5">
