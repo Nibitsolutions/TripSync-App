@@ -22,6 +22,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   });
 }
 
+function toValidObjectId(id: unknown): mongoose.Types.ObjectId | null {
+  if (!id) return null;
+  const str = String(id).trim();
+  if (str === "none" || str === "null" || str === "undefined") return null;
+  if (mongoose.Types.ObjectId.isValid(str)) {
+    return new mongoose.Types.ObjectId(str);
+  }
+  return null;
+}
+
 // PATCH /api/invoices/[id] - update Draft invoices only
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (user) => {
@@ -32,13 +42,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const body = await req.json();
     const {
-      customer_id, currency, bsp_flag, bsp_billing_period, line_items,
+      customer_id, currency, bsp_flag, bsp_billing_period, line_items, status,
       payment_mode, remarks, internal_remarks, customer_remarks, visit_type, spo_id, supplier_id,
       print_name, cost_center, adj_date, our_xo, client_xo,
     } = body;
 
     if (customer_id) {
       invoice.customer_id = await resolveOrCreateCustomer(user.tenant_id, customer_id, user.user_id);
+    }
+    if (status) {
+      invoice.status = status === "Confirmed" ? "Posted" : status;
     }
     if (currency) invoice.currency = currency;
     if (bsp_flag !== undefined) invoice.bsp_flag = bsp_flag;
@@ -48,15 +61,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (internal_remarks !== undefined) invoice.internal_remarks = internal_remarks;
     if (customer_remarks !== undefined) invoice.customer_remarks = customer_remarks;
     if (visit_type !== undefined) invoice.visit_type = visit_type;
-    if (spo_id !== undefined) invoice.spo_id = spo_id ? new mongoose.Types.ObjectId(spo_id) : null;
-    if (supplier_id !== undefined) invoice.supplier_id = supplier_id ? new mongoose.Types.ObjectId(supplier_id) : null;
+    if (spo_id !== undefined) invoice.spo_id = toValidObjectId(spo_id);
+    if (supplier_id !== undefined) invoice.supplier_id = toValidObjectId(supplier_id);
     if (print_name !== undefined) invoice.print_name = print_name;
     if (cost_center !== undefined) invoice.cost_center = cost_center;
     if (adj_date !== undefined) invoice.adj_date = adj_date ? new Date(adj_date) : null;
     if (our_xo !== undefined) invoice.our_xo = our_xo;
     if (client_xo !== undefined) invoice.client_xo = client_xo;
 
-    invoice.updated_by = new mongoose.Types.ObjectId(user.user_id);
+    invoice.updated_by = toValidObjectId(user.user_id) || invoice.updated_by;
     await invoice.save();
 
     if (Array.isArray(line_items)) {
@@ -72,7 +85,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           description: li.description || (li.pax_name ? `Ticket: ${li.ticket_number || ''} ${li.pax_name}` : "Service"),
           amount: amt,
           commission_override_rate: li.commission_override_rate ? parseFloat(String(li.commission_override_rate)) : null,
-          tax_code_id: li.tax_code_id && li.tax_code_id !== "none" ? li.tax_code_id : null,
+          tax_code_id: toValidObjectId(li.tax_code_id),
           
           // Passenger & Airline Details
           pax_name: li.pax_name || "",
@@ -146,13 +159,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           seg_percent: parseFloat(li.seg_percent) || 0,
           seg_amount: parseFloat(li.seg_amount) || 0,
           wht_c_percent: parseFloat(li.wht_c_percent) || 0,
-          wht_c_amount: parseFloat(li.wht_c_amount) || 0,
+          wht_c_amount: parseFloat(li.wht_c_amount || 0) || 0,
           auto_update: li.auto_update !== undefined ? Boolean(li.auto_update) : true,
           cancellation_charges_self: parseFloat(li.cancellation_charges_self) || 0,
           cancellation_charges_supplier: parseFloat(li.cancellation_charges_supplier) || 0,
 
           // Accounting Summary
-          supplier_id: li.supplier_id || supplier_id || null,
+          supplier_id: toValidObjectId(li.supplier_id) || toValidObjectId(supplier_id) || invoice.supplier_id,
           customer_gross: parseFloat(li.customer_gross) || 0,
           customer_net: parseFloat(li.customer_net) || (parseFloat(String(li.amount)) || 0),
           supplier_gross: parseFloat(li.supplier_gross) || 0,

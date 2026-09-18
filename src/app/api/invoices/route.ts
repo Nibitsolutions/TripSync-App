@@ -3,6 +3,17 @@ import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Invoice, InvoiceLineItem, Tenant, Customer, PaymentAllocation, CreditNote } from "@/models";
 import { logChanges } from "@/lib/audit";
 import { resolveOrCreateCustomer } from "@/lib/customer-utils";
+import mongoose from "mongoose";
+
+function toValidObjectId(id: unknown): mongoose.Types.ObjectId | null {
+  if (!id) return null;
+  const str = String(id).trim();
+  if (str === "none" || str === "null" || str === "undefined") return null;
+  if (mongoose.Types.ObjectId.isValid(str)) {
+    return new mongoose.Types.ObjectId(str);
+  }
+  return null;
+}
 
 // GET /api/invoices - List invoices with search & filters
 export async function GET(req: NextRequest) {
@@ -234,6 +245,9 @@ export async function POST(req: NextRequest) {
     const invoice_number = `${tenant.invoice_prefix}-${String(nextNum).padStart(6, "0")}`;
     const finalStatus = status === "Confirmed" ? "Posted" : status || "Draft";
 
+    const resolvedSpoId = toValidObjectId(spo_id);
+    const resolvedSupplierId = toValidObjectId(supplier_id);
+
     const invoice = await Invoice.create({
       tenant_id: user.tenant_id,
       customer_id: resolvedCustomerId,
@@ -248,8 +262,8 @@ export async function POST(req: NextRequest) {
       internal_remarks: internal_remarks || remarks || "",
       customer_remarks: customer_remarks || "",
       visit_type: visit_type || "Visitor",
-      spo_id: spo_id || null,
-      supplier_id: supplier_id || null,
+      spo_id: resolvedSpoId,
+      supplier_id: resolvedSupplierId,
       print_name: print_name || "",
       cost_center: cost_center || "",
       adj_date: adj_date ? new Date(adj_date) : null,
@@ -260,10 +274,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (finalStatus === "Posted" || finalStatus === "Confirmed") {
-      await Customer.updateOne(
-        { _id: customer_id, tenant_id: user.tenant_id },
-        { $inc: { current_balance: total_amount } }
-      );
+      try {
+        await Customer.updateOne(
+          { _id: resolvedCustomerId, tenant_id: user.tenant_id },
+          { $inc: { current_balance: total_amount } }
+        );
+      } catch (custErr) {
+        console.error("Failed to update customer balance:", custErr);
+      }
     }
 
     // Create line items
@@ -274,7 +292,7 @@ export async function POST(req: NextRequest) {
         service_type: item.service_type || "Other",
         description: item.description || (item.pax_name ? `Ticket: ${item.ticket_number || ''} ${item.pax_name}` : "Service"),
         amount: typeof item.customer_net === "number" && item.customer_net > 0 ? item.customer_net : (parseFloat(String(item.amount || 0)) || 0),
-        tax_code_id: item.tax_code_id && item.tax_code_id !== "none" ? item.tax_code_id : null,
+        tax_code_id: toValidObjectId(item.tax_code_id),
         booking_reference: item.booking_reference || null,
         commission_override_rate: item.commission_override_rate !== undefined && item.commission_override_rate !== "" && item.commission_override_rate !== null ? parseFloat(String(item.commission_override_rate)) : null,
         
@@ -356,7 +374,7 @@ export async function POST(req: NextRequest) {
         cancellation_charges_supplier: parseFloat(String(item.cancellation_charges_supplier || 0)) || 0,
 
         // Accounting Summary
-        supplier_id: item.supplier_id || supplier_id || null,
+        supplier_id: toValidObjectId(item.supplier_id) || resolvedSupplierId,
         customer_gross: parseFloat(String(item.customer_gross || 0)) || 0,
         customer_net: parseFloat(String(item.customer_net || item.amount || 0)) || 0,
         supplier_gross: parseFloat(String(item.supplier_gross || 0)) || 0,
@@ -366,12 +384,17 @@ export async function POST(req: NextRequest) {
       }))
     );
 
-    await logChanges(
-      { tenant_id: user.tenant_id, entity_type: "Invoice", entity_id: invoice._id, changed_by: user.user_id },
-      null,
-      invoice.toObject()
-    );
+    try {
+      await logChanges(
+        { tenant_id: user.tenant_id, entity_type: "Invoice", entity_id: invoice._id, changed_by: user.user_id },
+        null,
+        invoice.toObject()
+      );
+    } catch (auditErr) {
+      console.error("Audit log failed:", auditErr);
+    }
 
     return successResponse({ invoice, line_items: lineItemDocs }, 201);
   });
 }
+
