@@ -257,8 +257,8 @@ export default function InvoicesPage() {
     customer_remarks: "",
     issue_date: new Date().toISOString().split("T")[0],
     flight_segments: [
-      { city: "LHE", flight_no: "621", booking_class: "Y", dep_date: "", dep_time: "", arr_time: "" },
-      { city: "DOH", flight_no: "621", booking_class: "Y", dep_date: "", dep_time: "", arr_time: "" },
+      { city: "", flight_no: "", booking_class: "Y", dep_date: "", dep_time: "", arr_time: "" },
+      { city: "", flight_no: "", booking_class: "Y", dep_date: "", dep_time: "", arr_time: "" },
     ],
     airline_city_taxes: [
       { code: "XT", amount: "0" },
@@ -266,7 +266,7 @@ export default function InvoicesPage() {
     city_taxes: [
       { code: "City Tax", amount: "0" },
     ],
-    base_fare: "46500",
+    base_fare: "0",
     tax_rn: "0",
     tax_sp: "0",
     tax_rg: "0",
@@ -308,12 +308,12 @@ export default function InvoicesPage() {
     auto_update: true,
     cancellation_charges_self: "0",
     cancellation_charges_supplier: "0",
-    customer_gross: 38000,
-    customer_net: 38000,
-    supplier_gross: 37024,
-    supplier_net: 37024,
-    supplier_gross_wo_wht: 37024,
-    agency_margin: 976,
+    customer_gross: 0,
+    customer_net: 0,
+    supplier_gross: 0,
+    supplier_net: 0,
+    supplier_gross_wo_wht: 0,
+    agency_margin: 0,
   });
 
   const [lineItems, setLineItems] = useState<LineItemInput[]>([
