@@ -47,6 +47,7 @@ interface FlightSegment {
   flight_no: string;
   booking_class: string;
   dep_date: string;
+  arr_date?: string;
   dep_time: string;
   arr_time: string;
 }
@@ -75,6 +76,7 @@ interface LineItemInput {
   conjunction_flight_no?: string;
   conjunction_booking_class?: string;
   conjunction_dep_date?: string;
+  conjunction_arr_date?: string;
   conjunction_dep_time?: string;
   conjunction_arr_time?: string;
   gds_pnr?: string;
@@ -837,6 +839,7 @@ export default function InvoicesPage() {
       conjunction_flight_no: String(li.conjunction_flight_no || ""),
       conjunction_booking_class: String(li.conjunction_booking_class || "Y"),
       conjunction_dep_date: String(li.conjunction_dep_date || ""),
+      conjunction_arr_date: String(li.conjunction_arr_date || ""),
       conjunction_dep_time: String(li.conjunction_dep_time || ""),
       conjunction_arr_time: String(li.conjunction_arr_time || ""),
       gds_pnr: String(li.gds_pnr || ""),
@@ -1163,12 +1166,13 @@ export default function InvoicesPage() {
                 <table className="w-full text-[11px] table-auto">
                   <thead className="bg-slate-50 dark:bg-[#161618] border-b border-slate-200 dark:border-slate-800 text-slate-500 font-semibold">
                     <tr>
-                      <th className="p-1.5 text-left w-24">City</th>
-                      <th className="p-1.5 text-left w-16">Fl.No</th>
+                      <th className="p-1.5 text-left w-20">City</th>
+                      <th className="p-1.5 text-left w-14">Fl.No</th>
                       <th className="p-1.5 text-left w-10">Cl</th>
                       <th className="p-1.5 text-left w-24">Dep. Date</th>
-                      <th className="p-1.5 text-left w-16">Dep. Time</th>
-                      <th className="p-1.5 text-left w-16">Arr. Time</th>
+                      <th className="p-1.5 text-left w-20">Dep. Time</th>
+                      <th className="p-1.5 text-left w-24">Arr. Date</th>
+                      <th className="p-1.5 text-left w-20">Arr. Time</th>
                       <th className="p-1.5 text-center w-6"></th>
                     </tr>
                   </thead>
@@ -1186,7 +1190,7 @@ export default function InvoicesPage() {
                         </td>
                         <td className="p-1">
                           <Input
-                            placeholder="621"
+                            placeholder="000"
                             value={seg.flight_no}
                             onChange={(e) => updateFlightSegment(itemIdx, segIdx, "flight_no", e.target.value, isEdit)}
                             className="h-7 text-[11px] w-full bg-transparent"
@@ -1203,25 +1207,35 @@ export default function InvoicesPage() {
                         <td className="p-1">
                           <Input
                             type="date"
-                            value={seg.dep_date}
+                            value={seg.dep_date || ""}
                             onChange={(e) => updateFlightSegment(itemIdx, segIdx, "dep_date", e.target.value, isEdit)}
-                            className="h-7 text-[11px] w-full max-w-[110px] bg-transparent"
+                            className="h-7 text-[11px] w-full bg-transparent"
                           />
                         </td>
                         <td className="p-1">
                           <Input
-                            placeholder="14:30"
-                            value={seg.dep_time}
+                            type="time"
+                            step={60}
+                            value={seg.dep_time || ""}
                             onChange={(e) => updateFlightSegment(itemIdx, segIdx, "dep_time", e.target.value, isEdit)}
-                            className="h-7 text-[11px] font-mono w-full bg-transparent"
+                            className="h-7 text-[11px] font-mono w-full bg-transparent cursor-pointer"
                           />
                         </td>
                         <td className="p-1">
                           <Input
-                            placeholder="18:45"
-                            value={seg.arr_time}
+                            type="date"
+                            value={seg.arr_date || ""}
+                            onChange={(e) => updateFlightSegment(itemIdx, segIdx, "arr_date", e.target.value, isEdit)}
+                            className="h-7 text-[11px] w-full bg-transparent"
+                          />
+                        </td>
+                        <td className="p-1">
+                          <Input
+                            type="time"
+                            step={60}
+                            value={seg.arr_time || ""}
                             onChange={(e) => updateFlightSegment(itemIdx, segIdx, "arr_time", e.target.value, isEdit)}
-                            className="h-7 text-[11px] font-mono w-full bg-transparent"
+                            className="h-7 text-[11px] font-mono w-full bg-transparent cursor-pointer"
                           />
                         </td>
                         <td className="p-1 text-center">
@@ -1261,7 +1275,7 @@ export default function InvoicesPage() {
               </div>
 
               {/* Conjunction Leg Details (All Fields) */}
-              <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-2 sm:grid-cols-7 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
                 <div className="space-y-1">
                   <Label className="text-[9px] text-slate-500">6th City</Label>
                   <Input
@@ -1302,19 +1316,30 @@ export default function InvoicesPage() {
                 <div className="space-y-1">
                   <Label className="text-[9px] text-slate-500">Dep. Time</Label>
                   <Input
-                    placeholder="10:00"
+                    type="time"
+                    step={60}
                     value={item.conjunction_dep_time || ""}
                     onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_dep_time", e.target.value, isEdit)}
-                    className="h-6 text-[10px] font-mono"
+                    className="h-6 text-[10px] font-mono cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[9px] text-slate-500">Arr. Date</Label>
+                  <Input
+                    type="date"
+                    value={item.conjunction_arr_date || ""}
+                    onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_arr_date", e.target.value, isEdit)}
+                    className="h-6 text-[10px]"
                   />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[9px] text-slate-500">Arr. Time</Label>
                   <Input
-                    placeholder="14:30"
+                    type="time"
+                    step={60}
                     value={item.conjunction_arr_time || ""}
                     onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_arr_time", e.target.value, isEdit)}
-                    className="h-6 text-[10px] font-mono"
+                    className="h-6 text-[10px] font-mono cursor-pointer"
                   />
                 </div>
               </div>

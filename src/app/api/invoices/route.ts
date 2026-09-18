@@ -308,6 +308,7 @@ export async function POST(req: NextRequest) {
         conjunction_flight_no: item.conjunction_flight_no || "",
         conjunction_booking_class: item.conjunction_booking_class || "",
         conjunction_dep_date: item.conjunction_dep_date || "",
+        conjunction_arr_date: item.conjunction_arr_date || "",
         conjunction_dep_time: item.conjunction_dep_time || "",
         conjunction_arr_time: item.conjunction_arr_time || "",
         gds_pnr: item.gds_pnr || "",

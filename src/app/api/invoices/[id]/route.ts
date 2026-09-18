@@ -99,6 +99,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           conjunction_flight_no: li.conjunction_flight_no || "",
           conjunction_booking_class: li.conjunction_booking_class || "",
           conjunction_dep_date: li.conjunction_dep_date || "",
+          conjunction_arr_date: li.conjunction_arr_date || "",
           conjunction_dep_time: li.conjunction_dep_time || "",
           conjunction_arr_time: li.conjunction_arr_time || "",
           gds_pnr: li.gds_pnr || "",

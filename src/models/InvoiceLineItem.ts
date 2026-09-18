@@ -7,6 +7,7 @@ export interface IFlightSegment {
   flight_no: string;
   booking_class: string;
   dep_date: string;
+  arr_date?: string;
   dep_time: string;
   arr_time: string;
   fare_basis: string;
@@ -35,6 +36,7 @@ export interface IInvoiceLineItem extends Document {
   conjunction_flight_no: string;
   conjunction_booking_class: string;
   conjunction_dep_date: string;
+  conjunction_arr_date?: string;
   conjunction_dep_time: string;
   conjunction_arr_time: string;
   gds_pnr: string;
@@ -137,6 +139,7 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
     conjunction_flight_no: { type: String, default: "" },
     conjunction_booking_class: { type: String, default: "" },
     conjunction_dep_date: { type: String, default: "" },
+    conjunction_arr_date: { type: String, default: "" },
     conjunction_dep_time: { type: String, default: "" },
     conjunction_arr_time: { type: String, default: "" },
     gds_pnr: { type: String, default: "" },
@@ -158,6 +161,7 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
         flight_no: { type: String, default: "" },
         booking_class: { type: String, default: "" },
         dep_date: { type: String, default: "" },
+        arr_date: { type: String, default: "" },
         dep_time: { type: String, default: "" },
         arr_time: { type: String, default: "" },
         fare_basis: { type: String, default: "" },
