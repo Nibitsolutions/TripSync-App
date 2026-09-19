@@ -2348,7 +2348,7 @@ export default function InvoicesPage() {
             <div className="space-y-3.5 pt-1">
               {/* Top Invoice Header — Single Row: all fields in one line */}
               <div className="p-3 bg-slate-100/70 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-[12px] mb-4">
-                <div className="grid gap-2" style={{ gridTemplateColumns: "115px 115px 1fr 1fr 120px 105px 100px 95px 1fr 1fr" }}>
+                <div className="grid gap-2" style={{ gridTemplateColumns: "115px 115px 1fr 1fr 120px 105px 100px 95px 1fr" }}>
                   {/* Inv. Date */}
                   <div className="space-y-1">
                     <Label className="text-[11px] font-semibold">Inv. Date *</Label>
@@ -2459,16 +2459,6 @@ export default function InvoicesPage() {
                       placeholder="Internal notes..."
                       value={newInternalRemarks}
                       onChange={(e) => setNewInternalRemarks(e.target.value)}
-                      className="h-8 text-[11px] bg-white dark:bg-[#161619]"
-                    />
-                  </div>
-                  {/* Customer Remarks */}
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold">Customer Remarks</Label>
-                    <Input
-                      placeholder="Customer notes..."
-                      value={newCustomerRemarks}
-                      onChange={(e) => setNewCustomerRemarks(e.target.value)}
                       className="h-8 text-[11px] bg-white dark:bg-[#161619]"
                     />
                   </div>
@@ -2714,7 +2704,7 @@ export default function InvoicesPage() {
                 <div className="space-y-3.5 pt-1">
                   {/* Top Header Grid for Edit Modal — Single Row */}
                   <div className="p-3 bg-slate-100/70 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-[12px] mb-4">
-                    <div className="grid gap-2" style={{ gridTemplateColumns: "115px 115px 1fr 1fr 120px 105px 100px 95px 1fr 1fr" }}>
+                    <div className="grid gap-2" style={{ gridTemplateColumns: "115px 115px 1fr 1fr 120px 105px 100px 95px 1fr" }}>
                       <div className="space-y-1">
                         <Label className="text-[11px] font-semibold">Inv. Date</Label>
                         <Input
@@ -2820,15 +2810,6 @@ export default function InvoicesPage() {
                           placeholder="Internal notes..."
                           value={editInternalRemarks}
                           onChange={(e) => setEditInternalRemarks(e.target.value)}
-                          className="h-8 text-[11px] bg-white dark:bg-[#161619]"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] font-semibold">Customer Remarks</Label>
-                        <Input
-                          placeholder="Customer notes..."
-                          value={editCustomerRemarks}
-                          onChange={(e) => setEditCustomerRemarks(e.target.value)}
                           className="h-8 text-[11px] bg-white dark:bg-[#161619]"
                         />
                       </div>
