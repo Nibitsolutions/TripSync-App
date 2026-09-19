@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Invoice, Customer, ApprovalRequest, ExchangeRate, Tenant, InvoiceLineItem, Commission, User } from "@/models";
 import { logChanges } from "@/lib/audit";
+import { validateInvoiceForPosting } from "@/lib/invoiceValidation";
 
 // POST /api/invoices/[id]/post - Post a draft invoice (triggers credit-limit check)
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -10,6 +11,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const invoice = await Invoice.findOne({ _id: id, tenant_id: user.tenant_id });
     if (!invoice) return errorResponse("Invoice not found", 404);
     if (invoice.status !== "Draft") return errorResponse("Only Draft invoices can be posted");
+
+    const lineItemsForValidation = await InvoiceLineItem.find({ invoice_id: invoice._id }).lean();
+    const validationErrors = validateInvoiceForPosting({
+      inv_date: invoice.created_at ? new Date(invoice.created_at).toISOString().split("T")[0] : "valid",
+      customer_id: invoice.customer_id ? String(invoice.customer_id) : "",
+      print_name: invoice.print_name || "",
+      visit_type: (invoice as any).visit_type || "Visitor",
+      payment_mode: invoice.payment_mode || "CR",
+      line_items: lineItemsForValidation as any,
+    });
+
+    if (validationErrors.length > 0) {
+      return errorResponse(`Cannot post invoice: ${validationErrors.join(", ")}`, 400);
+    }
 
     const customer = await Customer.findOne({ _id: invoice.customer_id, tenant_id: user.tenant_id });
     if (!customer) return errorResponse("Customer not found", 404);

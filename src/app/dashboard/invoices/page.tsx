@@ -18,6 +18,7 @@ import {
   ArrowLeft, Copy, CheckCircle2, Save, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { CITY_AIRPORT_CODES, formatTicketNumber, getAirlineByTicketNumber, incrementTicketNumber } from "@/lib/iataAirlines";
+import { validateInvoiceForPosting } from "@/lib/invoiceValidation";
 
 interface Invoice {
   _id: string;
@@ -800,6 +801,22 @@ function InvoicesPageContent() {
     if (isCreating) return null;
     setIsCreating(true);
     try {
+      if ((newDocStatus || "Draft") === "Posted") {
+        const valErrors = validateInvoiceForPosting({
+          inv_date: newInvDate,
+          customer_id: newCustomerId,
+          print_name: newPrintName,
+          visit_type: newVisitType,
+          payment_mode: newPaymentMode,
+          line_items: lineItems,
+        });
+        if (valErrors.length > 0) {
+          alert(`Cannot post invoice. Please fill in all compulsory (*) fields:\n\n• ${valErrors.join("\n• ")}`);
+          setIsCreating(false);
+          return null;
+        }
+      }
+
       // Validate ticket numbers uniqueness before submitting
       for (let i = 0; i < lineItems.length; i++) {
         const t = lineItems[i].ticket_number;
@@ -859,6 +876,20 @@ function InvoicesPageContent() {
   }
 
   async function postInvoice(id: string) {
+    if (editInvoiceId === id) {
+      const valErrors = validateInvoiceForPosting({
+        inv_date: "valid",
+        customer_id: editCustomerId,
+        print_name: editPrintName,
+        visit_type: editVisitType,
+        payment_mode: editPaymentMode,
+        line_items: editLineItems,
+      });
+      if (valErrors.length > 0) {
+        alert(`Cannot post invoice. Please fill in all compulsory (*) fields:\n\n• ${valErrors.join("\n• ")}`);
+        return;
+      }
+    }
     const res = await fetch(`/api/invoices/${id}/post`, { method: "POST" });
     if (res.ok) {
       if (editInvoiceId === id) {
@@ -1013,6 +1044,22 @@ function InvoicesPageContent() {
     if (!editInvoiceId || isSavingEdit) return false;
     setIsSavingEdit(true);
     try {
+      if (editDocStatus === "Posted") {
+        const valErrors = validateInvoiceForPosting({
+          inv_date: "valid",
+          customer_id: editCustomerId,
+          print_name: editPrintName,
+          visit_type: editVisitType,
+          payment_mode: editPaymentMode,
+          line_items: editLineItems,
+        });
+        if (valErrors.length > 0) {
+          alert(`Cannot post invoice. Please fill in all compulsory (*) fields:\n\n• ${valErrors.join("\n• ")}`);
+          setIsSavingEdit(false);
+          return false;
+        }
+      }
+
       // Validate ticket numbers uniqueness before saving edits
       for (let i = 0; i < editLineItems.length; i++) {
         const t = editLineItems[i].ticket_number;

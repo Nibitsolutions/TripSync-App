@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Invoice, InvoiceLineItem } from "@/models";
 import { resolveOrCreateCustomer } from "@/lib/customer-utils";
+import { validateInvoiceForPosting } from "@/lib/invoiceValidation";
 import mongoose from "mongoose";
 
 // GET /api/invoices/[id]
@@ -46,6 +47,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       payment_mode, remarks, internal_remarks, customer_remarks, visit_type, spo_id, supplier_id,
       print_name, cost_center, adj_date, our_xo, client_xo,
     } = body;
+
+    if (status === "Posted") {
+      const validationErrors = validateInvoiceForPosting({
+        inv_date: "valid",
+        customer_id: customer_id || invoice.customer_id,
+        print_name: print_name || invoice.print_name,
+        visit_type: visit_type || (invoice as any).visit_type || "Visitor",
+        payment_mode: payment_mode || invoice.payment_mode || "CR",
+        line_items: line_items || [],
+      });
+
+      if (validationErrors.length > 0) {
+        return errorResponse(`Cannot post invoice: ${validationErrors.join(", ")}`, 400);
+      }
+    }
 
     // Duplicate Ticket Number Protection across non-voided invoices (excluding current invoice id)
     if (Array.isArray(line_items)) {

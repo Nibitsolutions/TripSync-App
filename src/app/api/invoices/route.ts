@@ -3,6 +3,7 @@ import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Invoice, InvoiceLineItem, Tenant, Customer, PaymentAllocation, CreditNote } from "@/models";
 import { logChanges } from "@/lib/audit";
 import { resolveOrCreateCustomer } from "@/lib/customer-utils";
+import { validateInvoiceForPosting } from "@/lib/invoiceValidation";
 import mongoose from "mongoose";
 
 function toValidObjectId(id: unknown): mongoose.Types.ObjectId | null {
@@ -177,6 +178,21 @@ export async function POST(req: NextRequest) {
 
     if (!customer_id || !line_items?.length) {
       return errorResponse("customer_id and line_items are required");
+    }
+
+    if (status === "Posted") {
+      const validationErrors = validateInvoiceForPosting({
+        inv_date: "valid",
+        customer_id,
+        print_name,
+        visit_type,
+        payment_mode,
+        line_items,
+      });
+
+      if (validationErrors.length > 0) {
+        return errorResponse(`Cannot post invoice: ${validationErrors.join(", ")}`, 400);
+      }
     }
 
     // Resolve or Auto-Create Customer in DB if typed custom customer name
