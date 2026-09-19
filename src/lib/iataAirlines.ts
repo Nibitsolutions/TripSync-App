@@ -94,6 +94,29 @@ export function formatTicketNumber(val: string): string {
 }
 
 /**
+ * Increment ticket number by 1 while preserving formatting
+ * e.g. "157-2127-850-017" -> "157-2127-850-018"
+ * e.g. "157" -> "158"
+ */
+export function incrementTicketNumber(ticketNo: string): string {
+  if (!ticketNo || !ticketNo.trim()) return "";
+  const clean = ticketNo.trim();
+  const digitsOnly = clean.replace(/\D/g, "");
+  if (!digitsOnly) return clean;
+
+  try {
+    const num = BigInt(digitsOnly) + BigInt(1);
+    const numStr = num.toString().padStart(digitsOnly.length, "0");
+    if (clean.includes("-")) {
+      return formatTicketNumber(numStr);
+    }
+    return numStr;
+  } catch {
+    return clean;
+  }
+}
+
+/**
  * Lookup Airline info from the ticket number's first 3 digits
  */
 export function getAirlineByTicketNumber(ticketNo: string): IATAAirlineInfo | null {

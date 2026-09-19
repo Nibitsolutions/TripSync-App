@@ -17,7 +17,7 @@ import {
   Printer, Plane, FileText, Calculator, Search, X, RotateCcw, AlertTriangle, Check, Layers,
   ArrowLeft, Copy, CheckCircle2, Save, ChevronLeft, ChevronRight
 } from "lucide-react";
-import { CITY_AIRPORT_CODES, formatTicketNumber, getAirlineByTicketNumber } from "@/lib/iataAirlines";
+import { CITY_AIRPORT_CODES, formatTicketNumber, getAirlineByTicketNumber, incrementTicketNumber } from "@/lib/iataAirlines";
 
 interface Invoice {
   _id: string;
@@ -701,8 +701,10 @@ export default function InvoicesPage() {
 
     const cloned: LineItemInput = JSON.parse(JSON.stringify(sourceItem));
     cloned.pax_name = "";
-    cloned.ticket_number = "";
-    cloned.conjunction_ticket_no = "";
+    cloned.passport_no = "";
+    cloned.passport_issue_date = "";
+    cloned.ticket_number = incrementTicketNumber(sourceItem.ticket_number || "");
+    cloned.conjunction_ticket_no = sourceItem.conjunction_ticket_no ? incrementTicketNumber(sourceItem.conjunction_ticket_no) : "";
 
     if (isEdit) {
       setEditLineItems((prev) => [...prev, cloned]);
