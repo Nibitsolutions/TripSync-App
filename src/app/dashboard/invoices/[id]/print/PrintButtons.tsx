@@ -1,10 +1,29 @@
-﻿"use client";
+"use client";
 
-export default function PrintButtons() {
+import { useEffect } from "react";
+
+interface PrintButtonsProps {
+  title?: string;
+}
+
+export default function PrintButtons({ title }: PrintButtonsProps) {
+  useEffect(() => {
+    if (title) {
+      document.title = title;
+    }
+  }, [title]);
+
+  const handlePrint = () => {
+    if (title) {
+      document.title = title;
+    }
+    window.print();
+  };
+
   return (
     <div style={{ position: "fixed", top: 16, right: 16, zIndex: 50, display: "flex", gap: 8 }} className="no-print">
       <button
-        onClick={() => window.print()}
+        onClick={handlePrint}
         style={{ padding: "8px 16px", background: "#111827", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", border: "1px solid #111827" }}
       >
         Print / Save PDF

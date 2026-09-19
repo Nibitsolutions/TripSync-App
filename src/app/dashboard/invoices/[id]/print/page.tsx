@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
+import { Metadata } from "next";
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import { Invoice, InvoiceLineItem, Tenant } from "@/models";
@@ -9,6 +10,31 @@ import PrintButtons from "./PrintButtons";
 
 interface PrintParams {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PrintParams): Promise<Metadata> {
+  const { id } = await params;
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { title: "Invoice" };
+
+  await connectDB();
+  const tenantId = (session.user as { tenant_id?: string }).tenant_id;
+  if (!tenantId) return { title: "Invoice" };
+
+  const invoice = await Invoice.findOne({ _id: id, tenant_id: tenantId })
+    .populate("customer_id", "name")
+    .lean();
+
+  if (!invoice) return { title: "Invoice" };
+
+  const customer = invoice.customer_id as { name?: string } | null;
+  const rawCustName = (invoice.print_name || customer?.name || "Customer").trim();
+  const formattedCustName = rawCustName.replace(/\s+/g, "_").replace(/[/\\?%*:|"<>]/g, "");
+  const invNum = String(invoice.invoice_number || "").trim().replace(/[/\\?%*:|"<>]/g, "");
+
+  return {
+    title: `${invNum}-${formattedCustName}`,
+  };
 }
 
 export default async function PrintInvoicePage({ params }: PrintParams) {
@@ -38,6 +64,11 @@ export default async function PrintInvoicePage({ params }: PrintParams) {
   const customer = invoice.customer_id as {
     name?: string; email?: string; phone?: string; address?: string; contact_person?: string; fax?: string;
   } | null;
+
+  const rawCustName = (invoice.print_name || customer?.name || "Customer").trim();
+  const formattedCustName = rawCustName.replace(/\s+/g, "_").replace(/[/\\?%*:|"<>]/g, "");
+  const invNum = String(invoice.invoice_number || "").trim().replace(/[/\\?%*:|"<>]/g, "");
+  const pdfTitle = `${invNum}-${formattedCustName}`;
 
   const formatDate = (d: Date | string) => {
     if (!d) return "";
@@ -183,7 +214,7 @@ export default async function PrintInvoicePage({ params }: PrintParams) {
   return (
     <div className="print-wrapper bg-white text-black min-h-screen">
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      <PrintButtons />
+      <PrintButtons title={pdfTitle} />
       <div className="page">
         {/* Top Right Print Date */}
         <div className="print-date">{formatPrintDateTime()}</div>
