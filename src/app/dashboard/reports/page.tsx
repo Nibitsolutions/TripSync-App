@@ -1,3 +1,5 @@
+"use client";
+
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

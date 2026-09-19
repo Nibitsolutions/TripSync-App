@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -165,7 +165,7 @@ interface AuditLogEntry {
   changed_at: string;
 }
 
-export default function InvoicesPage() {
+function InvoicesPageContent() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const typeFilter = searchParams.get("type");
@@ -3444,5 +3444,13 @@ export default function InvoicesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function InvoicesPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
+      <InvoicesPageContent />
+    </Suspense>
   );
 }
