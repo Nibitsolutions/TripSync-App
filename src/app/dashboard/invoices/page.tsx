@@ -254,13 +254,17 @@ function InvoicesPageContent() {
 
   const defaultType = (typeFilter && typeFilter !== "Other") ? typeFilter : "Ticket";
 
-  // Ticket Line item default matching ERP screenshot
   const createDefaultTicketItem = (taxList?: ConfiguredTaxCode[]): LineItemInput => {
-    const codes = taxList || configuredTaxCodes;
+    const codes = Array.isArray(taxList) ? taxList : Array.isArray(configuredTaxCodes) ? configuredTaxCodes : [];
     const findDefaultPct = (searchKey: string) => {
-      const found = codes.find(
-        (t) => t.active && (t.code.trim().toUpperCase() === searchKey.toUpperCase() || t.name.trim().toUpperCase().includes(searchKey.toUpperCase()))
-      );
+      if (!codes || !codes.length) return "";
+      const searchUpper = searchKey.toUpperCase();
+      const found = codes.find((t) => {
+        if (!t || !t.active) return false;
+        const codeStr = t.code ? String(t.code).trim().toUpperCase() : "";
+        const nameStr = t.name ? String(t.name).trim().toUpperCase() : "";
+        return (codeStr && codeStr === searchUpper) || (nameStr && nameStr.includes(searchUpper));
+      });
       return found && found.default_percentage !== null && found.default_percentage !== undefined
         ? String(found.default_percentage)
         : "";
@@ -2429,9 +2433,9 @@ function InvoicesPageContent() {
                         const val = e.target.value;
                         const matched = customers.find(
                           (c) =>
-                            c.name.toLowerCase() === val.trim().toLowerCase() ||
-                            (c.code && c.code.toLowerCase() === val.trim().toLowerCase()) ||
-                            c._id === val
+                            (c && c.name && String(c.name).toLowerCase() === val.trim().toLowerCase()) ||
+                            (c && c.code && String(c.code).toLowerCase() === val.trim().toLowerCase()) ||
+                            (c && c._id === val)
                         );
                         if (matched) {
                           setNewCustomerId(matched._id);
@@ -2786,9 +2790,9 @@ function InvoicesPageContent() {
                             const val = e.target.value;
                             const matched = customers.find(
                               (c) =>
-                                c.name.toLowerCase() === val.trim().toLowerCase() ||
-                                (c.code && c.code.toLowerCase() === val.trim().toLowerCase()) ||
-                                c._id === val
+                                (c && c.name && String(c.name).toLowerCase() === val.trim().toLowerCase()) ||
+                                (c && c.code && String(c.code).toLowerCase() === val.trim().toLowerCase()) ||
+                                (c && c._id === val)
                             );
                             if (matched) {
                               setEditCustomerId(matched._id);
