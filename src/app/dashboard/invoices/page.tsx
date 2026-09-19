@@ -225,98 +225,141 @@ export default function InvoicesPage() {
   const [activeTicketTab, setActiveTicketTab] = useState(0);
   const [activeEditTicketTab, setActiveEditTicketTab] = useState(0);
 
+  interface ConfiguredTaxCode {
+    _id: string;
+    name: string;
+    code: string;
+    category: string;
+    default_percentage: number | null;
+    active: boolean;
+  }
+
+  const [configuredTaxCodes, setConfiguredTaxCodes] = useState<ConfiguredTaxCode[]>([]);
+
+  const loadTaxCodes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/tax-codes");
+      const data = await res.json();
+      if (data.tax_codes) {
+        setConfiguredTaxCodes(data.tax_codes);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTaxCodes();
+  }, [loadTaxCodes]);
+
   const defaultType = (typeFilter && typeFilter !== "Other") ? typeFilter : "Ticket";
 
   // Ticket Line item default matching ERP screenshot
-  const createDefaultTicketItem = (): LineItemInput => ({
-    service_type: "Ticket",
-    description: "",
-    amount: "0",
-    commission_override_rate: "",
-    tax_code_id: "",
-    pax_name: "",
-    pax_type: "A",
-    passport_no: "",
-    passport_issue_date: "",
-    ticket_number: "",
-    conjunction_ticket_no: "",
-    conjunction_route: "",
-    conjunction_city: "",
-    conjunction_flight_no: "",
-    conjunction_booking_class: "",
-    conjunction_dep_date: "",
-    conjunction_dep_time: "",
-    conjunction_arr_time: "",
-    gds_pnr: "",
-    gds_name: "Amadeus",
-    airline_name: "",
-    airline_code: "",
-    sector: "",
-    trip_type: "International",
-    doc_type: "BSPD",
-    tour_code: "",
-    our_xo: "E",
-    customer_remarks: "",
-    issue_date: new Date().toISOString().split("T")[0],
-    flight_segments: [
-      { city: "", flight_no: "", booking_class: "Y", dep_date: "", dep_time: "", arr_time: "" },
-      { city: "", flight_no: "", booking_class: "Y", dep_date: "", dep_time: "", arr_time: "" },
-    ],
-    airline_city_taxes: [
-      { code: "XT", amount: "0" },
-    ],
-    city_taxes: [
-      { code: "City Tax", amount: "0" },
-    ],
-    base_fare: "0",
-    tax_rn: "0",
-    tax_sp: "0",
-    tax_rg: "0",
-    tax_pk: "0",
-    tax_yr: "0",
-    tax_yq: "0",
-    tax_dof: "0",
-    tax_xz: "0",
-    tax_yd: "0",
-    tax_yi: "0",
-    tax_apt: "0",
-    tax_kbr: "0",
-    tax_kbp: "0",
-    tax_pb: "0",
-    tax_city: "0",
-    tax_airline_city: "0",
-    other_taxes: "0",
-    tax_ced: "0",
-    tax_gst_dom: "0",
-    tax_ast: "0",
-    commission_percent: "0",
-    commission_amount: "0",
-    wht_percent: "24",
-    wht_amount: "0",
-    discount_percent: "0",
-    discount_amount: "0",
-    discount2_percent: "0",
-    discount2_amount: "0",
-    psf_p_percent: "0",
-    psf_p_amount: "0",
-    psf_percent: "0",
-    psf_amount: "0",
-    gst_percent: "0",
-    gst_amount: "0",
-    seg_percent: "0",
-    seg_amount: "0",
-    wht_c_percent: "0",
-    wht_c_amount: "0",
-    auto_update: true,
-    cancellation_charges_self: "0",
-    cancellation_charges_supplier: "0",
-    customer_gross: 0,
-    customer_net: 0,
-    supplier_gross: 0,
-    supplier_net: 0,
-    supplier_gross_wo_wht: 0,
-    agency_margin: 0,
-  });
+  const createDefaultTicketItem = (taxList?: ConfiguredTaxCode[]): LineItemInput => {
+    const codes = taxList || configuredTaxCodes;
+    const findDefaultPct = (searchKey: string) => {
+      const found = codes.find(
+        (t) => t.active && (t.code.trim().toUpperCase() === searchKey.toUpperCase() || t.name.trim().toUpperCase().includes(searchKey.toUpperCase()))
+      );
+      return found && found.default_percentage !== null && found.default_percentage !== undefined
+        ? String(found.default_percentage)
+        : "";
+    };
+
+    const whtDefault = findDefaultPct("WHT") || "24";
+    const psfDefault = findDefaultPct("PSF") || "0";
+    const gstDefault = findDefaultPct("SST") || findDefaultPct("GST") || "0";
+
+    return {
+      service_type: "Ticket",
+      description: "",
+      amount: "0",
+      commission_override_rate: "",
+      tax_code_id: "",
+      pax_name: "",
+      pax_type: "A",
+      passport_no: "",
+      passport_issue_date: "",
+      ticket_number: "",
+      conjunction_ticket_no: "",
+      conjunction_route: "",
+      conjunction_city: "",
+      conjunction_flight_no: "",
+      conjunction_booking_class: "",
+      conjunction_dep_date: "",
+      conjunction_dep_time: "",
+      conjunction_arr_time: "",
+      gds_pnr: "",
+      gds_name: "Amadeus",
+      airline_name: "",
+      airline_code: "",
+      sector: "",
+      trip_type: "International",
+      doc_type: "BSPD",
+      tour_code: "",
+      our_xo: "E",
+      customer_remarks: "",
+      issue_date: new Date().toISOString().split("T")[0],
+      flight_segments: [
+        { city: "", flight_no: "", booking_class: "Y", dep_date: "", dep_time: "", arr_time: "" },
+        { city: "", flight_no: "", booking_class: "Y", dep_date: "", dep_time: "", arr_time: "" },
+      ],
+      airline_city_taxes: [
+        { code: "XT", amount: "0" },
+      ],
+      city_taxes: [
+        { code: "City Tax", amount: "0" },
+      ],
+      base_fare: "0",
+      tax_rn: "0",
+      tax_sp: "0",
+      tax_rg: "0",
+      tax_pk: "0",
+      tax_yr: "0",
+      tax_yq: "0",
+      tax_dof: "0",
+      tax_xz: "0",
+      tax_yd: "0",
+      tax_yi: "0",
+      tax_apt: "0",
+      tax_kbr: "0",
+      tax_kbp: "0",
+      tax_pb: "0",
+      tax_city: "0",
+      tax_airline_city: "0",
+      other_taxes: "0",
+      tax_ced: "0",
+      tax_gst_dom: "0",
+      tax_ast: "0",
+      commission_percent: "0",
+      commission_amount: "0",
+      wht_percent: whtDefault,
+      wht_amount: "0",
+      discount_percent: "0",
+      discount_amount: "0",
+      discount2_percent: "0",
+      discount2_amount: "0",
+      psf_p_percent: "0",
+      psf_p_amount: "0",
+      psf_percent: psfDefault,
+      psf_amount: "0",
+      gst_percent: gstDefault,
+      gst_amount: "0",
+      seg_percent: "0",
+      seg_amount: "0",
+      wht_c_percent: "0",
+      wht_c_amount: "0",
+      auto_update: true,
+      cancellation_charges_self: "0",
+      cancellation_charges_supplier: "0",
+      customer_gross: 0,
+      customer_net: 0,
+      supplier_gross: 0,
+      supplier_net: 0,
+      supplier_gross_wo_wht: 0,
+      agency_margin: 0,
+    };
+  };
 
   const [lineItems, setLineItems] = useState<LineItemInput[]>([
     defaultType === "Ticket"
