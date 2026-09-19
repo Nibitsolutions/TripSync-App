@@ -749,8 +749,8 @@ export default function InvoicesPage() {
     }
   }
 
-  async function createInvoice() {
-    if (isCreating) return;
+  async function createInvoice(): Promise<string | null> {
+    if (isCreating) return null;
     setIsCreating(true);
     try {
       // Validate ticket numbers uniqueness before submitting
@@ -760,7 +760,7 @@ export default function InvoicesPage() {
           const isDup = await checkAndWarnDuplicateTicket(t.trim(), false, i);
           if (isDup) {
             setIsCreating(false);
-            return;
+            return null;
           }
         }
       }
@@ -796,13 +796,16 @@ export default function InvoicesPage() {
           openEditDialog(createdInv);
         }
         loadInvoices();
+        return createdInv?._id || null;
       } else {
         const d = await res.json();
         alert(d.error || "Failed to create invoice");
+        return null;
       }
     } catch (err) {
       console.error(err);
       alert("An unexpected error occurred while creating invoice.");
+      return null;
     } finally {
       setIsCreating(false);
     }
@@ -959,8 +962,8 @@ export default function InvoicesPage() {
     setEditLoading(false);
   }
 
-  async function saveEditInvoice() {
-    if (!editInvoiceId || isSavingEdit) return;
+  async function saveEditInvoice(): Promise<boolean> {
+    if (!editInvoiceId || isSavingEdit) return false;
     setIsSavingEdit(true);
     try {
       // Validate ticket numbers uniqueness before saving edits
@@ -970,7 +973,7 @@ export default function InvoicesPage() {
           const isDup = await checkAndWarnDuplicateTicket(t.trim(), true, i);
           if (isDup) {
             setIsSavingEdit(false);
-            return;
+            return false;
           }
         }
       }
@@ -998,13 +1001,15 @@ export default function InvoicesPage() {
           line_items: editLineItems,
         }),
       });
-      if (!res.ok) { const d = await res.json(); alert(d.error || "Failed to save"); return; }
+      if (!res.ok) { const d = await res.json(); alert(d.error || "Failed to save"); return false; }
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
       loadInvoices();
+      return true;
     } catch (err) {
       console.error(err);
       alert("Error saving invoice changes");
+      return false;
     } finally {
       setIsSavingEdit(false);
     }
@@ -2285,11 +2290,22 @@ export default function InvoicesPage() {
                 variant="outline"
                 size="sm"
                 className="h-8 text-xs gap-1.5 border-slate-300 dark:border-slate-700 bg-white dark:bg-[#161619]"
-                onClick={() => {
+                onClick={async () => {
+                  const win = window.open("", "_blank");
                   if (editInvoiceId) {
-                    window.open(`/dashboard/invoices/${editInvoiceId}/print`, "_blank");
+                    const ok = await saveEditInvoice();
+                    if (ok) {
+                      if (win) win.location.href = `/dashboard/invoices/${editInvoiceId}/print`;
+                    } else {
+                      if (win) win.close();
+                    }
                   } else {
-                    window.print();
+                    const createdId = await createInvoice();
+                    if (createdId) {
+                      if (win) win.location.href = `/dashboard/invoices/${createdId}/print`;
+                    } else {
+                      if (win) win.close();
+                    }
                   }
                 }}
               >
