@@ -7,28 +7,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Plus, Phone, Mail, BadgeDollarSign, Loader2, Landmark, X, ArrowLeft } from "lucide-react";
+import { Building2, Plus, Phone, Mail, BadgeDollarSign, Loader2, Landmark, X, ArrowLeft, Search } from "lucide-react";
 
 interface Supplier {
   _id: string;
   name: string;
   code: string;
   currency: string;
-  contact_email: string;
-  contact_phone: string;
+  contact_email?: string;
+  contact_phone?: string;
   current_balance: number;
-  created_at: string;
 }
 
 interface Booking {
   _id: string;
   booking_reference: string;
   service_type: string;
-  gds_pnr: string;
+  gds_pnr?: string;
   total_cost: number;
-  total_price: number;
-  status: string;
   created_at: string;
+  status?: string;
 }
 
 export default function SuppliersPage() {
@@ -45,6 +43,9 @@ export default function SuppliersPage() {
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [supplierBookings, setSupplierBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [ledgerSearch, setLedgerSearch] = useState("");
+  const [ledgerFromDate, setLedgerFromDate] = useState("");
+  const [ledgerToDate, setLedgerToDate] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/suppliers");
@@ -76,13 +77,18 @@ export default function SuppliersPage() {
     }
   }
 
-  async function openSupplierLedger(sup: Supplier) {
+  async function openSupplierLedger(sup: Supplier, search = ledgerSearch, from = ledgerFromDate, to = ledgerToDate) {
     setShowNew(false);
     setSelectedSupplier(sup);
     setLoadingBookings(true);
-    const res = await fetch(`/api/bookings?supplier_id=${sup._id}`);
+    const params = new URLSearchParams({ supplier_id: sup._id });
+    if (search.trim()) params.set("search", search.trim());
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+
+    const res = await fetch(`/api/reports/supplier-ledger?${params.toString()}`);
     const data = await res.json();
-    setSupplierBookings(data.bookings || []);
+    setSupplierBookings(data.entries || []);
     setLoadingBookings(false);
   }
 
@@ -183,6 +189,60 @@ export default function SuppliersPage() {
                   <p className="text-2xl font-bold font-mono text-gray-900 dark:text-gray-50 mt-1">
                     {selectedSupplier.currency} {selectedSupplier.current_balance.toLocaleString()}
                   </p>
+                </div>
+              </div>
+
+              {/* Filter Controls for Supplier Ledger */}
+              <div className="flex flex-col sm:flex-row flex-wrap items-end gap-3 p-3 rounded-lg bg-slate-50 dark:bg-[#151518] border border-slate-200 dark:border-slate-800">
+                <div className="space-y-1 flex-1 min-w-[140px]">
+                  <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Search Ref / PNR / Name</Label>
+                  <Input
+                    placeholder="e.g. PNR / Booking #"
+                    value={ledgerSearch}
+                    onChange={(e) => setLedgerSearch(e.target.value)}
+                    className="h-8 text-xs bg-white dark:bg-[#111113]"
+                  />
+                </div>
+                <div className="space-y-1 w-full sm:w-36">
+                  <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">From Date</Label>
+                  <Input
+                    type="date"
+                    value={ledgerFromDate}
+                    onChange={(e) => setLedgerFromDate(e.target.value)}
+                    className="h-8 text-xs bg-white dark:bg-[#111113]"
+                  />
+                </div>
+                <div className="space-y-1 w-full sm:w-36">
+                  <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">To Date</Label>
+                  <Input
+                    type="date"
+                    value={ledgerToDate}
+                    onChange={(e) => setLedgerToDate(e.target.value)}
+                    className="h-8 text-xs bg-white dark:bg-[#111113]"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => selectedSupplier && openSupplierLedger(selectedSupplier)}
+                    disabled={loadingBookings}
+                    className="h-8 text-xs gap-1 cursor-pointer"
+                  >
+                    <Search className="h-3.5 w-3.5" /> Filter
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setLedgerSearch("");
+                      setLedgerFromDate("");
+                      setLedgerToDate("");
+                      if (selectedSupplier) openSupplierLedger(selectedSupplier, "", "", "");
+                    }}
+                    className="h-8 text-xs bg-white dark:bg-[#111113] cursor-pointer"
+                  >
+                    Reset
+                  </Button>
                 </div>
               </div>
               

@@ -7,9 +7,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Clock, TrendingUp, TrendingDown, Loader2, Printer, FileText, UserCheck, FileSpreadsheet, BookOpen, Search, ArrowUpRight, ArrowDownRight, RotateCcw } from "lucide-react";
+import { BarChart3, Clock, TrendingUp, TrendingDown, Loader2, Printer, FileText, UserCheck, FileSpreadsheet, BookOpen, Search, ArrowUpRight, ArrowDownRight, RotateCcw, Building2 } from "lucide-react";
 
 interface Customer { _id: string; name: string; }
+interface SupplierOption { _id: string; name: string; code?: string; }
+
+interface SupplierLedgerEntry {
+  id: string;
+  type: string;
+  date: string;
+  supplier_id: string;
+  supplier_name: string;
+  supplier_code: string;
+  reference: string;
+  pnr: string;
+  debit: number;
+  credit: number;
+  running_balance: number;
+  status: string;
+}
+
+interface SupplierLedgerSummary {
+  total_debit: number;
+  total_credit: number;
+  net_balance: number;
+  entry_count: number;
+}
 
 interface CustomerLedgerEntry {
   id: string;
@@ -175,8 +198,19 @@ function ReportsPageContent() {
   const [ledgerSummary, setLedgerSummary] = useState<CustomerLedgerSummary | null>(null);
   const [loadingLedger, setLoadingLedger] = useState(false);
 
+  // Supplier Ledger tab state
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
+  const [selectedLedgerSupplierId, setSelectedLedgerSupplierId] = useState("all");
+  const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
+  const [supplierFromDate, setSupplierFromDate] = useState("");
+  const [supplierToDate, setSupplierToDate] = useState("");
+  const [supplierLedgerEntries, setSupplierLedgerEntries] = useState<SupplierLedgerEntry[]>([]);
+  const [supplierLedgerSummary, setSupplierLedgerSummary] = useState<SupplierLedgerSummary | null>(null);
+  const [loadingSupplierLedger, setLoadingSupplierLedger] = useState(false);
+
   useEffect(() => {
     fetch("/api/customers").then((r) => r.json()).then((d) => setCustomers(d.customers || []));
+    fetch("/api/suppliers").then((r) => r.json()).then((d) => setSuppliers(d.suppliers || []));
   }, []);
 
   const loadCustomerLedger = useCallback(async () => {
@@ -201,6 +235,44 @@ function ReportsPageContent() {
     setLedgerSummary(data.summary || null);
     setLoadingLedger(false);
   }, [selectedLedgerCustomerId, ledgerInvoiceNumber, ledgerFromDate, ledgerToDate]);
+
+  const loadSupplierLedger = useCallback(async () => {
+    setLoadingSupplierLedger(true);
+    const params = new URLSearchParams();
+    if (selectedLedgerSupplierId && selectedLedgerSupplierId !== "all") {
+      params.set("supplier_id", selectedLedgerSupplierId);
+    }
+    if (supplierSearchQuery.trim()) {
+      params.set("search", supplierSearchQuery.trim());
+    }
+    if (supplierFromDate) {
+      params.set("from", supplierFromDate);
+    }
+    if (supplierToDate) {
+      params.set("to", supplierToDate);
+    }
+
+    const res = await fetch(`/api/reports/supplier-ledger?${params.toString()}`);
+    const data = await res.json();
+    setSupplierLedgerEntries(data.entries || []);
+    setSupplierLedgerSummary(data.summary || null);
+    setLoadingSupplierLedger(false);
+  }, [selectedLedgerSupplierId, supplierSearchQuery, supplierFromDate, supplierToDate]);
+
+  useEffect(() => {
+    loadCustomerLedger();
+  }, [loadCustomerLedger]);
+
+  useEffect(() => {
+    loadSupplierLedger();
+  }, [loadSupplierLedger]);
+
+  const resetSupplierLedgerFilters = () => {
+    setSelectedLedgerSupplierId("all");
+    setSupplierSearchQuery("");
+    setSupplierFromDate("");
+    setSupplierToDate("");
+  };
 
   useEffect(() => {
     loadCustomerLedger();
@@ -264,8 +336,9 @@ function ReportsPageContent() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
+        <TabsList className="mb-6 flex flex-wrap gap-1">
           <TabsTrigger value="customer-ledger" className="gap-2"><BookOpen className="h-3.5 w-3.5" /> Customer Ledger</TabsTrigger>
+          <TabsTrigger value="supplier-ledger" className="gap-2"><Building2 className="h-3.5 w-3.5" /> Supplier Ledger</TabsTrigger>
           <TabsTrigger value="invoice-aging" className="gap-2"><FileSpreadsheet className="h-3.5 w-3.5" /> Invoice Wise Aging</TabsTrigger>
           <TabsTrigger value="pnl" className="gap-2"><BarChart3 className="h-3.5 w-3.5" /> Profit &amp; Loss</TabsTrigger>
           <TabsTrigger value="aging" className="gap-2"><Clock className="h-3.5 w-3.5" /> Summary Aging</TabsTrigger>
@@ -774,6 +847,177 @@ function ReportsPageContent() {
                             {e.reference}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs text-red-600 dark:text-red-400 font-medium">
+                            {e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                            {e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold text-gray-900 dark:text-gray-100">
+                            {e.running_balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Supplier Ledger Tab */}
+        <TabsContent value="supplier-ledger">
+          <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">
+            <CardHeader className="px-6 pt-5 pb-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <CardTitle className="text-[15px] font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" /> Supplier Ledger Statement
+                </CardTitle>
+                {supplierLedgerSummary && (
+                  <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2 text-[12px] bg-white dark:bg-[#161619]">
+                    <Printer className="h-3.5 w-3.5 text-purple-600" /> Print Ledger
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {/* Search & Filters Bar */}
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-end mb-6 p-4 rounded-xl bg-gray-50/70 dark:bg-[#151518]/70 border border-gray-200/80 dark:border-gray-800">
+                {/* Supplier Select Filter */}
+                <div className="space-y-1.5 w-full sm:w-60">
+                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Supplier</Label>
+                  <Select value={selectedLedgerSupplierId} onValueChange={(v) => setSelectedLedgerSupplierId(v || "all")}>
+                    <SelectTrigger className="h-9 text-[13px] bg-white dark:bg-[#111113]">
+                      <SelectValue placeholder="All Suppliers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Suppliers</SelectItem>
+                      {suppliers.map((s) => (
+                        <SelectItem key={s._id} value={s._id}>
+                          {s.name} {s.code ? `(${s.code})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Supplier Name / ID Search Filter */}
+                <div className="space-y-1.5 w-full sm:w-48">
+                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Supplier Name / ID</Label>
+                  <Input
+                    placeholder="e.g. Emirates / SUP-001"
+                    value={supplierSearchQuery}
+                    onChange={(e) => setSupplierSearchQuery(e.target.value)}
+                    className="h-9 text-[13px] bg-white dark:bg-[#111113]"
+                  />
+                </div>
+
+                {/* From Date Filter */}
+                <div className="space-y-1.5 w-full sm:w-36">
+                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">From Date</Label>
+                  <Input
+                    type="date"
+                    value={supplierFromDate}
+                    onChange={(e) => setSupplierFromDate(e.target.value)}
+                    className="h-9 text-[13px] bg-white dark:bg-[#111113]"
+                  />
+                </div>
+
+                {/* To Date Filter */}
+                <div className="space-y-1.5 w-full sm:w-36">
+                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">To Date</Label>
+                  <Input
+                    type="date"
+                    value={supplierToDate}
+                    onChange={(e) => setSupplierToDate(e.target.value)}
+                    className="h-9 text-[13px] bg-white dark:bg-[#111113]"
+                  />
+                </div>
+
+                {/* Actions Buttons */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button onClick={loadSupplierLedger} disabled={loadingSupplierLedger} className="h-9 gap-1.5 text-[13px] px-4 cursor-pointer">
+                    {loadingSupplierLedger ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    Filter Ledger
+                  </Button>
+                  <Button variant="outline" onClick={resetSupplierLedgerFilters} className="h-9 gap-1.5 text-[13px] px-3 bg-white dark:bg-[#111113] cursor-pointer">
+                    <RotateCcw className="h-3.5 w-3.5 text-gray-500" /> Reset
+                  </Button>
+                </div>
+              </div>
+
+              {/* Summary Cards */}
+              {supplierLedgerSummary && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                  <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/50">
+                    <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Total Owed (Cost)</span>
+                    <p className="text-xl font-bold font-mono text-amber-900 dark:text-amber-200 mt-1">
+                      PKR {supplierLedgerSummary.total_debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50">
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Total Paid / Settled</span>
+                    <p className="text-xl font-bold font-mono text-emerald-900 dark:text-emerald-200 mt-1">
+                      PKR {supplierLedgerSummary.total_credit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50">
+                    <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Net Payable Balance</span>
+                    <p className="text-xl font-bold font-mono text-rose-900 dark:text-rose-200 mt-1">
+                      PKR {supplierLedgerSummary.net_balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Transactions Table */}
+              {loadingSupplierLedger ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : supplierLedgerEntries.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="h-14 w-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+                    <Building2 className="h-7 w-7 text-gray-400" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-[13px] text-gray-400">No supplier ledger transactions found matching your search criteria.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
+                  <Table>
+                    <TableHeader className="bg-gray-100/80 dark:bg-[#151518]">
+                      <TableRow className="border-gray-200 dark:border-gray-800">
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Date</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Supplier Name</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Supplier Code</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Service Type</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Reference / PNR</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300 text-right">Debit (Cost)</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300 text-right">Credit (Paid)</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300 text-right">Running Balance</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {supplierLedgerEntries.map((e) => (
+                        <TableRow key={e.id} className="border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-[#151517]">
+                          <TableCell className="text-xs text-gray-600 dark:text-gray-400 font-mono">
+                            {new Date(e.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                            {e.supplier_name}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-gray-500">
+                            {e.supplier_code || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+                              {e.type}
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-bold text-gray-800 dark:text-gray-200">
+                            {e.reference} {e.pnr && e.pnr !== "—" ? `(PNR: ${e.pnr})` : ""}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-amber-700 dark:text-amber-400 font-medium">
                             {e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-medium">
