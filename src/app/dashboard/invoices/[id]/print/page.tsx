@@ -281,8 +281,8 @@ export default async function PrintInvoicePage({ params }: PrintParams) {
               <span>{agentName}</span>
             </div>
             <div className="info-row">
-              <span className="info-label">Reference:</span>
-              <span>{invoice.remarks || "—"}</span>
+              <span className="info-label">Remarks:</span>
+              <span>{invoice.customer_remarks || "—"}</span>
             </div>
           </div>
         </div>
