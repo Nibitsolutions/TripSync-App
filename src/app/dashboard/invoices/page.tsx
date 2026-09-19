@@ -503,6 +503,7 @@ export default function InvoicesPage() {
     }
 
     const grossFare = baseFare + taxes;
+    const fareBase = baseFare > 0 ? baseFare : grossFare;
     
     const updated = { ...item };
 
@@ -521,48 +522,47 @@ export default function InvoicesPage() {
         u[pctField] = pct > 0 ? (pct % 1 === 0 ? pct.toString() : pct.toFixed(2)) : "";
       } else if (lastEditedField === pctField) {
         amt = (base * pct) / 100;
-        u[amtField] = amt > 0 ? amt.toFixed(2) : "0.00";
+        u[amtField] = amt > 0 ? (amt % 1 === 0 ? amt.toString() : amt.toFixed(2)) : "0.00";
       } else {
         if (pct === 0 && amt > 0) {
           pct = base > 0 ? (amt / base) * 100 : 0;
           u[pctField] = pct > 0 ? (pct % 1 === 0 ? pct.toString() : pct.toFixed(2)) : "";
-        } else {
+        } else if (pct > 0) {
           amt = (base * pct) / 100;
-          u[amtField] = amt > 0 ? amt.toFixed(2) : "0.00";
+          u[amtField] = amt > 0 ? (amt % 1 === 0 ? amt.toString() : amt.toFixed(2)) : "0.00";
         }
       }
       return { pct, amt };
     };
 
     // 1. Commission on Base Fare (COM)
-    const { amt: commAmt } = calcPair("commission_percent", "commission_amount", baseFare);
+    const { amt: commAmt } = calcPair("commission_percent", "commission_amount", fareBase);
 
     // 2. Withholding Tax on Commission (WHT)
     const { amt: whtAmt } = calcPair("wht_percent", "wht_amount", commAmt);
 
     // 3. Discount 1 (DIS)
-    const { amt: disAmt } = calcPair("discount_percent", "discount_amount", grossFare);
+    const { amt: disAmt } = calcPair("discount_percent", "discount_amount", fareBase);
 
     // 4. Discount 2 (DIS2)
-    const { amt: dis2Amt } = calcPair("discount2_percent", "discount2_amount", grossFare);
+    const { amt: dis2Amt } = calcPair("discount2_percent", "discount2_amount", fareBase);
 
     // 5. Passenger Service Fee % (PSF/P)
-    const { amt: psfPAmt } = calcPair("psf_p_percent", "psf_p_amount", grossFare);
+    const { amt: psfPAmt } = calcPair("psf_p_percent", "psf_p_amount", fareBase);
 
-    // Passenger Service Fee Flat (PSF)
-    const psfFlat = parseFloat(updated.psf_amount || "0") || 0;
-    const psfPct = parseFloat(updated.psf_percent || "0") || 0;
-    const psfPctAmt = (grossFare * psfPct) / 100;
-    const totalPsf = psfFlat + psfPAmt + psfPctAmt;
+    // 5b. Passenger Service Fee (PSF)
+    const { amt: psfAmt } = calcPair("psf_percent", "psf_amount", fareBase);
+
+    const totalPsf = psfPAmt + psfAmt;
 
     // 6. GST on PSF/service fee (GST)
-    const { amt: gstAmt } = calcPair("gst_percent", "gst_amount", totalPsf);
+    const { amt: gstAmt } = calcPair("gst_percent", "gst_amount", totalPsf > 0 ? totalPsf : fareBase);
 
     // 7. SEG (Segment Fee)
-    const { amt: segAmt } = calcPair("seg_percent", "seg_amount", grossFare);
+    const { amt: segAmt } = calcPair("seg_percent", "seg_amount", fareBase);
 
     // 8. WHT_C (Customer Withholding Tax)
-    const { amt: whtCAmt } = calcPair("wht_c_percent", "wht_c_amount", grossFare);
+    const { amt: whtCAmt } = calcPair("wht_c_percent", "wht_c_amount", fareBase);
 
     const customerGross = grossFare + totalPsf + segAmt;
     const customerNet = customerGross - disAmt - dis2Amt + gstAmt + whtCAmt;
