@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, BookOpen, ArrowUpRight, ArrowDownRight, X, ArrowLeft, UserPlus } from "lucide-react";
+import { Plus, BookOpen, ArrowUpRight, ArrowDownRight, X, ArrowLeft, UserPlus, Search } from "lucide-react";
 
 interface Customer {
   _id: string;
@@ -28,6 +28,10 @@ export default function CustomersPage() {
   const [creditLimit, setCreditLimit] = useState("");
   const [ledgerCustomer, setLedgerCustomer] = useState<string | null>(null);
   const [ledgerData, setLedgerData] = useState<Record<string, unknown> | null>(null);
+  const [ledgerInvNo, setLedgerInvNo] = useState("");
+  const [ledgerFromDate, setLedgerFromDate] = useState("");
+  const [ledgerToDate, setLedgerToDate] = useState("");
+  const [loadingLedgerFilter, setLoadingLedgerFilter] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/customers");
@@ -46,11 +50,18 @@ export default function CustomersPage() {
     if (res.ok) { setShowNew(false); setName(""); setCode(""); setPhone(""); setEmail(""); setCreditLimit(""); load(); }
   }
 
-  async function viewLedger(id: string) {
+  async function viewLedger(id: string, invNo = ledgerInvNo, from = ledgerFromDate, to = ledgerToDate) {
     setShowNew(false);
     setLedgerCustomer(id);
-    const res = await fetch(`/api/customers/${id}/ledger`);
+    setLoadingLedgerFilter(true);
+    const params = new URLSearchParams();
+    if (invNo.trim()) params.set("invoice_number", invNo.trim());
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+
+    const res = await fetch(`/api/customers/${id}/ledger?${params.toString()}`);
     setLedgerData(await res.json());
+    setLoadingLedgerFilter(false);
   }
 
   return (
@@ -150,6 +161,60 @@ export default function CustomersPage() {
                   <div className="sm:text-right">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Current Balance</p>
                     <p className="text-2xl font-bold font-mono text-gray-900 dark:text-gray-50 mt-1">{(ledgerData.current_balance as number)?.toLocaleString()}</p>
+                  </div>
+                </div>
+
+                {/* Filter Controls for Customer Ledger */}
+                <div className="flex flex-col sm:flex-row flex-wrap items-end gap-3 p-3 rounded-lg bg-slate-50 dark:bg-[#151518] border border-slate-200 dark:border-slate-800">
+                  <div className="space-y-1 flex-1 min-w-[140px]">
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Invoice Number</Label>
+                    <Input
+                      placeholder="e.g. 158"
+                      value={ledgerInvNo}
+                      onChange={(e) => setLedgerInvNo(e.target.value)}
+                      className="h-8 text-xs bg-white dark:bg-[#111113]"
+                    />
+                  </div>
+                  <div className="space-y-1 w-full sm:w-36">
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">From Date</Label>
+                    <Input
+                      type="date"
+                      value={ledgerFromDate}
+                      onChange={(e) => setLedgerFromDate(e.target.value)}
+                      className="h-8 text-xs bg-white dark:bg-[#111113]"
+                    />
+                  </div>
+                  <div className="space-y-1 w-full sm:w-36">
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">To Date</Label>
+                    <Input
+                      type="date"
+                      value={ledgerToDate}
+                      onChange={(e) => setLedgerToDate(e.target.value)}
+                      className="h-8 text-xs bg-white dark:bg-[#111113]"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => ledgerCustomer && viewLedger(ledgerCustomer)}
+                      disabled={loadingLedgerFilter}
+                      className="h-8 text-xs gap-1 cursor-pointer"
+                    >
+                      <Search className="h-3.5 w-3.5" /> Filter
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setLedgerInvNo("");
+                        setLedgerFromDate("");
+                        setLedgerToDate("");
+                        if (ledgerCustomer) viewLedger(ledgerCustomer, "", "", "");
+                      }}
+                      className="h-8 text-xs bg-white dark:bg-[#111113] cursor-pointer"
+                    >
+                      Reset
+                    </Button>
                   </div>
                 </div>
                 <div className="overflow-x-auto">

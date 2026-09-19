@@ -1,6 +1,5 @@
-"use client";
-
-import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Clock, TrendingUp, TrendingDown, Loader2, Printer, FileText, UserCheck, FileSpreadsheet } from "lucide-react";
+import { BarChart3, Clock, TrendingUp, TrendingDown, Loader2, Printer, FileText, UserCheck, FileSpreadsheet, BookOpen, Search, ArrowUpRight, ArrowDownRight, RotateCcw } from "lucide-react";
 
 interface Customer { _id: string; name: string; }
+
+interface CustomerLedgerEntry {
+  id: string;
+  type: "invoice" | "payment" | "credit_note";
+  date: string;
+  customer_id: string;
+  customer_name: string;
+  reference: string;
+  debit: number;
+  credit: number;
+  running_balance: number;
+  status: string;
+}
+
+interface CustomerLedgerSummary {
+  total_debit: number;
+  total_credit: number;
+  net_balance: number;
+  entry_count: number;
+}
 
 interface InvoiceDetail {
   id: string;
@@ -130,7 +149,11 @@ const SERVICE_COLORS: Record<string, string> = {
   Other: "bg-gray-400",
 };
 
-export default function ReportsPage() {
+function ReportsPageContent() {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") || "customer-ledger";
+  const [activeTab, setActiveTab] = useState(initialTab);
+
   const [pnl, setPnl] = useState<PnlData | null>(null);
   const [aging, setAging] = useState<AgingEntry[]>([]);
   const [invoiceAgingData, setInvoiceAgingData] = useState<InvoiceAgingData | null>(null);
@@ -143,9 +166,52 @@ export default function ReportsPage() {
   const [loadingAging, setLoadingAging] = useState(false);
   const [loadingInvoiceAging, setLoadingInvoiceAging] = useState(false);
 
+  // Customer Ledger tab state
+  const [selectedLedgerCustomerId, setSelectedLedgerCustomerId] = useState("all");
+  const [ledgerInvoiceNumber, setLedgerInvoiceNumber] = useState("");
+  const [ledgerFromDate, setLedgerFromDate] = useState("");
+  const [ledgerToDate, setLedgerToDate] = useState("");
+  const [ledgerEntries, setLedgerEntries] = useState<CustomerLedgerEntry[]>([]);
+  const [ledgerSummary, setLedgerSummary] = useState<CustomerLedgerSummary | null>(null);
+  const [loadingLedger, setLoadingLedger] = useState(false);
+
   useEffect(() => {
     fetch("/api/customers").then((r) => r.json()).then((d) => setCustomers(d.customers || []));
   }, []);
+
+  const loadCustomerLedger = useCallback(async () => {
+    setLoadingLedger(true);
+    const params = new URLSearchParams();
+    if (selectedLedgerCustomerId && selectedLedgerCustomerId !== "all") {
+      params.set("customer_id", selectedLedgerCustomerId);
+    }
+    if (ledgerInvoiceNumber.trim()) {
+      params.set("invoice_number", ledgerInvoiceNumber.trim());
+    }
+    if (ledgerFromDate) {
+      params.set("from", ledgerFromDate);
+    }
+    if (ledgerToDate) {
+      params.set("to", ledgerToDate);
+    }
+
+    const res = await fetch(`/api/reports/customer-ledger?${params.toString()}`);
+    const data = await res.json();
+    setLedgerEntries(data.entries || []);
+    setLedgerSummary(data.summary || null);
+    setLoadingLedger(false);
+  }, [selectedLedgerCustomerId, ledgerInvoiceNumber, ledgerFromDate, ledgerToDate]);
+
+  useEffect(() => {
+    loadCustomerLedger();
+  }, [loadCustomerLedger]);
+
+  const resetLedgerFilters = () => {
+    setSelectedLedgerCustomerId("all");
+    setLedgerInvoiceNumber("");
+    setLedgerFromDate("");
+    setLedgerToDate("");
+  };
 
   async function loadPnl() {
     setLoadingPnl(true);
@@ -194,11 +260,12 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">Reports</h1>
-        <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Financial reports, invoice-wise aging statements, and analytics</p>
+        <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Financial reports, customer ledger search, invoice-wise aging statements, and analytics</p>
       </div>
 
-      <Tabs defaultValue="invoice-aging">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
+          <TabsTrigger value="customer-ledger" className="gap-2"><BookOpen className="h-3.5 w-3.5" /> Customer Ledger</TabsTrigger>
           <TabsTrigger value="invoice-aging" className="gap-2"><FileSpreadsheet className="h-3.5 w-3.5" /> Invoice Wise Aging</TabsTrigger>
           <TabsTrigger value="pnl" className="gap-2"><BarChart3 className="h-3.5 w-3.5" /> Profit &amp; Loss</TabsTrigger>
           <TabsTrigger value="aging" className="gap-2"><Clock className="h-3.5 w-3.5" /> Summary Aging</TabsTrigger>
@@ -553,6 +620,178 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
 
+        {/* Customer Ledger Tab */}
+        <TabsContent value="customer-ledger">
+          <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">
+            <CardHeader className="px-6 pt-5 pb-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <CardTitle className="text-[15px] font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-primary" /> Customer Ledger Statement
+                </CardTitle>
+                {ledgerSummary && (
+                  <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2 text-[12px] bg-white dark:bg-[#161619]">
+                    <Printer className="h-3.5 w-3.5 text-purple-600" /> Print Ledger
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {/* Search & Filters Bar */}
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-end mb-6 p-4 rounded-xl bg-gray-50/70 dark:bg-[#151518]/70 border border-gray-200/80 dark:border-gray-800">
+                {/* Customer Select Filter */}
+                <div className="space-y-1.5 w-full sm:w-60">
+                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Customer</Label>
+                  <Select value={selectedLedgerCustomerId} onValueChange={(v) => setSelectedLedgerCustomerId(v || "all")}>
+                    <SelectTrigger className="h-9 text-[13px] bg-white dark:bg-[#111113]">
+                      <SelectValue placeholder="All Customers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Customers</SelectItem>
+                      {customers.map((c) => (
+                        <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Invoice Number Search Filter */}
+                <div className="space-y-1.5 w-full sm:w-48">
+                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Invoice Number</Label>
+                  <Input
+                    placeholder="e.g. 158"
+                    value={ledgerInvoiceNumber}
+                    onChange={(e) => setLedgerInvoiceNumber(e.target.value)}
+                    className="h-9 text-[13px] bg-white dark:bg-[#111113]"
+                  />
+                </div>
+
+                {/* From Date Filter */}
+                <div className="space-y-1.5 w-full sm:w-36">
+                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">From Date</Label>
+                  <Input
+                    type="date"
+                    value={ledgerFromDate}
+                    onChange={(e) => setLedgerFromDate(e.target.value)}
+                    className="h-9 text-[13px] bg-white dark:bg-[#111113]"
+                  />
+                </div>
+
+                {/* To Date Filter */}
+                <div className="space-y-1.5 w-full sm:w-36">
+                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">To Date</Label>
+                  <Input
+                    type="date"
+                    value={ledgerToDate}
+                    onChange={(e) => setLedgerToDate(e.target.value)}
+                    className="h-9 text-[13px] bg-white dark:bg-[#111113]"
+                  />
+                </div>
+
+                {/* Actions Buttons */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button onClick={loadCustomerLedger} disabled={loadingLedger} className="h-9 gap-1.5 text-[13px] px-4 cursor-pointer">
+                    {loadingLedger ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    Filter Ledger
+                  </Button>
+                  <Button variant="outline" onClick={resetLedgerFilters} className="h-9 gap-1.5 text-[13px] px-3 bg-white dark:bg-[#111113] cursor-pointer">
+                    <RotateCcw className="h-3.5 w-3.5 text-gray-500" /> Reset
+                  </Button>
+                </div>
+              </div>
+
+              {/* Summary Cards */}
+              {ledgerSummary && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                  <div className="p-4 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50">
+                    <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Total Debit (Invoices)</span>
+                    <p className="text-xl font-bold font-mono text-blue-900 dark:text-blue-200 mt-1">
+                      PKR {ledgerSummary.total_debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50">
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Total Credit (Payments)</span>
+                    <p className="text-xl font-bold font-mono text-emerald-900 dark:text-emerald-200 mt-1">
+                      PKR {ledgerSummary.total_credit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/50">
+                    <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Net Receivable Balance</span>
+                    <p className="text-xl font-bold font-mono text-purple-900 dark:text-purple-200 mt-1">
+                      PKR {ledgerSummary.net_balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Transactions Table */}
+              {loadingLedger ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : ledgerEntries.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="h-14 w-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+                    <BookOpen className="h-7 w-7 text-gray-400" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-[13px] text-gray-400">No ledger transactions found matching your search criteria.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
+                  <Table>
+                    <TableHeader className="bg-gray-100/80 dark:bg-[#151518]">
+                      <TableRow className="border-gray-200 dark:border-gray-800">
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Date</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Customer</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Type</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Reference / Inv #</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300 text-right">Debit</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300 text-right">Credit</TableHead>
+                        <TableHead className="text-[11px] font-bold text-gray-700 dark:text-gray-300 text-right">Running Balance</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {ledgerEntries.map((e) => (
+                        <TableRow key={e.id} className="border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-[#151517]">
+                          <TableCell className="text-xs text-gray-600 dark:text-gray-400 font-mono">
+                            {new Date(e.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                            {e.customer_name}
+                          </TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${
+                              e.type === "invoice"
+                                ? "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400"
+                                : e.type === "payment"
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+                                : "bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400"
+                            }`}>
+                              {e.type === "invoice" ? <ArrowUpRight className="h-3 w-3 text-blue-600" /> : <ArrowDownRight className="h-3 w-3 text-emerald-600" />}
+                              {e.type.replace("_", " ").toUpperCase()}
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-bold text-gray-800 dark:text-gray-200">
+                            {e.reference}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-red-600 dark:text-red-400 font-medium">
+                            {e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                            {e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold text-gray-900 dark:text-gray-100">
+                            {e.running_balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="agents">
           <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">
             <CardHeader className="px-6 pt-5 pb-3">
@@ -606,5 +845,13 @@ export default function ReportsPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
+      <ReportsPageContent />
+    </Suspense>
   );
 }
