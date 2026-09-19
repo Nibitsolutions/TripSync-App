@@ -585,6 +585,37 @@ export default function InvoicesPage() {
     };
   }
 
+  const DUPLICATE_TICKET_MSG = "This ticket number has already been used and cannot be used again. To find the existing ticket, please search for it in the search box.";
+
+  async function checkAndWarnDuplicateTicket(ticketNo: string, isEdit = false, currentIndex = 0): Promise<boolean> {
+    if (!ticketNo || !ticketNo.trim()) return false;
+    const clean = ticketNo.trim();
+    const list = isEdit ? editLineItems : lineItems;
+
+    // 1. Check local duplicate within current form tabs
+    const isLocalDuplicate = list.some((item, idx) => idx !== currentIndex && item.ticket_number && item.ticket_number.trim() === clean);
+    if (isLocalDuplicate) {
+      alert(DUPLICATE_TICKET_MSG);
+      return true;
+    }
+
+    // 2. Check duplicate in database via API
+    try {
+      const excludeId = isEdit ? editInvoiceId || "" : "";
+      const res = await fetch(`/api/invoices/check-ticket?ticket_number=${encodeURIComponent(clean)}&exclude_invoice_id=${excludeId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists) {
+          alert(DUPLICATE_TICKET_MSG);
+          return true;
+        }
+      }
+    } catch (err) {
+      console.error("Ticket uniqueness check failed:", err);
+    }
+    return false;
+  }
+
   function updateTicketLineItem(index: number, field: string, value: unknown, isEdit = false) {
     const list = isEdit ? [...editLineItems] : [...lineItems];
     let item = { ...list[index], [field]: value };
@@ -597,6 +628,9 @@ export default function InvoicesPage() {
       if (detectedAirline) {
         item.airline_name = detectedAirline.name;
         item.airline_code = detectedAirline.code;
+      }
+      if (formatted && formatted.length >= 3) {
+        checkAndWarnDuplicateTicket(formatted, isEdit, index);
       }
     }
 
@@ -719,6 +753,18 @@ export default function InvoicesPage() {
     if (isCreating) return;
     setIsCreating(true);
     try {
+      // Validate ticket numbers uniqueness before submitting
+      for (let i = 0; i < lineItems.length; i++) {
+        const t = lineItems[i].ticket_number;
+        if (t && t.trim()) {
+          const isDup = await checkAndWarnDuplicateTicket(t.trim(), false, i);
+          if (isDup) {
+            setIsCreating(false);
+            return;
+          }
+        }
+      }
+
       const res = await fetch("/api/invoices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -917,6 +963,18 @@ export default function InvoicesPage() {
     if (!editInvoiceId || isSavingEdit) return;
     setIsSavingEdit(true);
     try {
+      // Validate ticket numbers uniqueness before saving edits
+      for (let i = 0; i < editLineItems.length; i++) {
+        const t = editLineItems[i].ticket_number;
+        if (t && t.trim()) {
+          const isDup = await checkAndWarnDuplicateTicket(t.trim(), true, i);
+          if (isDup) {
+            setIsSavingEdit(false);
+            return;
+          }
+        }
+      }
+
       const res = await fetch(`/api/invoices/${editInvoiceId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

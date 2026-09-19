@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
 
           if (existingInv) {
             return errorResponse(
-              `Duplicate Error: Ticket #${cleanTicket} is already invoiced under Invoice #${existingInv.invoice_number}. Cannot invoice the same ticket twice.`,
+              "This ticket number has already been used and cannot be used again. To find the existing ticket, please search for it in the search box.",
               400
             );
           }

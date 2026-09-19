@@ -47,6 +47,36 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       print_name, cost_center, adj_date, our_xo, client_xo,
     } = body;
 
+    // Duplicate Ticket Number Protection across non-voided invoices (excluding current invoice id)
+    if (Array.isArray(line_items)) {
+      for (const item of line_items) {
+        if (item.ticket_number && String(item.ticket_number).trim()) {
+          const cleanTicket = String(item.ticket_number).trim();
+          const existingLines = await InvoiceLineItem.find({
+            tenant_id: user.tenant_id,
+            ticket_number: cleanTicket,
+            invoice_id: { $ne: id },
+          }).select("invoice_id").lean();
+
+          if (existingLines.length > 0) {
+            const invIds = existingLines.map((l) => l.invoice_id);
+            const existingInv = await Invoice.findOne({
+              _id: { $in: invIds },
+              tenant_id: user.tenant_id,
+              status: { $ne: "Voided" },
+            }).lean();
+
+            if (existingInv) {
+              return errorResponse(
+                "This ticket number has already been used and cannot be used again. To find the existing ticket, please search for it in the search box.",
+                400
+              );
+            }
+          }
+        }
+      }
+    }
+
     if (customer_id) {
       invoice.customer_id = await resolveOrCreateCustomer(user.tenant_id, customer_id, user.user_id);
     }
