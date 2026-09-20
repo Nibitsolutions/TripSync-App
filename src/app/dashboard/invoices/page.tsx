@@ -18,7 +18,7 @@ import {
   ArrowLeft, Copy, CheckCircle2, Save, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { CITY_AIRPORT_CODES, formatTicketNumber, getAirlineByTicketNumber, incrementTicketNumber } from "@/lib/iataAirlines";
-import { validateInvoiceForPosting } from "@/lib/invoiceValidation";
+import { validateInvoiceForPosting, validateInvoiceForDraft } from "@/lib/invoiceValidation";
 
 interface Invoice {
   _id: string;
@@ -815,6 +815,16 @@ function InvoicesPageContent() {
           setIsCreating(false);
           return null;
         }
+      } else {
+        const draftErrors = validateInvoiceForDraft({
+          customer_id: newCustomerId,
+          line_items: lineItems,
+        });
+        if (draftErrors.length > 0) {
+          alert(`Cannot save draft invoice. Please fill in required field(s):\n\n• ${draftErrors.join("\n• ")}`);
+          setIsCreating(false);
+          return null;
+        }
       }
 
       // Validate ticket numbers uniqueness before submitting
@@ -1055,6 +1065,16 @@ function InvoicesPageContent() {
         });
         if (valErrors.length > 0) {
           alert(`Cannot post invoice. Please fill in all compulsory (*) fields:\n\n• ${valErrors.join("\n• ")}`);
+          setIsSavingEdit(false);
+          return false;
+        }
+      } else {
+        const draftErrors = validateInvoiceForDraft({
+          customer_id: editCustomerId,
+          line_items: editLineItems,
+        });
+        if (draftErrors.length > 0) {
+          alert(`Cannot save draft invoice. Please fill in required field(s):\n\n• ${draftErrors.join("\n• ")}`);
           setIsSavingEdit(false);
           return false;
         }

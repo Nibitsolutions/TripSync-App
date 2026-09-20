@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Invoice, InvoiceLineItem } from "@/models";
 import { resolveOrCreateCustomer } from "@/lib/customer-utils";
-import { validateInvoiceForPosting } from "@/lib/invoiceValidation";
+import { validateInvoiceForPosting, validateInvoiceForDraft } from "@/lib/invoiceValidation";
 import mongoose from "mongoose";
 
 // GET /api/invoices/[id]
@@ -60,6 +60,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
       if (validationErrors.length > 0) {
         return errorResponse(`Cannot post invoice: ${validationErrors.join(", ")}`, 400);
+      }
+    } else {
+      const draftErrors = validateInvoiceForDraft({
+        customer_id: customer_id || invoice.customer_id,
+        line_items: line_items || [],
+      });
+      if (draftErrors.length > 0) {
+        return errorResponse(`Cannot save draft invoice: ${draftErrors.join(", ")}`, 400);
       }
     }
 

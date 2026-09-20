@@ -3,7 +3,7 @@ import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Invoice, InvoiceLineItem, Tenant, Customer, PaymentAllocation, CreditNote } from "@/models";
 import { logChanges } from "@/lib/audit";
 import { resolveOrCreateCustomer } from "@/lib/customer-utils";
-import { validateInvoiceForPosting } from "@/lib/invoiceValidation";
+import { validateInvoiceForPosting, validateInvoiceForDraft } from "@/lib/invoiceValidation";
 import mongoose from "mongoose";
 
 function toValidObjectId(id: unknown): mongoose.Types.ObjectId | null {
@@ -192,6 +192,14 @@ export async function POST(req: NextRequest) {
 
       if (validationErrors.length > 0) {
         return errorResponse(`Cannot post invoice: ${validationErrors.join(", ")}`, 400);
+      }
+    } else {
+      const draftErrors = validateInvoiceForDraft({
+        customer_id,
+        line_items,
+      });
+      if (draftErrors.length > 0) {
+        return errorResponse(`Cannot save draft invoice: ${draftErrors.join(", ")}`, 400);
       }
     }
 

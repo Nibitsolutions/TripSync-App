@@ -20,13 +20,39 @@ export interface InvoicePostingValidationInput {
   }>;
 }
 
+export function validateInvoiceForDraft(data: InvoicePostingValidationInput): string[] {
+  const errors: string[] = [];
+
+  // 1. Customer Name validation
+  const custId = typeof data.customer_id === "object" && data.customer_id !== null ? data.customer_id._id : data.customer_id;
+  if (!custId || !String(custId).trim()) {
+    errors.push("Customer Name is missing");
+  }
+
+  // 2. Ticket Number validation
+  if (!data.line_items || data.line_items.length === 0) {
+    errors.push("Ticket Number is missing");
+  } else {
+    data.line_items.forEach((item, index) => {
+      const ticketLabel = data.line_items!.length > 1 ? `Ticket #${index + 1}` : "Ticket";
+      if (!item.service_type || item.service_type === "Ticket") {
+        if (!item.ticket_number || !String(item.ticket_number).trim()) {
+          errors.push(data.line_items!.length > 1 ? `${ticketLabel}: Ticket Number is missing` : "Ticket Number is missing");
+        }
+      }
+    });
+  }
+
+  return errors;
+}
+
 export function validateInvoiceForPosting(data: InvoicePostingValidationInput): string[] {
   const errors: string[] = [];
 
   // 1. Header Validation (fields marked with *)
   const custId = typeof data.customer_id === "object" && data.customer_id !== null ? data.customer_id._id : data.customer_id;
   if (!custId || !String(custId).trim()) {
-    errors.push("Customer is missing");
+    errors.push("Customer Name is missing");
   }
 
   if (!data.print_name || !String(data.print_name).trim()) {
