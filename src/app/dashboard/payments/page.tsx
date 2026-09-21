@@ -102,7 +102,7 @@ export default function PaymentsPage() {
     setLoadingInvoices(true);
     setAllocationRows([]);
     
-    const custId = typeof payment.customer_id === "object" ? payment.customer_id._id : payment.customer_id;
+    const custId = payment.customer_id && typeof payment.customer_id === "object" ? payment.customer_id._id : (typeof payment.customer_id === "string" ? payment.customer_id : "");
     try {
       const res = await fetch(`/api/customers/${custId}/ledger`);
       const data = await res.json();
@@ -289,7 +289,7 @@ export default function PaymentsPage() {
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Customer</p>
                   <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100 mt-0.5">
-                    {typeof allocatingPayment.customer_id === "object" ? allocatingPayment.customer_id.name : "-"}
+                    {allocatingPayment.customer_id && typeof allocatingPayment.customer_id === "object" ? allocatingPayment.customer_id.name : "-"}
                   </p>
                 </div>
                 <div>
@@ -391,7 +391,7 @@ export default function PaymentsPage() {
                     <TableRow><TableCell colSpan={7} className="text-center py-12 text-[13px] text-gray-400">No payments yet</TableCell></TableRow>
                   ) : payments.map((p) => (
                     <TableRow key={p._id} className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-50/50 dark:hover:bg-[#151517]">
-                      <TableCell className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{typeof p.customer_id === "object" ? p.customer_id.name : "-"}</TableCell>
+                      <TableCell className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{p.customer_id && typeof p.customer_id === "object" ? p.customer_id.name : "-"}</TableCell>
                       <TableCell className="text-right font-mono text-[13px]">
                         <div className="font-semibold text-gray-900 dark:text-gray-100">{p.amount.toLocaleString()}</div>
                         {p.allocated_amount > 0 && (

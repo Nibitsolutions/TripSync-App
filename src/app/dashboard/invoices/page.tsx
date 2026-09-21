@@ -944,7 +944,7 @@ function InvoicesPageContent() {
     setEditLoading(true);
     const res = await fetch(`/api/invoices/${inv._id}`);
     const data = await res.json();
-    const customerId = typeof inv.customer_id === "object" ? inv.customer_id._id : inv.customer_id;
+    const customerId = inv.customer_id && typeof inv.customer_id === "object" ? inv.customer_id._id : (typeof inv.customer_id === "string" ? inv.customer_id : "");
     setEditCustomerId(customerId);
     setEditCurrency(inv.currency);
     setEditBsp(inv.bsp_flag);
@@ -3375,9 +3375,9 @@ function InvoicesPageContent() {
                       </TableCell>
                       <TableCell className="text-[13px] text-gray-600 dark:text-gray-300">
                         <div className="font-medium text-gray-900 dark:text-gray-100">
-                          {typeof inv.customer_id === "object" ? inv.customer_id.name : "-"}
+                          {inv.customer_id && typeof inv.customer_id === "object" ? inv.customer_id.name : (inv.print_name || "-")}
                         </div>
-                        {inv.print_name && inv.print_name !== (typeof inv.customer_id === "object" ? inv.customer_id.name : "") && (
+                        {inv.print_name && inv.customer_id && typeof inv.customer_id === "object" && inv.print_name !== inv.customer_id.name && (
                           <span className="text-[11px] text-slate-400 block">{inv.print_name}</span>
                         )}
                       </TableCell>

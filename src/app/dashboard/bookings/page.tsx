@@ -275,8 +275,8 @@ export default function BookingsPage() {
                   ) : bookings.map((b) => (
                     <TableRow key={b._id} className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-50/50 dark:hover:bg-[#151517]">
                       <TableCell className="font-mono text-[13px] font-semibold text-gray-900 dark:text-gray-100">{b.booking_reference}</TableCell>
-                      <TableCell className="text-[13px] text-gray-600 dark:text-gray-300">{typeof b.customer_id === "object" ? b.customer_id.name : "-"}</TableCell>
-                      <TableCell className="text-[13px] text-gray-600 dark:text-gray-300">{typeof b.supplier_id === "object" ? b.supplier_id.name : "-"}</TableCell>
+                      <TableCell className="text-[13px] text-gray-600 dark:text-gray-300">{b.customer_id && typeof b.customer_id === "object" ? b.customer_id.name : "-"}</TableCell>
+                      <TableCell className="text-[13px] text-gray-600 dark:text-gray-300">{b.supplier_id && typeof b.supplier_id === "object" ? b.supplier_id.name : "-"}</TableCell>
                       <TableCell className="text-[13px] text-gray-500">{b.service_type}</TableCell>
                       <TableCell className="font-mono text-[12px] text-gray-500">{b.gds_pnr || "—"}</TableCell>
                       <TableCell className="text-right font-mono text-[13px] font-semibold text-emerald-600 dark:text-emerald-400">{b.total_price.toLocaleString()}</TableCell>

@@ -195,7 +195,7 @@ export default function ExpensesPage() {
                     <TableRow><TableCell colSpan={5} className="text-center py-12 text-[13px] text-gray-400">No expenses yet</TableCell></TableRow>
                   ) : expenses.map((e) => (
                     <TableRow key={e._id} className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-50/50 dark:hover:bg-[#151517]">
-                      <TableCell className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{typeof e.expense_type_id === "object" ? e.expense_type_id.name : "-"}</TableCell>
+                      <TableCell className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{e.expense_type_id && typeof e.expense_type_id === "object" ? e.expense_type_id.name : "-"}</TableCell>
                       <TableCell className="text-[13px] text-gray-500">{e.description || "-"}</TableCell>
                       <TableCell className="text-right font-mono text-[13px] font-semibold text-gray-900 dark:text-gray-100">{e.amount.toLocaleString()}</TableCell>
                       <TableCell><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusStyles[e.status] || ""}`}>{e.status === "PendingApproval" ? "Pending" : e.status}</span></TableCell>

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
-import { Customer } from "@/models";
+import { Customer, Invoice } from "@/models";
 import { logChanges } from "@/lib/audit";
 
 // GET /api/customers/[id]
@@ -101,6 +101,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (user) => {
     const { id } = await params;
+
+    // Check if customer has associated invoices
+    const invoiceCount = await Invoice.countDocuments({ customer_id: id, tenant_id: user.tenant_id });
+    if (invoiceCount > 0) {
+      return errorResponse(
+        `Cannot delete customer because ${invoiceCount} invoice(s) are linked to this customer account.`,
+        400
+      );
+    }
+
     const customer = await Customer.findOneAndDelete({ _id: id, tenant_id: user.tenant_id });
     if (!customer) return errorResponse("Customer not found", 404);
     return successResponse({ message: "Customer deleted successfully" });
