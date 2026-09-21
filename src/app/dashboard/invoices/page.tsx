@@ -243,6 +243,18 @@ function InvoicesPageContent() {
       const data = await res.json();
       if (data.tax_codes) {
         setConfiguredTaxCodes(data.tax_codes);
+        setLineItems((prev) => {
+          if (
+            prev.length === 1 &&
+            prev[0].service_type === "Ticket" &&
+            !prev[0].pax_name &&
+            !prev[0].ticket_number &&
+            (prev[0].amount === "0" || prev[0].amount === "")
+          ) {
+            return [createDefaultTicketItem(data.tax_codes)];
+          }
+          return prev;
+        });
       }
     } catch (err) {
       console.error(err);
@@ -271,9 +283,10 @@ function InvoicesPageContent() {
         : "";
     };
 
-    const whtDefault = findDefaultPct("WHT") || "24";
+    const whtDefault = findDefaultPct("WHT") || "0";
     const psfDefault = findDefaultPct("PSF") || "0";
     const gstDefault = findDefaultPct("SST") || findDefaultPct("GST") || "0";
+    const whtcDefault = findDefaultPct("WHT_C") || findDefaultPct("WHT C") || "0";
 
     return {
       service_type: "Ticket",
@@ -352,7 +365,7 @@ function InvoicesPageContent() {
       gst_amount: "0",
       seg_percent: "0",
       seg_amount: "0",
-      wht_c_percent: "0",
+      wht_c_percent: whtcDefault,
       wht_c_amount: "0",
       auto_update: true,
       cancellation_charges_self: "0",

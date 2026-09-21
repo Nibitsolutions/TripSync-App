@@ -15,8 +15,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const taxCode = await TaxCode.findOne({ _id: id, tenant_id: user.tenant_id });
     if (!taxCode) return errorResponse("Tax Code not found", 404);
 
-    if (name !== undefined) taxCode.name = name;
-    if (code !== undefined) taxCode.code = code;
+    if (name !== undefined) taxCode.name = String(name).trim();
+    if (code !== undefined) taxCode.code = String(code).trim().toUpperCase();
     if (category !== undefined) {
       const validCategories = ["Income Tax", "WHT", "Airline Tax", "Other Taxes"];
       if (!validCategories.includes(category)) {

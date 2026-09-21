@@ -58,8 +58,8 @@ export async function POST(req: NextRequest) {
 
     const taxCode = await TaxCode.create({
       tenant_id: user.tenant_id,
-      name,
-      code,
+      name: name.trim(),
+      code: code.trim().toUpperCase(),
       category,
       default_percentage: isNaN(parsePct as number) ? null : parsePct,
       active: true,
