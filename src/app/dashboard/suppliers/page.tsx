@@ -194,6 +194,29 @@ export default function SuppliersPage() {
 
               {/* Filter Controls for Supplier Ledger */}
               <div className="flex flex-col sm:flex-row flex-wrap items-end gap-3 p-3 rounded-lg bg-slate-50 dark:bg-[#151518] border border-slate-200 dark:border-slate-800">
+                <div className="space-y-1 flex-1 min-w-[180px]">
+                  <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Select Supplier</Label>
+                  <Select
+                    value={selectedSupplier._id}
+                    onValueChange={(v) => {
+                      const found = suppliers.find((s) => s._id === v);
+                      if (found) {
+                        openSupplierLedger(found, ledgerSearch, ledgerFromDate, ledgerToDate);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-xs bg-white dark:bg-[#111113]">
+                      <SelectValue placeholder="Select Supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((s) => (
+                        <SelectItem key={s._id} value={s._id}>
+                          {s.name} {s.code ? `(${s.code})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-1 flex-1 min-w-[140px]">
                   <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Search Ref / PNR / Name</Label>
                   <Input
