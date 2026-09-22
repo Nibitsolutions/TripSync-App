@@ -276,10 +276,6 @@ function ReportsPageContent() {
     setSupplierToDate("");
   };
 
-  useEffect(() => {
-    loadCustomerLedger();
-  }, [loadCustomerLedger]);
-
   const resetLedgerFilters = () => {
     setSelectedLedgerCustomerId("all");
     setLedgerInvoiceNumber("");

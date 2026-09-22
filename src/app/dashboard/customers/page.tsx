@@ -814,6 +814,28 @@ export default function CustomersPage() {
 
                 {/* Filter Controls for Customer Ledger */}
                 <div className="flex flex-col sm:flex-row flex-wrap items-end gap-3 p-3 rounded-lg bg-slate-50 dark:bg-[#151518] border border-slate-200 dark:border-slate-800">
+                  <div className="space-y-1 flex-1 min-w-[180px]">
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Select Customer</Label>
+                    <Select
+                      value={ledgerCustomer || ""}
+                      onValueChange={(v) => {
+                        if (v) {
+                          viewLedger(v, ledgerInvNo, ledgerFromDate, ledgerToDate);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs bg-white dark:bg-[#111113]">
+                        <SelectValue placeholder="Select Customer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers.map((c) => (
+                          <SelectItem key={c._id} value={c._id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-1 flex-1 min-w-[140px]">
                     <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Invoice Number</Label>
                     <Input
