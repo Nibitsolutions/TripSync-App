@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   return withAuth(async (user) => {
     const { searchParams } = new URL(req.url);
     const customerId = searchParams.get("customer_id") || "all";
+    const customerSearch = searchParams.get("customer_search") || searchParams.get("customer") || "";
     const invoiceNumberQuery = searchParams.get("invoice_number") || searchParams.get("search") || "";
     const fromDateStr = searchParams.get("from") || "";
     const toDateStr = searchParams.get("to") || "";
@@ -14,7 +15,21 @@ export async function GET(req: NextRequest) {
     // Build filter objects
     const customerFilter: Record<string, any> = { tenant_id: user.tenant_id };
     if (customerId !== "all" && customerId.trim() !== "") {
-      customerFilter._id = customerId;
+      if (customerId.match(/^[0-9a-fA-F]{24}$/)) {
+        customerFilter._id = customerId;
+      } else {
+        customerFilter.$or = [
+          { name: { $regex: customerId.trim(), $options: "i" } },
+          { code: { $regex: customerId.trim(), $options: "i" } },
+        ];
+      }
+    }
+    if (customerSearch.trim()) {
+      const q = customerSearch.trim();
+      customerFilter.$or = [
+        { name: { $regex: q, $options: "i" } },
+        { code: { $regex: q, $options: "i" } },
+      ];
     }
 
     const customers = await Customer.find(customerFilter).select("_id name code credit_limit current_balance").lean();

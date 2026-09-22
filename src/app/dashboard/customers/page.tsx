@@ -113,6 +113,7 @@ export default function CustomersPage() {
 
   // Ledger State
   const [ledgerCustomer, setLedgerCustomer] = useState<string | null>(null);
+  const [ledgerCustomerSearch, setLedgerCustomerSearch] = useState("");
   const [ledgerData, setLedgerData] = useState<Record<string, unknown> | null>(null);
   const [ledgerInvNo, setLedgerInvNo] = useState("");
   const [ledgerFromDate, setLedgerFromDate] = useState("");
@@ -306,9 +307,21 @@ export default function CustomersPage() {
     }
   }
 
-  async function viewLedger(id: string, invNo = ledgerInvNo, from = ledgerFromDate, to = ledgerToDate) {
+  async function viewLedger(id: string, invNo = ledgerInvNo, from = ledgerFromDate, to = ledgerToDate, custSearch = ledgerCustomerSearch) {
     setShowModal(false);
-    setLedgerCustomer(id);
+    let targetId = id;
+    if (custSearch.trim()) {
+      const q = custSearch.trim().toLowerCase();
+      const found = customers.find((c) => c.name.toLowerCase().includes(q) || (c.code && c.code.toLowerCase().includes(q)));
+      if (found) {
+        targetId = found._id;
+      }
+    } else {
+      const currentCust = customers.find((c) => c._id === id);
+      if (currentCust) setLedgerCustomerSearch(currentCust.name);
+    }
+
+    setLedgerCustomer(targetId);
     setLoadingLedgerFilter(true);
     const params = new URLSearchParams();
     if (invNo.trim()) params.set("invoice_number", invNo.trim());
@@ -316,7 +329,7 @@ export default function CustomersPage() {
     if (to) params.set("to", to);
 
     try {
-      const res = await fetch(`/api/customers/${id}/ledger?${params.toString()}`);
+      const res = await fetch(`/api/customers/${targetId}/ledger?${params.toString()}`);
       setLedgerData(await res.json());
     } catch (err) {
       console.error(err);
@@ -815,26 +828,13 @@ export default function CustomersPage() {
                 {/* Filter Controls for Customer Ledger */}
                 <div className="flex flex-col sm:flex-row flex-wrap items-end gap-3 p-3 rounded-lg bg-slate-50 dark:bg-[#151518] border border-slate-200 dark:border-slate-800">
                   <div className="space-y-1 flex-1 min-w-[180px]">
-                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Select Customer</Label>
-                    <Select
-                      value={ledgerCustomer || ""}
-                      onValueChange={(v) => {
-                        if (v) {
-                          viewLedger(v, ledgerInvNo, ledgerFromDate, ledgerToDate);
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="h-8 text-xs bg-white dark:bg-[#111113]">
-                        <SelectValue placeholder="Select Customer" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers.map((c) => (
-                          <SelectItem key={c._id} value={c._id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Search Customer Name / ID</Label>
+                    <Input
+                      placeholder="e.g. Customer Name or Code"
+                      value={ledgerCustomerSearch}
+                      onChange={(e) => setLedgerCustomerSearch(e.target.value)}
+                      className="h-8 text-xs bg-white dark:bg-[#111113]"
+                    />
                   </div>
                   <div className="space-y-1 flex-1 min-w-[140px]">
                     <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Invoice Number</Label>

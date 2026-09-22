@@ -193,6 +193,7 @@ function ReportsPageContent() {
 
   // Customer Ledger tab state
   const [selectedLedgerCustomerId, setSelectedLedgerCustomerId] = useState("all");
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [ledgerInvoiceNumber, setLedgerInvoiceNumber] = useState("");
   const [ledgerFromDate, setLedgerFromDate] = useState("");
   const [ledgerToDate, setLedgerToDate] = useState("");
@@ -221,6 +222,9 @@ function ReportsPageContent() {
     if (selectedLedgerCustomerId && selectedLedgerCustomerId !== "all") {
       params.set("customer_id", selectedLedgerCustomerId);
     }
+    if (customerSearchQuery.trim()) {
+      params.set("customer_search", customerSearchQuery.trim());
+    }
     if (ledgerInvoiceNumber.trim()) {
       params.set("invoice_number", ledgerInvoiceNumber.trim());
     }
@@ -236,7 +240,7 @@ function ReportsPageContent() {
     setLedgerEntries(data.entries || []);
     setLedgerSummary(data.summary || null);
     setLoadingLedger(false);
-  }, [selectedLedgerCustomerId, ledgerInvoiceNumber, ledgerFromDate, ledgerToDate]);
+  }, [selectedLedgerCustomerId, customerSearchQuery, ledgerInvoiceNumber, ledgerFromDate, ledgerToDate]);
 
   const loadSupplierLedger = useCallback(async () => {
     setLoadingSupplierLedger(true);
@@ -278,6 +282,7 @@ function ReportsPageContent() {
 
   const resetLedgerFilters = () => {
     setSelectedLedgerCustomerId("all");
+    setCustomerSearchQuery("");
     setLedgerInvoiceNumber("");
     setLedgerFromDate("");
     setLedgerToDate("");
@@ -709,20 +714,15 @@ function ReportsPageContent() {
             <CardContent className="px-6 pb-6">
               {/* Search & Filters Bar */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-end mb-6 p-4 rounded-xl bg-gray-50/70 dark:bg-[#151518]/70 border border-gray-200/80 dark:border-gray-800">
-                {/* Customer Select Filter */}
+                {/* Search Customer Field */}
                 <div className="space-y-1.5 w-full sm:w-60">
-                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Customer</Label>
-                  <Select value={selectedLedgerCustomerId} onValueChange={(v) => setSelectedLedgerCustomerId(v || "all")}>
-                    <SelectTrigger className="h-9 text-[13px] bg-white dark:bg-[#111113]">
-                      <SelectValue placeholder="All Customers" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Customers</SelectItem>
-                      {customers.map((c) => (
-                        <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Search Customer Name / ID</Label>
+                  <Input
+                    placeholder="e.g. Customer Name or Code..."
+                    value={customerSearchQuery}
+                    onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                    className="h-9 text-[13px] bg-white dark:bg-[#111113]"
+                  />
                 </div>
 
                 {/* Invoice Number Search Filter */}
@@ -881,29 +881,11 @@ function ReportsPageContent() {
             <CardContent className="px-6 pb-6">
               {/* Search & Filters Bar */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-end mb-6 p-4 rounded-xl bg-gray-50/70 dark:bg-[#151518]/70 border border-gray-200/80 dark:border-gray-800">
-                {/* Supplier Select Filter */}
+                {/* Search Supplier Field */}
                 <div className="space-y-1.5 w-full sm:w-60">
-                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Supplier</Label>
-                  <Select value={selectedLedgerSupplierId} onValueChange={(v) => setSelectedLedgerSupplierId(v || "all")}>
-                    <SelectTrigger className="h-9 text-[13px] bg-white dark:bg-[#111113]">
-                      <SelectValue placeholder="All Suppliers" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Suppliers</SelectItem>
-                      {suppliers.map((s) => (
-                        <SelectItem key={s._id} value={s._id}>
-                          {s.name} {s.code ? `(${s.code})` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Supplier Name / ID Search Filter */}
-                <div className="space-y-1.5 w-full sm:w-48">
-                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Supplier Name / ID</Label>
+                  <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Supplier Name / ID / Ref</Label>
                   <Input
-                    placeholder="e.g. Emirates / SUP-001"
+                    placeholder="Search supplier name, code, PNR..."
                     value={supplierSearchQuery}
                     onChange={(e) => setSupplierSearchQuery(e.target.value)}
                     className="h-9 text-[13px] bg-white dark:bg-[#111113]"
