@@ -1181,153 +1181,157 @@ function InvoicesPageContent() {
           </div>
 
           {/* Row 1: Pax, Pax Type, GDS, PP No, PP Issue Dt */}
-          <div className="grid grid-cols-12 gap-2">
-            <div className="col-span-12 sm:col-span-6 lg:col-span-4 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Pax *</Label>
-              <Input
-                placeholder="MR. First Name Last Name"
-                value={item.pax_name || ""}
-                onChange={(e) => updateTicketLineItem(itemIdx, "pax_name", e.target.value.toUpperCase(), isEdit)}
-                className="h-8 text-[12px] uppercase font-semibold bg-white dark:bg-[#161619]"
-              />
-            </div>
-            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Pax Type *</Label>
-              <Select value={item.pax_type || "A"} onValueChange={(v) => updateTicketLineItem(itemIdx, "pax_type", v || "A", isEdit)}>
-                <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
-                  <SelectValue>
-                    {(val) => val === "A" ? "Adult (A)" : val === "C" ? "Child (C)" : val === "I" ? "Infant (I)" : val || "Adult (A)"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A">Adult (A)</SelectItem>
-                  <SelectItem value="C">Child (C)</SelectItem>
-                  <SelectItem value="I">Infant (I)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">GDS</Label>
-              <Select value={item.gds_name || "Amadeus"} onValueChange={(v) => updateTicketLineItem(itemIdx, "gds_name", v || "Amadeus", isEdit)}>
-                <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
-                  <SelectValue>{(val) => val || "Amadeus"}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Amadeus">Amadeus</SelectItem>
-                  <SelectItem value="Sabre">Sabre</SelectItem>
-                  <SelectItem value="Galileo">Galileo</SelectItem>
-                  <SelectItem value="Worldspan">Worldspan</SelectItem>
-                  <SelectItem value="Direct">Direct Portal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP No.</Label>
-              <Input
-                placeholder="e.g. AB1234567"
-                value={item.passport_no || ""}
-                onChange={(e) => updateTicketLineItem(itemIdx, "passport_no", e.target.value.toUpperCase(), isEdit)}
-                className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
-              />
-            </div>
-            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP Issue Dt</Label>
-              <Input
-                type="date"
-                value={item.passport_issue_date || ""}
-                onChange={(e) => updateTicketLineItem(itemIdx, "passport_issue_date", e.target.value, isEdit)}
-                className="h-8 text-[12px] bg-white dark:bg-[#161619]"
-              />
+          <div className="w-full overflow-x-auto pb-1">
+            <div className="flex flex-nowrap items-end gap-2 min-w-[700px]">
+              <div className="flex-1 min-w-[180px] space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Pax *</Label>
+                <Input
+                  placeholder="MR. First Name Last Name"
+                  value={item.pax_name || ""}
+                  onChange={(e) => updateTicketLineItem(itemIdx, "pax_name", e.target.value.toUpperCase(), isEdit)}
+                  className="h-8 text-[12px] uppercase font-semibold bg-white dark:bg-[#161619]"
+                />
+              </div>
+              <div className="w-[100px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Pax Type *</Label>
+                <Select value={item.pax_type || "A"} onValueChange={(v) => updateTicketLineItem(itemIdx, "pax_type", v || "A", isEdit)}>
+                  <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
+                    <SelectValue>
+                      {(val) => val === "A" ? "Adult (A)" : val === "C" ? "Child (C)" : val === "I" ? "Infant (I)" : val || "Adult (A)"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">Adult (A)</SelectItem>
+                    <SelectItem value="C">Child (C)</SelectItem>
+                    <SelectItem value="I">Infant (I)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[100px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">GDS</Label>
+                <Select value={item.gds_name || "Amadeus"} onValueChange={(v) => updateTicketLineItem(itemIdx, "gds_name", v || "Amadeus", isEdit)}>
+                  <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
+                    <SelectValue>{(val) => val || "Amadeus"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Amadeus">Amadeus</SelectItem>
+                    <SelectItem value="Sabre">Sabre</SelectItem>
+                    <SelectItem value="Galileo">Galileo</SelectItem>
+                    <SelectItem value="Worldspan">Worldspan</SelectItem>
+                    <SelectItem value="Direct">Direct Portal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[110px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP No.</Label>
+                <Input
+                  placeholder="e.g. AB1234567"
+                  value={item.passport_no || ""}
+                  onChange={(e) => updateTicketLineItem(itemIdx, "passport_no", e.target.value.toUpperCase(), isEdit)}
+                  className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
+                />
+              </div>
+              <div className="w-[125px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP Issue Dt</Label>
+                <Input
+                  type="date"
+                  value={item.passport_issue_date || ""}
+                  onChange={(e) => updateTicketLineItem(itemIdx, "passport_issue_date", e.target.value, isEdit)}
+                  className="h-8 text-[12px] bg-white dark:bg-[#161619]"
+                />
+              </div>
             </div>
           </div>
 
           {/* Row 2: All 7 Ticketing Fields in Single Row */}
-          <div className="grid grid-cols-12 gap-2">
-            <div className="col-span-12 sm:col-span-4 lg:col-span-3 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Ticket No. (3-4-3-3) *</Label>
-              <Input
-                placeholder="000-0000-000-000"
-                value={item.ticket_number || ""}
-                onChange={(e) => updateTicketLineItem(itemIdx, "ticket_number", e.target.value, isEdit)}
-                className="h-8 text-[12px] font-mono font-bold tracking-tight bg-white dark:bg-[#161619]"
-              />
-            </div>
-            <div className="col-span-6 sm:col-span-2 lg:col-span-1 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PNR</Label>
-              <Input
-                placeholder="e.g. ABC123"
-                value={item.gds_pnr || ""}
-                onChange={(e) => updateTicketLineItem(itemIdx, "gds_pnr", e.target.value.toUpperCase(), isEdit)}
-                className="h-8 text-[12px] font-mono uppercase font-bold text-blue-600 bg-white dark:bg-[#161619]"
-              />
-            </div>
-            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Airline *</Label>
-              <Input
-                placeholder="Auto-detected or QATAR"
-                value={item.airline_name || ""}
-                onChange={(e) => updateTicketLineItem(itemIdx, "airline_name", e.target.value.toUpperCase(), isEdit)}
-                className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
-              />
-            </div>
-            <div className="col-span-6 sm:col-span-3 lg:col-span-2 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Supplier / BSP *</Label>
-              <Select
-                value={item.supplier_id || (isEdit ? editSupplierId : newSupplierId) || ""}
-                onValueChange={(v) => {
-                  const val = v || "";
-                  updateTicketLineItem(itemIdx, "supplier_id", val, isEdit);
-                  if (isEdit) setEditSupplierId(val);
-                  else setNewSupplierId(val);
-                }}
-              >
-                <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
-                  <SelectValue placeholder="BSP / Airline">
-                    {(val) => getSupplierName(val)}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s._id} value={s._id}>
-                      {s.name} {s.code ? `(${s.code})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-6 sm:col-span-4 lg:col-span-2 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Sector *</Label>
-              <Input
-                placeholder="ORG / ORG-DST"
-                value={item.sector || ""}
-                onChange={(e) => updateTicketLineItem(itemIdx, "sector", e.target.value.toUpperCase(), isEdit)}
-                className="h-8 text-[12px] uppercase font-mono bg-white dark:bg-[#161619]"
-              />
-            </div>
-            <div className="col-span-3 sm:col-span-2 lg:col-span-1 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Doc *</Label>
-              <Select value={item.doc_type || "BSPD"} onValueChange={(v) => updateTicketLineItem(itemIdx, "doc_type", v || "BSPD", isEdit)}>
-                <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619] px-2 text-[11px]">
-                  <SelectValue>{(val) => val || "BSPD"}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BSPD">BSPD</SelectItem>
-                  <SelectItem value="E-Ticket">E-Ticket</SelectItem>
-                  <SelectItem value="MCO">MCO</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-3 sm:col-span-2 lg:col-span-1 space-y-1">
-              <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Type *</Label>
-              <Select value={item.trip_type || "International"} onValueChange={(v) => updateTicketLineItem(itemIdx, "trip_type", v || "International", isEdit)}>
-                <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619] px-2 text-[11px]">
-                  <SelectValue>{(val) => val === "International" ? "I (Int)" : "D (Dom)"}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="International">International (I)</SelectItem>
-                  <SelectItem value="Domestic">Domestic (D)</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="w-full overflow-x-auto pb-1">
+            <div className="flex flex-nowrap items-end gap-2 min-w-[850px]">
+              <div className="w-[170px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Ticket No. (3-4-3-3) *</Label>
+                <Input
+                  placeholder="000-0000-000-000"
+                  value={item.ticket_number || ""}
+                  onChange={(e) => updateTicketLineItem(itemIdx, "ticket_number", e.target.value, isEdit)}
+                  className="h-8 text-[12px] font-mono font-bold tracking-tight bg-white dark:bg-[#161619]"
+                />
+              </div>
+              <div className="w-[85px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PNR</Label>
+                <Input
+                  placeholder="e.g. ABC123"
+                  value={item.gds_pnr || ""}
+                  onChange={(e) => updateTicketLineItem(itemIdx, "gds_pnr", e.target.value.toUpperCase(), isEdit)}
+                  className="h-8 text-[12px] font-mono uppercase font-bold text-blue-600 bg-white dark:bg-[#161619]"
+                />
+              </div>
+              <div className="w-[130px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Airline *</Label>
+                <Input
+                  placeholder="Auto-detected or QATAR"
+                  value={item.airline_name || ""}
+                  onChange={(e) => updateTicketLineItem(itemIdx, "airline_name", e.target.value.toUpperCase(), isEdit)}
+                  className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
+                />
+              </div>
+              <div className="w-[150px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Supplier / BSP *</Label>
+                <Select
+                  value={item.supplier_id || (isEdit ? editSupplierId : newSupplierId) || ""}
+                  onValueChange={(v) => {
+                    const val = v || "";
+                    updateTicketLineItem(itemIdx, "supplier_id", val, isEdit);
+                    if (isEdit) setEditSupplierId(val);
+                    else setNewSupplierId(val);
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
+                    <SelectValue placeholder="BSP / Airline">
+                      {(val) => getSupplierName(val)}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s._id} value={s._id}>
+                        {s.name} {s.code ? `(${s.code})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[120px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Sector *</Label>
+                <Input
+                  placeholder="ORG / ORG-DST"
+                  value={item.sector || ""}
+                  onChange={(e) => updateTicketLineItem(itemIdx, "sector", e.target.value.toUpperCase(), isEdit)}
+                  className="h-8 text-[12px] uppercase font-mono bg-white dark:bg-[#161619]"
+                />
+              </div>
+              <div className="w-[90px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Doc *</Label>
+                <Select value={item.doc_type || "BSPD"} onValueChange={(v) => updateTicketLineItem(itemIdx, "doc_type", v || "BSPD", isEdit)}>
+                  <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619] px-2 text-[11px]">
+                    <SelectValue>{(val) => val || "BSPD"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BSPD">BSPD</SelectItem>
+                    <SelectItem value="E-Ticket">E-Ticket</SelectItem>
+                    <SelectItem value="MCO">MCO</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[90px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Type *</Label>
+                <Select value={item.trip_type || "International"} onValueChange={(v) => updateTicketLineItem(itemIdx, "trip_type", v || "International", isEdit)}>
+                  <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619] px-2 text-[11px]">
+                    <SelectValue>{(val) => val === "International" ? "I (Int)" : "D (Dom)"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="International">International (I)</SelectItem>
+                    <SelectItem value="Domestic">Domestic (D)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </div>
@@ -1354,18 +1358,18 @@ function InvoicesPageContent() {
                   <Plus className="h-2.5 w-2.5" /> Add Leg
                 </Button>
               </div>
-              <div className="w-full">
-                <table className="w-full text-[11px] table-auto">
+              <div className="w-full overflow-x-auto">
+                <table className="w-full min-w-[650px] text-[11px] table-fixed">
                   <thead className="bg-slate-50 dark:bg-[#161618] border-b border-slate-200 dark:border-slate-800 text-slate-500 font-semibold">
                     <tr>
-                      <th className="p-1.5 text-left w-20">City</th>
-                      <th className="p-1.5 text-left w-14">Fl.No</th>
-                      <th className="p-1.5 text-left w-10">Cl</th>
-                      <th className="p-1.5 text-left w-24">Dep. Date</th>
-                      <th className="p-1.5 text-left w-20">Dep. Time</th>
-                      <th className="p-1.5 text-left w-24">Arr. Date</th>
-                      <th className="p-1.5 text-left w-20">Arr. Time</th>
-                      <th className="p-1.5 text-center w-6"></th>
+                      <th className="p-1.5 text-left w-[75px]">City</th>
+                      <th className="p-1.5 text-left w-[70px]">Fl.No</th>
+                      <th className="p-1.5 text-left w-[45px]">Cl</th>
+                      <th className="p-1.5 text-left w-[125px]">Dep. Date</th>
+                      <th className="p-1.5 text-left w-[90px]">Dep. Time</th>
+                      <th className="p-1.5 text-left w-[125px]">Arr. Date</th>
+                      <th className="p-1.5 text-left w-[90px]">Arr. Time</th>
+                      <th className="p-1.5 text-center w-[30px]"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1467,72 +1471,74 @@ function InvoicesPageContent() {
               </div>
 
               {/* Conjunction Leg Details (All Fields) */}
-              <div className="grid grid-cols-2 sm:grid-cols-7 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
-                <div className="space-y-1">
-                  <Label className="text-[9px] text-slate-500">6th City</Label>
-                  <Input
-                    placeholder="XXX"
-                    list="city-airport-options"
-                    value={item.conjunction_city || ""}
-                    onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_city", e.target.value.toUpperCase(), isEdit)}
-                    className="h-6 text-[10px] uppercase font-mono"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[9px] text-slate-500">Fl.No</Label>
-                  <Input
-                    placeholder="000"
-                    value={item.conjunction_flight_no || ""}
-                    onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_flight_no", e.target.value, isEdit)}
-                    className="h-6 text-[10px]"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[9px] text-slate-500">Cl</Label>
-                  <Input
-                    placeholder="Y"
-                    value={item.conjunction_booking_class || ""}
-                    onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_booking_class", e.target.value.toUpperCase(), isEdit)}
-                    className="h-6 text-[10px] font-mono uppercase text-center"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[9px] text-slate-500">Dep. Date</Label>
-                  <Input
-                    type="date"
-                    value={item.conjunction_dep_date || ""}
-                    onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_dep_date", e.target.value, isEdit)}
-                    className="h-6 text-[10px]"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[9px] text-slate-500">Dep. Time</Label>
-                  <Input
-                    type="time"
-                    step={60}
-                    value={item.conjunction_dep_time || ""}
-                    onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_dep_time", e.target.value, isEdit)}
-                    className="h-6 text-[10px] font-mono cursor-pointer"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[9px] text-slate-500">Arr. Date</Label>
-                  <Input
-                    type="date"
-                    value={item.conjunction_arr_date || ""}
-                    onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_arr_date", e.target.value, isEdit)}
-                    className="h-6 text-[10px]"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[9px] text-slate-500">Arr. Time</Label>
-                  <Input
-                    type="time"
-                    step={60}
-                    value={item.conjunction_arr_time || ""}
-                    onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_arr_time", e.target.value, isEdit)}
-                    className="h-6 text-[10px] font-mono cursor-pointer"
-                  />
+              <div className="w-full overflow-x-auto pb-1">
+                <div className="flex flex-nowrap items-end gap-2 min-w-[650px] pt-1 border-t border-slate-100 dark:border-slate-800">
+                  <div className="w-[75px] flex-shrink-0 space-y-1">
+                    <Label className="text-[9px] text-slate-500">6th City</Label>
+                    <Input
+                      placeholder="XXX"
+                      list="city-airport-options"
+                      value={item.conjunction_city || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_city", e.target.value.toUpperCase(), isEdit)}
+                      className="h-6 text-[10px] uppercase font-mono"
+                    />
+                  </div>
+                  <div className="w-[70px] flex-shrink-0 space-y-1">
+                    <Label className="text-[9px] text-slate-500">Fl.No</Label>
+                    <Input
+                      placeholder="000"
+                      value={item.conjunction_flight_no || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_flight_no", e.target.value, isEdit)}
+                      className="h-6 text-[10px]"
+                    />
+                  </div>
+                  <div className="w-[45px] flex-shrink-0 space-y-1">
+                    <Label className="text-[9px] text-slate-500">Cl</Label>
+                    <Input
+                      placeholder="Y"
+                      value={item.conjunction_booking_class || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_booking_class", e.target.value.toUpperCase(), isEdit)}
+                      className="h-6 text-[10px] font-mono uppercase text-center"
+                    />
+                  </div>
+                  <div className="w-[125px] flex-shrink-0 space-y-1">
+                    <Label className="text-[9px] text-slate-500">Dep. Date</Label>
+                    <Input
+                      type="date"
+                      value={item.conjunction_dep_date || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_dep_date", e.target.value, isEdit)}
+                      className="h-6 text-[10px]"
+                    />
+                  </div>
+                  <div className="w-[90px] flex-shrink-0 space-y-1">
+                    <Label className="text-[9px] text-slate-500">Dep. Time</Label>
+                    <Input
+                      type="time"
+                      step={60}
+                      value={item.conjunction_dep_time || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_dep_time", e.target.value, isEdit)}
+                      className="h-6 text-[10px] font-mono cursor-pointer"
+                    />
+                  </div>
+                  <div className="w-[125px] flex-shrink-0 space-y-1">
+                    <Label className="text-[9px] text-slate-500">Arr. Date</Label>
+                    <Input
+                      type="date"
+                      value={item.conjunction_arr_date || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_arr_date", e.target.value, isEdit)}
+                      className="h-6 text-[10px]"
+                    />
+                  </div>
+                  <div className="w-[90px] flex-shrink-0 space-y-1">
+                    <Label className="text-[9px] text-slate-500">Arr. Time</Label>
+                    <Input
+                      type="time"
+                      step={60}
+                      value={item.conjunction_arr_time || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_arr_time", e.target.value, isEdit)}
+                      className="h-6 text-[10px] font-mono cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -2490,20 +2496,20 @@ function InvoicesPageContent() {
           <CardContent className="p-5">
             <div className="space-y-3.5 pt-1">
               {/* Top Invoice Header — Single Row: all fields in one line */}
-              <div className="p-3 bg-slate-100/70 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-[12px] mb-4">
-                <div className="grid gap-2" style={{ gridTemplateColumns: "115px 115px 1fr 1fr 120px 105px 100px 95px 1fr" }}>
+              <div className="p-3 bg-slate-100/70 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-[12px] mb-4 overflow-x-auto pb-1">
+                <div className="flex flex-nowrap items-end gap-2 min-w-[1000px]">
                   {/* Inv. Date */}
-                  <div className="space-y-1">
+                  <div className="w-[115px] flex-shrink-0 space-y-1">
                     <Label className="text-[11px] font-semibold">Inv. Date *</Label>
                     <Input type="date" value={newInvDate} onChange={(e) => setNewInvDate(e.target.value)} className="h-8 text-[11px] bg-white dark:bg-[#161619] px-1.5" />
                   </div>
                   {/* Adj. Date */}
-                  <div className="space-y-1">
+                  <div className="w-[115px] flex-shrink-0 space-y-1">
                     <Label className="text-[11px] font-semibold">Adj. Date</Label>
                     <Input type="date" value={newAdjDate} onChange={(e) => setNewAdjDate(e.target.value)} className="h-8 text-[11px] bg-white dark:bg-[#161619] px-1.5" />
                   </div>
                   {/* Customer */}
-                  <div className="space-y-1">
+                  <div className="flex-1 min-w-[180px] space-y-1">
                     <Label className="text-[11px] font-semibold">Customer *</Label>
                     <Input
                       type="text"
@@ -2537,12 +2543,12 @@ function InvoicesPageContent() {
                     </datalist>
                   </div>
                   {/* Print Name */}
-                  <div className="space-y-1">
+                  <div className="flex-1 min-w-[160px] space-y-1">
                     <Label className="text-[11px] font-semibold">Print Name *</Label>
                     <Input value={newPrintName} onChange={(e) => setNewPrintName(e.target.value)} placeholder="Print Name" className="h-8 text-[11px] bg-white dark:bg-[#161619]" />
                   </div>
                   {/* SPO / Agent */}
-                  <div className="space-y-1">
+                  <div className="w-[140px] flex-shrink-0 space-y-1">
                     <Label className="text-[11px] font-semibold">SPO / Agent</Label>
                     <Select value={newSpoId} onValueChange={(v) => setNewSpoId(v || "")}>
                       <SelectTrigger className="h-8 text-[11px] bg-white dark:bg-[#161619]">
@@ -2554,7 +2560,7 @@ function InvoicesPageContent() {
                     </Select>
                   </div>
                   {/* Visit Type */}
-                  <div className="space-y-1">
+                  <div className="w-[110px] flex-shrink-0 space-y-1">
                     <Label className="text-[11px] font-semibold">Visit Type *</Label>
                     <Select value={newVisitType} onValueChange={(v) => setNewVisitType(v || "Visitor")}>
                       <SelectTrigger className="h-8 text-[11px] bg-white dark:bg-[#161619]"><SelectValue /></SelectTrigger>
@@ -2567,7 +2573,7 @@ function InvoicesPageContent() {
                     </Select>
                   </div>
                   {/* Pay. Mode */}
-                  <div className="space-y-1">
+                  <div className="w-[100px] flex-shrink-0 space-y-1">
                     <Label className="text-[11px] font-semibold">Pay. Mode *</Label>
                     <Select value={newPaymentMode} onValueChange={(v) => setNewPaymentMode(v || "CR")}>
                       <SelectTrigger className="h-8 text-[11px] bg-white dark:bg-[#161619]">
@@ -2583,7 +2589,7 @@ function InvoicesPageContent() {
                     </Select>
                   </div>
                   {/* Status */}
-                  <div className="space-y-1">
+                  <div className="w-[95px] flex-shrink-0 space-y-1">
                     <Label className="text-[11px] font-semibold">Status *</Label>
                     <Select value={newDocStatus} onValueChange={(v) => setNewDocStatus(v || "Draft")}>
                       <SelectTrigger className="h-8 text-[11px] bg-white dark:bg-[#161619]">
@@ -2596,7 +2602,7 @@ function InvoicesPageContent() {
                     </Select>
                   </div>
                   {/* Internal Remarks */}
-                  <div className="space-y-1">
+                  <div className="flex-1 min-w-[140px] space-y-1">
                     <Label className="text-[11px] font-semibold">Internal Remarks</Label>
                     <Input
                       placeholder="Internal notes..."
@@ -2846,9 +2852,9 @@ function InvoicesPageContent() {
               ) : (
                 <div className="space-y-3.5 pt-1">
                   {/* Top Header Grid for Edit Modal — Single Row */}
-                  <div className="p-3 bg-slate-100/70 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-[12px] mb-4">
-                    <div className="grid gap-2" style={{ gridTemplateColumns: "115px 115px 1fr 1fr 120px 105px 100px 95px 1fr" }}>
-                      <div className="space-y-1">
+                  <div className="p-3 bg-slate-100/70 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-[12px] mb-4 overflow-x-auto pb-1">
+                    <div className="flex flex-nowrap items-end gap-2 min-w-[1000px]">
+                      <div className="w-[115px] flex-shrink-0 space-y-1">
                         <Label className="text-[11px] font-semibold">Inv. Date</Label>
                         <Input
                           readOnly
@@ -2856,11 +2862,11 @@ function InvoicesPageContent() {
                           className="h-8 text-[11px] bg-slate-100 dark:bg-[#161619] px-1.5 font-mono text-slate-500"
                         />
                       </div>
-                      <div className="space-y-1">
+                      <div className="w-[115px] flex-shrink-0 space-y-1">
                         <Label className="text-[11px] font-semibold">Adj. Date</Label>
                         <Input type="date" value={editAdjDate} onChange={(e) => setEditAdjDate(e.target.value)} className="h-8 text-[11px] bg-white dark:bg-[#161619] px-1.5" />
                       </div>
-                      <div className="space-y-1">
+                      <div className="flex-1 min-w-[180px] space-y-1">
                         <Label className="text-[11px] font-semibold">Customer *</Label>
                         <Input
                           type="text"
@@ -2893,11 +2899,11 @@ function InvoicesPageContent() {
                           ))}
                         </datalist>
                       </div>
-                      <div className="space-y-1">
+                      <div className="flex-1 min-w-[160px] space-y-1">
                         <Label className="text-[11px] font-semibold">Print Name *</Label>
                         <Input value={editPrintName} onChange={(e) => setEditPrintName(e.target.value)} className="h-8 text-[11px] bg-white dark:bg-[#161619]" />
                       </div>
-                      <div className="space-y-1">
+                      <div className="w-[140px] flex-shrink-0 space-y-1">
                         <Label className="text-[11px] font-semibold">SPO / Agent</Label>
                         <Select value={editSpoId} onValueChange={(v) => setEditSpoId(v || "")}>
                           <SelectTrigger className="h-8 text-[11px] bg-white dark:bg-[#161619]">
@@ -2908,7 +2914,7 @@ function InvoicesPageContent() {
                           <SelectContent>{staffUsers.map((u) => <SelectItem key={u._id} value={u._id}>{u.name} ({u.role})</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-1">
+                      <div className="w-[110px] flex-shrink-0 space-y-1">
                         <Label className="text-[11px] font-semibold">Visit Type *</Label>
                         <Select value={editVisitType} onValueChange={(v) => setEditVisitType(v || "Visitor")}>
                           <SelectTrigger className="h-8 text-[11px] bg-white dark:bg-[#161619]"><SelectValue /></SelectTrigger>
@@ -2920,7 +2926,7 @@ function InvoicesPageContent() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-1">
+                      <div className="w-[100px] flex-shrink-0 space-y-1">
                         <Label className="text-[11px] font-semibold">Pay. Mode *</Label>
                         <Select value={editPaymentMode} onValueChange={(v) => setEditPaymentMode(v || "CR")}>
                           <SelectTrigger className="h-8 text-[11px] bg-white dark:bg-[#161619]">
@@ -2935,7 +2941,7 @@ function InvoicesPageContent() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-1">
+                      <div className="w-[95px] flex-shrink-0 space-y-1">
                         <Label className="text-[11px] font-semibold">Status *</Label>
                         <Select value={editDocStatus} onValueChange={(v) => setEditDocStatus(v || "Draft")}>
                           <SelectTrigger className="h-8 text-[11px] bg-white dark:bg-[#161619]">
@@ -2947,7 +2953,7 @@ function InvoicesPageContent() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-1">
+                      <div className="flex-1 min-w-[140px] space-y-1">
                         <Label className="text-[11px] font-semibold">Internal Remarks</Label>
                         <Input
                           placeholder="Internal notes..."
