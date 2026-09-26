@@ -1190,185 +1190,185 @@ function InvoicesPageContent() {
 
     return (
       <div className="space-y-4 text-[12px] bg-slate-50/50 dark:bg-[#0c0c0e] p-1.5 md:p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner">
-        {/* Passenger & Ticket Main Details */}
-        <div className="p-3 bg-white dark:bg-[#111113] rounded-lg border border-slate-200 dark:border-slate-800 space-y-3">
-          <div className="font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-slate-300 border-b pb-1 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span>Passenger &amp; Ticketing Information</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-6 px-2 text-[11px] font-semibold gap-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40"
-                onClick={() => duplicateTicket(itemIdx, isEdit)}
-                title="Duplicate active ticket data to a new ticket (excluding passenger name and ticket number)"
-              >
-                <Copy className="h-3 w-3" /> Duplicate Ticket
-              </Button>
-            </div>
-            <span className="font-mono text-primary font-bold">{item.airline_name || "Airline Booking"}</span>
-          </div>
-
-          {/* Row 1: Pax, Pax Type, GDS, PP No, PP Issue Dt */}
-          <div className="w-full overflow-x-auto pb-1">
-            <div className="flex flex-nowrap items-end gap-2 min-w-[700px]">
-              <div className="flex-1 min-w-[180px] space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Pax *</Label>
-                <Input
-                  placeholder="MR. First Name Last Name"
-                  value={item.pax_name || ""}
-                  onChange={(e) => updateTicketLineItem(itemIdx, "pax_name", e.target.value.toUpperCase(), isEdit)}
-                  className="h-8 text-[12px] uppercase font-semibold bg-white dark:bg-[#161619]"
-                />
-              </div>
-              <div className="w-[100px] flex-shrink-0 space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Pax Type *</Label>
-                <Select value={item.pax_type || "A"} onValueChange={(v) => updateTicketLineItem(itemIdx, "pax_type", v || "A", isEdit)}>
-                  <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
-                    <SelectValue>
-                      {(val) => val === "A" ? "Adult (A)" : val === "C" ? "Child (C)" : val === "I" ? "Infant (I)" : val || "Adult (A)"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A">Adult (A)</SelectItem>
-                    <SelectItem value="C">Child (C)</SelectItem>
-                    <SelectItem value="I">Infant (I)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-[100px] flex-shrink-0 space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">GDS</Label>
-                <Select value={item.gds_name || "Amadeus"} onValueChange={(v) => updateTicketLineItem(itemIdx, "gds_name", v || "Amadeus", isEdit)}>
-                  <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
-                    <SelectValue>{(val) => val || "Amadeus"}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Amadeus">Amadeus</SelectItem>
-                    <SelectItem value="Sabre">Sabre</SelectItem>
-                    <SelectItem value="Galileo">Galileo</SelectItem>
-                    <SelectItem value="Worldspan">Worldspan</SelectItem>
-                    <SelectItem value="Direct">Direct Portal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-[110px] flex-shrink-0 space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP No.</Label>
-                <Input
-                  placeholder="e.g. AB1234567"
-                  value={item.passport_no || ""}
-                  onChange={(e) => updateTicketLineItem(itemIdx, "passport_no", e.target.value.toUpperCase(), isEdit)}
-                  className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
-                />
-              </div>
-              <div className="w-[125px] flex-shrink-0 space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP Issue Dt</Label>
-                <DatePicker
-                  value={item.passport_issue_date || ""}
-                  onChange={(val) => updateTicketLineItem(itemIdx, "passport_issue_date", val, isEdit)}
-                  className="h-8 text-[12px] bg-white dark:bg-[#161619]"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Row 2: All 7 Ticketing Fields in Single Row */}
-          <div className="w-full overflow-x-auto pb-1">
-            <div className="flex flex-nowrap items-end gap-2 min-w-[850px]">
-              <div className="w-[170px] flex-shrink-0 space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Ticket No. (3-4-3-3) *</Label>
-                <Input
-                  placeholder="000-0000-000-000"
-                  value={item.ticket_number || ""}
-                  onChange={(e) => updateTicketLineItem(itemIdx, "ticket_number", e.target.value, isEdit)}
-                  className="h-8 text-[12px] font-mono font-bold tracking-tight bg-white dark:bg-[#161619]"
-                />
-              </div>
-              <div className="w-[85px] flex-shrink-0 space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PNR</Label>
-                <Input
-                  placeholder="e.g. ABC123"
-                  value={item.gds_pnr || ""}
-                  onChange={(e) => updateTicketLineItem(itemIdx, "gds_pnr", e.target.value.toUpperCase(), isEdit)}
-                  className="h-8 text-[12px] font-mono uppercase font-bold text-blue-600 bg-white dark:bg-[#161619]"
-                />
-              </div>
-              <div className="w-[130px] flex-shrink-0 space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Airline *</Label>
-                <TypeToSearch
-                  placeholder="QATAR AIRWAYS"
-                  value={item.airline_name || ""}
-                  onChange={(val) => updateTicketLineItem(itemIdx, "airline_name", val.toUpperCase(), isEdit)}
-                  onSelectOption={(opt) => updateTicketLineItem(itemIdx, "airline_name", opt.value.toUpperCase(), isEdit)}
-                  options={airlineOptions}
-                  className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
-                />
-              </div>
-              <div className="w-[150px] flex-shrink-0 space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Supplier / BSP *</Label>
-                <TypeToSearch
-                  placeholder="BSP / Airline"
-                  value={getSupplierName(item.supplier_id || (isEdit ? editSupplierId : newSupplierId) || "")}
-                  onChange={(val) => {
-                    const matched = suppliers.find(
-                      (s) => s._id === val || s.name.toLowerCase() === val.trim().toLowerCase()
-                    );
-                    const suppId = matched ? matched._id : val;
-                    updateTicketLineItem(itemIdx, "supplier_id", suppId, isEdit);
-                    if (isEdit) setEditSupplierId(suppId);
-                    else setNewSupplierId(suppId);
-                  }}
-                  onSelectOption={(opt) => {
-                    updateTicketLineItem(itemIdx, "supplier_id", opt.value, isEdit);
-                    if (isEdit) setEditSupplierId(opt.value);
-                    else setNewSupplierId(opt.value);
-                  }}
-                  options={supplierOptions}
-                  className="h-8 text-[12px] bg-white dark:bg-[#161619]"
-                />
-              </div>
-              <div className="w-[120px] flex-shrink-0 space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Sector *</Label>
-                <Input
-                  placeholder="ORG / ORG-DST"
-                  value={item.sector || ""}
-                  onChange={(e) => updateTicketLineItem(itemIdx, "sector", e.target.value.toUpperCase(), isEdit)}
-                  className="h-8 text-[12px] uppercase font-mono bg-white dark:bg-[#161619]"
-                />
-              </div>
-              <div className="w-[90px] flex-shrink-0 space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Doc *</Label>
-                <Select value={item.doc_type || "BSPD"} onValueChange={(v) => updateTicketLineItem(itemIdx, "doc_type", v || "BSPD", isEdit)}>
-                  <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619] px-2 text-[11px]">
-                    <SelectValue>{(val) => val || "BSPD"}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BSPD">BSPD</SelectItem>
-                    <SelectItem value="E-Ticket">E-Ticket</SelectItem>
-                    <SelectItem value="MCO">MCO</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-[90px] flex-shrink-0 space-y-1">
-                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Type *</Label>
-                <Select value={item.trip_type || "International"} onValueChange={(v) => updateTicketLineItem(itemIdx, "trip_type", v || "International", isEdit)}>
-                  <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619] px-2 text-[11px]">
-                    <SelectValue>{(val) => val === "International" ? "I (Int)" : "D (Dom)"}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="International">International (I)</SelectItem>
-                    <SelectItem value="Domestic">Domestic (D)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* 2-Column Split: Left Box vs Right Box (65% / 35%) */}
         <div className="flex flex-col lg:flex-row gap-4">
           
-          {/* LEFT BOX (65% width: Routing & Segments Table + Conjunction Ticket + Charges + Remarks) */}
+          {/* LEFT BOX (65% width: Passenger Details + Routing & Segments Table + Conjunction Ticket + Charges + Remarks) */}
           <div className="w-full lg:w-[65%] space-y-3.5 flex flex-col gap-3">
+            
+            {/* Passenger & Ticket Main Details */}
+            <div className="p-3 bg-white dark:bg-[#111113] rounded-lg border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-slate-300 border-b pb-1 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span>Passenger &amp; Ticketing Information</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2 text-[11px] font-semibold gap-1 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                    onClick={() => duplicateTicket(itemIdx, isEdit)}
+                    title="Duplicate active ticket data to a new ticket (excluding passenger name and ticket number)"
+                  >
+                    <Copy className="h-3 w-3" /> Duplicate Ticket
+                  </Button>
+                </div>
+                <span className="font-mono text-primary font-bold">{item.airline_name || "Airline Booking"}</span>
+              </div>
+
+              {/* Row 1: Pax, Pax Type, GDS, PP No, PP Issue Dt */}
+              <div className="w-full overflow-x-auto pb-1">
+                <div className="flex flex-nowrap items-end gap-2 min-w-[700px]">
+                  <div className="flex-1 min-w-[180px] space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Pax *</Label>
+                    <Input
+                      placeholder="MR. First Name Last Name"
+                      value={item.pax_name || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "pax_name", e.target.value.toUpperCase(), isEdit)}
+                      className="h-8 text-[12px] uppercase font-semibold bg-white dark:bg-[#161619]"
+                    />
+                  </div>
+                  <div className="w-[100px] flex-shrink-0 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Pax Type *</Label>
+                    <Select value={item.pax_type || "A"} onValueChange={(v) => updateTicketLineItem(itemIdx, "pax_type", v || "A", isEdit)}>
+                      <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
+                        <SelectValue>
+                          {(val) => val === "A" ? "Adult (A)" : val === "C" ? "Child (C)" : val === "I" ? "Infant (I)" : val || "Adult (A)"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A">Adult (A)</SelectItem>
+                        <SelectItem value="C">Child (C)</SelectItem>
+                        <SelectItem value="I">Infant (I)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-[100px] flex-shrink-0 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">GDS</Label>
+                    <Select value={item.gds_name || "Amadeus"} onValueChange={(v) => updateTicketLineItem(itemIdx, "gds_name", v || "Amadeus", isEdit)}>
+                      <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
+                        <SelectValue>{(val) => val || "Amadeus"}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Amadeus">Amadeus</SelectItem>
+                        <SelectItem value="Sabre">Sabre</SelectItem>
+                        <SelectItem value="Galileo">Galileo</SelectItem>
+                        <SelectItem value="Worldspan">Worldspan</SelectItem>
+                        <SelectItem value="Direct">Direct Portal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-[110px] flex-shrink-0 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP No.</Label>
+                    <Input
+                      placeholder="e.g. AB1234567"
+                      value={item.passport_no || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "passport_no", e.target.value.toUpperCase(), isEdit)}
+                      className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
+                    />
+                  </div>
+                  <div className="w-[125px] flex-shrink-0 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP Issue Dt</Label>
+                    <DatePicker
+                      value={item.passport_issue_date || ""}
+                      onChange={(val) => updateTicketLineItem(itemIdx, "passport_issue_date", val, isEdit)}
+                      className="h-8 text-[12px] bg-white dark:bg-[#161619]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: All 7 Ticketing Fields in Single Row */}
+              <div className="w-full overflow-x-auto pb-1">
+                <div className="flex flex-nowrap items-end gap-2 min-w-[850px]">
+                  <div className="w-[170px] flex-shrink-0 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Ticket No. (3-4-3-3) *</Label>
+                    <Input
+                      placeholder="000-0000-000-000"
+                      value={item.ticket_number || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "ticket_number", e.target.value, isEdit)}
+                      className="h-8 text-[12px] font-mono font-bold tracking-tight bg-white dark:bg-[#161619]"
+                    />
+                  </div>
+                  <div className="w-[85px] flex-shrink-0 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PNR</Label>
+                    <Input
+                      placeholder="e.g. ABC123"
+                      value={item.gds_pnr || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "gds_pnr", e.target.value.toUpperCase(), isEdit)}
+                      className="h-8 text-[12px] font-mono uppercase font-bold text-blue-600 bg-white dark:bg-[#161619]"
+                    />
+                  </div>
+                  <div className="w-[130px] flex-shrink-0 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Airline *</Label>
+                    <TypeToSearch
+                      placeholder="QATAR AIRWAYS"
+                      value={item.airline_name || ""}
+                      onChange={(val) => updateTicketLineItem(itemIdx, "airline_name", val.toUpperCase(), isEdit)}
+                      onSelectOption={(opt) => updateTicketLineItem(itemIdx, "airline_name", opt.value.toUpperCase(), isEdit)}
+                      options={airlineOptions}
+                      className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
+                    />
+                  </div>
+                  <div className="w-[150px] flex-shrink-0 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Supplier / BSP *</Label>
+                    <TypeToSearch
+                      placeholder="BSP / Airline"
+                      value={getSupplierName(item.supplier_id || (isEdit ? editSupplierId : newSupplierId) || "")}
+                      onChange={(val) => {
+                        const matched = suppliers.find(
+                          (s) => s._id === val || s.name.toLowerCase() === val.trim().toLowerCase()
+                        );
+                        const suppId = matched ? matched._id : val;
+                        updateTicketLineItem(itemIdx, "supplier_id", suppId, isEdit);
+                        if (isEdit) setEditSupplierId(suppId);
+                        else setNewSupplierId(suppId);
+                      }}
+                      onSelectOption={(opt) => {
+                        updateTicketLineItem(itemIdx, "supplier_id", opt.value, isEdit);
+                        if (isEdit) setEditSupplierId(opt.value);
+                        else setNewSupplierId(opt.value);
+                      }}
+                      options={supplierOptions}
+                      className="h-8 text-[12px] bg-white dark:bg-[#161619]"
+                    />
+                  </div>
+                  <div className="w-[120px] flex-shrink-0 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Sector *</Label>
+                    <Input
+                      placeholder="ORG / ORG-DST"
+                      value={item.sector || ""}
+                      onChange={(e) => updateTicketLineItem(itemIdx, "sector", e.target.value.toUpperCase(), isEdit)}
+                      className="h-8 text-[12px] uppercase font-mono bg-white dark:bg-[#161619]"
+                    />
+                  </div>
+                  <div className="w-[90px] flex-shrink-0 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Doc *</Label>
+                    <Select value={item.doc_type || "BSPD"} onValueChange={(v) => updateTicketLineItem(itemIdx, "doc_type", v || "BSPD", isEdit)}>
+                      <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619] px-2 text-[11px]">
+                        <SelectValue>{(val) => val || "BSPD"}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BSPD">BSPD</SelectItem>
+                        <SelectItem value="E-Ticket">E-Ticket</SelectItem>
+                        <SelectItem value="MCO">MCO</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-[90px] flex-shrink-0 space-y-1">
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Type *</Label>
+                    <Select value={item.trip_type || "International"} onValueChange={(v) => updateTicketLineItem(itemIdx, "trip_type", v || "International", isEdit)}>
+                      <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619] px-2 text-[11px]">
+                        <SelectValue>{(val) => val === "International" ? "I (Int)" : "D (Dom)"}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="International">International (I)</SelectItem>
+                        <SelectItem value="Domestic">Domestic (D)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
             {/* Flight Segments Table (Max 5 Legs) */}
             <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-[#111113]">
               <div className="bg-slate-100 dark:bg-slate-900 px-3 py-1.5 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
