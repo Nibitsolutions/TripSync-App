@@ -1160,7 +1160,7 @@ function InvoicesPageContent() {
     const isDomestic = item.trip_type === "Domestic";
 
     return (
-      <div className="space-y-4 text-[12px] bg-slate-50/50 dark:bg-[#0c0c0e] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner">
+      <div className="space-y-4 text-[12px] bg-slate-50/50 dark:bg-[#0c0c0e] p-1.5 md:p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner">
         {/* Passenger & Ticket Main Details */}
         <div className="p-3 bg-white dark:bg-[#111113] rounded-lg border border-slate-200 dark:border-slate-800 space-y-3">
           <div className="font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-slate-300 border-b pb-1 flex items-center justify-between">
@@ -2228,7 +2228,7 @@ function InvoicesPageContent() {
 
       {isFormView ? (
         /* Create / Edit Invoice View */
-        <div className="space-y-4">
+        <div className="space-y-4 -mx-3 md:-mx-6 px-0.5">
           {/* Top Action & Navigation Toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white dark:bg-[#111113] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
             <div className="flex items-center gap-3">
@@ -2484,7 +2484,7 @@ function InvoicesPageContent() {
           {/* Inline Create Invoice Form Card */}
           {showNew && (
         <Card className="mb-6 border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111113] shadow-md">
-          <CardHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
+          <CardHeader className="px-3 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
               {defaultType === "Ticket" ? "Ticket Booking & Sale Invoice" : "Create New Invoice"}
@@ -2493,7 +2493,7 @@ function InvoicesPageContent() {
               <X className="h-4 w-4" />
             </Button>
           </CardHeader>
-          <CardContent className="p-5">
+          <CardContent className="px-2 py-3">
             <div className="space-y-3.5 pt-1">
               {/* Top Invoice Header — Single Row: all fields in one line */}
               <div className="p-3 bg-slate-100/70 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-[12px] mb-4 overflow-x-auto pb-1">
@@ -2846,7 +2846,7 @@ function InvoicesPageContent() {
 
             return (
               <Card className="mb-6 border-blue-300 dark:border-blue-800/80 bg-white dark:bg-[#111113] shadow-lg">
-                <CardContent className="p-5">
+                <CardContent className="px-2 py-3">
               {editLoading ? (
                 <div className="flex items-center justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
               ) : (
