@@ -1336,11 +1336,11 @@ function InvoicesPageContent() {
           </div>
         </div>
 
-        {/* 2-Column Split: Left Box vs Right Box */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* 2-Column Split: Left Box vs Right Box (65% / 35%) */}
+        <div className="flex flex-col lg:flex-row gap-4">
           
-          {/* LEFT BOX (Routing & Segments Table + Conjunction Ticket) */}
-          <div className="lg:col-span-6 space-y-3.5 flex flex-col gap-3">
+          {/* LEFT BOX (65% width: Routing & Segments Table + Conjunction Ticket + Charges + Remarks) */}
+          <div className="w-full lg:w-[65%] space-y-3.5 flex flex-col gap-3">
             {/* Flight Segments Table (Max 5 Legs) */}
             <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-[#111113]">
               <div className="bg-slate-100 dark:bg-slate-900 px-3 py-1.5 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
@@ -1584,8 +1584,8 @@ function InvoicesPageContent() {
             </div>
           </div>
 
-          {/* RIGHT BOX (Airline City Tax, IATA / Domestic Taxes, Commercials, Totals) */}
-          <div className="lg:col-span-6 space-y-3">
+          {/* RIGHT BOX (35% width: Airline City Tax, IATA / Domestic Taxes, Commercials, Totals) */}
+          <div className="w-full lg:w-[35%] space-y-3">
             
             {/* Top: Airline City Tax & City Tax Side-by-Side */}
             <div className="grid grid-cols-2 gap-3">
