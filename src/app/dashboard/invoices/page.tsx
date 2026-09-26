@@ -178,9 +178,9 @@ function InvoicesPageContent() {
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
 
-  // Ticket sidebar collapse states
-  const [isTicketSidebarCollapsed, setIsTicketSidebarCollapsed] = useState(false);
-  const [isEditTicketSidebarCollapsed, setIsEditTicketSidebarCollapsed] = useState(false);
+  // Ticket sidebar collapse states (default collapsed)
+  const [isTicketSidebarCollapsed, setIsTicketSidebarCollapsed] = useState(true);
+  const [isEditTicketSidebarCollapsed, setIsEditTicketSidebarCollapsed] = useState(true);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
