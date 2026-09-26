@@ -14,6 +14,8 @@ import {
   Plus, BookOpen, ArrowUpRight, ArrowDownRight, X, ArrowLeft, UserPlus, Search,
   Pencil, Trash2, Building2, MapPin, UserCheck, FileText, Check, ShieldAlert
 } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { formatDateDDMMYYYY } from "@/lib/date-utils";
 
 interface Customer {
   _id: string;
@@ -528,19 +530,17 @@ export default function CustomersPage() {
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="space-y-1">
                         <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Date of creation</Label>
-                        <Input
-                          type="date"
+                        <DatePicker
                           value={dateOfCreation}
-                          onChange={(e) => setDateOfCreation(e.target.value)}
+                          onChange={(val) => setDateOfCreation(val)}
                           className="h-8 text-[12px]"
                         />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Date expiry</Label>
-                        <Input
-                          type="date"
+                        <DatePicker
                           value={dateExpiry}
-                          onChange={(e) => setDateExpiry(e.target.value)}
+                          onChange={(val) => setDateExpiry(val)}
                           className="h-8 text-[12px]"
                         />
                       </div>
@@ -847,19 +847,17 @@ export default function CustomersPage() {
                   </div>
                   <div className="space-y-1 w-full sm:w-36">
                     <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">From Date</Label>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={ledgerFromDate}
-                      onChange={(e) => setLedgerFromDate(e.target.value)}
+                      onChange={(val) => setLedgerFromDate(val)}
                       className="h-8 text-xs bg-white dark:bg-[#111113]"
                     />
                   </div>
                   <div className="space-y-1 w-full sm:w-36">
                     <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">To Date</Label>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={ledgerToDate}
-                      onChange={(e) => setLedgerToDate(e.target.value)}
+                      onChange={(val) => setLedgerToDate(val)}
                       className="h-8 text-xs bg-white dark:bg-[#111113]"
                     />
                   </div>
@@ -901,7 +899,7 @@ export default function CustomersPage() {
                     <TableBody>
                       {((ledgerData.entries as Array<Record<string, unknown>>) || []).map((e, i) => (
                         <TableRow key={i} className="border-gray-100 dark:border-[#1e1e21]">
-                          <TableCell className="text-[13px] text-gray-500">{new Date(e.date as string).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-[13px] text-gray-500 font-mono">{formatDateDDMMYYYY(e.date as string)}</TableCell>
                           <TableCell className="text-[13px] capitalize text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
                             {(e.debit as number) > 0 ? <ArrowUpRight className="h-3 w-3 text-red-500" /> : <ArrowDownRight className="h-3 w-3 text-emerald-500" />}
                             {(e.type as string).replace("_", " ")}

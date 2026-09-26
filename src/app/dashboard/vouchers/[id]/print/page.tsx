@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import Voucher, { IVoucherEntry } from "@/models/Voucher";
 
 import { numberToWords } from "@/lib/numberToWords";
+import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -98,7 +99,7 @@ export default async function VoucherPrintPage({ params }: Props) {
               <span className="lbl">Date:</span>
               <span className="val">
                 {voucher.voucher_date
-                  ? new Date(voucher.voucher_date).toLocaleDateString("en-GB")
+                  ? formatDateDDMMYYYY(voucher.voucher_date)
                   : "—"}
               </span>
             </div>
@@ -159,7 +160,7 @@ export default async function VoucherPrintPage({ params }: Props) {
                     <td className="text-center">{e.branch}</td>
                     <td>{e.ref_code}</td>
                     <td>{e.ref_no}</td>
-                    <td>{e.adj_date ? new Date(e.adj_date).toLocaleDateString("en-GB") : ""}</td>
+                    <td>{e.adj_date ? formatDateDDMMYYYY(e.adj_date) : ""}</td>
                     <td>{e.description}</td>
                     <td>{e.account_code}</td>
                     <td className="text-right">{e.debit ? e.debit.toLocaleString("en-PK", { minimumFractionDigits: 2 }) : ""}</td>

@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, Plus, Phone, Mail, BadgeDollarSign, Loader2, Landmark, X, ArrowLeft, Search } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { formatDateDDMMYYYY } from "@/lib/date-utils";
 
 interface Supplier {
   _id: string;
@@ -205,19 +207,17 @@ export default function SuppliersPage() {
                 </div>
                 <div className="space-y-1 w-full sm:w-36">
                   <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">From Date</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={ledgerFromDate}
-                    onChange={(e) => setLedgerFromDate(e.target.value)}
+                    onChange={(val) => setLedgerFromDate(val)}
                     className="h-8 text-xs bg-white dark:bg-[#111113]"
                   />
                 </div>
                 <div className="space-y-1 w-full sm:w-36">
                   <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">To Date</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={ledgerToDate}
-                    onChange={(e) => setLedgerToDate(e.target.value)}
+                    onChange={(val) => setLedgerToDate(val)}
                     className="h-8 text-xs bg-white dark:bg-[#111113]"
                   />
                 </div>
@@ -268,7 +268,7 @@ export default function SuppliersPage() {
                           <TableCell className="font-mono text-[13px] font-medium text-gray-900 dark:text-gray-100">{b.booking_reference}</TableCell>
                           <TableCell className="text-[13px] text-gray-500">{b.service_type}</TableCell>
                           <TableCell className="font-mono text-[12px] text-gray-500">{b.gds_pnr || "—"}</TableCell>
-                          <TableCell className="text-[12px] text-gray-500">{new Date(b.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-[12px] text-gray-500 font-mono">{formatDateDDMMYYYY(b.created_at)}</TableCell>
                           <TableCell className="text-right font-mono text-[13px] font-semibold text-gray-900 dark:text-gray-100">
                             {selectedSupplier.currency} {b.total_cost.toLocaleString()}
                           </TableCell>

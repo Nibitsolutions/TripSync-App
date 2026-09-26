@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Receipt, ShieldCheck, X } from "lucide-react";
+import { formatDateDDMMYYYY } from "@/lib/date-utils";
 
 interface Expense {
   _id: string;
@@ -199,7 +200,7 @@ export default function ExpensesPage() {
                       <TableCell className="text-[13px] text-gray-500">{e.description || "-"}</TableCell>
                       <TableCell className="text-right font-mono text-[13px] font-semibold text-gray-900 dark:text-gray-100">{e.amount.toLocaleString()}</TableCell>
                       <TableCell><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusStyles[e.status] || ""}`}>{e.status === "PendingApproval" ? "Pending" : e.status}</span></TableCell>
-                      <TableCell className="text-[13px] text-gray-500">{new Date(e.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-[13px] text-gray-500 font-mono">{formatDateDDMMYYYY(e.created_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

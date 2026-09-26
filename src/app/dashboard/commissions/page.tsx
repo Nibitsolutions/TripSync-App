@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDateDDMMYYYY } from "@/lib/date-utils";
 
 interface Commission {
   _id: string;
@@ -67,7 +68,7 @@ export default function CommissionsPage() {
                       <TableCell className="text-right font-mono text-[13px] text-gray-600 dark:text-gray-300">{c.rate_applied}%</TableCell>
                       <TableCell className="text-right font-mono text-[13px] font-semibold text-gray-900 dark:text-gray-100">{c.amount.toLocaleString()}</TableCell>
                       <TableCell><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusStyles[c.status] || ""}`}>{c.status}</span></TableCell>
-                      <TableCell className="text-[13px] text-gray-500">{new Date(c.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-[13px] text-gray-500 font-mono">{formatDateDDMMYYYY(c.created_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Wallet, Coins, Loader2, Printer, X, ArrowLeft } from "lucide-react";
+import { formatDateDDMMYYYY } from "@/lib/date-utils";
 
 interface Payment {
   _id: string;
@@ -331,7 +332,7 @@ export default function PaymentsPage() {
                         {allocationRows.map((row) => (
                           <TableRow key={row.invoice_id} className="border-gray-100 dark:border-[#1e1e21]">
                             <TableCell className="font-mono text-[13px] font-medium text-gray-900 dark:text-gray-100">{row.invoice_number}</TableCell>
-                            <TableCell className="text-[12px] text-gray-500">{new Date(row.date).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-[12px] text-gray-500 font-mono">{formatDateDDMMYYYY(row.date)}</TableCell>
                             <TableCell className="text-right font-mono text-[13px] text-gray-600 dark:text-gray-300">{row.total.toLocaleString()}</TableCell>
                             <TableCell className="text-right font-mono text-[13px] font-semibold text-emerald-600 dark:text-emerald-400">{row.balance.toLocaleString()}</TableCell>
                             <TableCell className="text-right">
@@ -403,7 +404,7 @@ export default function PaymentsPage() {
                       <TableCell className="text-[13px] text-gray-500">{p.currency}</TableCell>
                       <TableCell className="text-[13px] text-gray-600 dark:text-gray-300">{p.payment_method}</TableCell>
                       <TableCell><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusStyles[p.status] || ""}`}>{p.status}</span></TableCell>
-                      <TableCell className="text-[13px] text-gray-500">{new Date(p.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-[13px] text-gray-500 font-mono">{formatDateDDMMYYYY(p.created_at)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1.5">
                           {p.status === "Posted" && p.unallocated_amount > 0 && (

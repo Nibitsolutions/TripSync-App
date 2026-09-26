@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, Clock, TrendingUp, TrendingDown, Loader2, Printer, FileText, UserCheck, FileSpreadsheet, BookOpen, Search, ArrowUpRight, ArrowDownRight, RotateCcw, Building2 } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { formatDateDDMMYYYY } from "@/lib/date-utils";
 
 interface Customer { _id: string; name: string; }
 interface SupplierOption { _id: string; name: string; code?: string; }
@@ -375,8 +377,8 @@ function ReportsPageContent() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5 w-full sm:w-auto"><Label className="text-[13px] font-semibold">From Date</Label><Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-10 text-[13px]" /></div>
-                <div className="space-y-1.5 w-full sm:w-auto"><Label className="text-[13px] font-semibold">To Date</Label><Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-10 text-[13px]" /></div>
+                <div className="space-y-1.5 w-full sm:w-auto"><Label className="text-[13px] font-semibold">From Date</Label><DatePicker value={fromDate} onChange={(val) => setFromDate(val)} className="h-10 text-[13px]" /></div>
+                <div className="space-y-1.5 w-full sm:w-auto"><Label className="text-[13px] font-semibold">To Date</Label><DatePicker value={toDate} onChange={(val) => setToDate(val)} className="h-10 text-[13px]" /></div>
                 <Button onClick={loadInvoiceAging} disabled={loadingInvoiceAging} className="h-10 gap-2 w-full sm:w-auto">
                   {loadingInvoiceAging ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
                   Generate Statement
@@ -530,8 +532,8 @@ function ReportsPageContent() {
             </CardHeader>
             <CardContent className="px-6 pb-6">
               <div className="flex flex-col sm:flex-row gap-4 sm:items-end mb-6">
-                <div className="space-y-1.5 w-full sm:w-auto"><Label className="text-[13px]">From</Label><Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-10 w-full" /></div>
-                <div className="space-y-1.5 w-full sm:w-auto"><Label className="text-[13px]">To</Label><Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-10 w-full" /></div>
+                <div className="space-y-1.5 w-full sm:w-auto"><Label className="text-[13px]">From</Label><DatePicker value={fromDate} onChange={(val) => setFromDate(val)} className="h-10 w-full" /></div>
+                <div className="space-y-1.5 w-full sm:w-auto"><Label className="text-[13px]">To</Label><DatePicker value={toDate} onChange={(val) => setToDate(val)} className="h-10 w-full" /></div>
                 <Button onClick={loadPnl} disabled={loadingPnl} className="h-10 gap-2 w-full sm:w-auto">
                   {loadingPnl ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
                   Generate
@@ -614,7 +616,7 @@ function ReportsPageContent() {
                               <TableRow key={inv.id} className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-50/50 dark:hover:bg-[#151517]">
                                 <TableCell className="font-mono text-[13px] font-medium text-gray-900 dark:text-gray-100">{inv.invoice_number}</TableCell>
                                 <TableCell className="text-[13px] text-gray-600 dark:text-gray-300">{inv.customer}</TableCell>
-                                <TableCell className="text-[13px] text-gray-500">{new Date(inv.date).toLocaleDateString()}</TableCell>
+                                <TableCell className="text-[13px] text-gray-500 font-mono">{formatDateDDMMYYYY(inv.date)}</TableCell>
                                 <TableCell>
                                   <div className="flex flex-wrap gap-1">
                                     {inv.service_types.map((st) => (
@@ -739,22 +741,20 @@ function ReportsPageContent() {
                 {/* From Date Filter */}
                 <div className="space-y-1.5 w-full sm:w-36">
                   <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">From Date</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={ledgerFromDate}
-                    onChange={(e) => setLedgerFromDate(e.target.value)}
-                    className="h-9 text-[13px] bg-white dark:bg-[#111113]"
+                    onChange={(val) => setLedgerFromDate(val)}
+                    className="h-9 text-[13px]"
                   />
                 </div>
 
                 {/* To Date Filter */}
                 <div className="space-y-1.5 w-full sm:w-36">
                   <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">To Date</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={ledgerToDate}
-                    onChange={(e) => setLedgerToDate(e.target.value)}
-                    className="h-9 text-[13px] bg-white dark:bg-[#111113]"
+                    onChange={(val) => setLedgerToDate(val)}
+                    className="h-9 text-[13px]"
                   />
                 </div>
 
@@ -824,7 +824,7 @@ function ReportsPageContent() {
                       {ledgerEntries.map((e) => (
                         <TableRow key={e.id} className="border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-[#151517]">
                           <TableCell className="text-xs text-gray-600 dark:text-gray-400 font-mono">
-                            {new Date(e.date).toLocaleDateString()}
+                            {formatDateDDMMYYYY(e.date)}
                           </TableCell>
                           <TableCell className="text-xs font-semibold text-gray-900 dark:text-gray-100">
                             {e.customer_name}
@@ -895,22 +895,20 @@ function ReportsPageContent() {
                 {/* From Date Filter */}
                 <div className="space-y-1.5 w-full sm:w-36">
                   <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">From Date</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={supplierFromDate}
-                    onChange={(e) => setSupplierFromDate(e.target.value)}
-                    className="h-9 text-[13px] bg-white dark:bg-[#111113]"
+                    onChange={(val) => setSupplierFromDate(val)}
+                    className="h-9 text-[13px]"
                   />
                 </div>
 
                 {/* To Date Filter */}
                 <div className="space-y-1.5 w-full sm:w-36">
                   <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">To Date</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={supplierToDate}
-                    onChange={(e) => setSupplierToDate(e.target.value)}
-                    className="h-9 text-[13px] bg-white dark:bg-[#111113]"
+                    onChange={(val) => setSupplierToDate(val)}
+                    className="h-9 text-[13px]"
                   />
                 </div>
 
@@ -981,7 +979,7 @@ function ReportsPageContent() {
                       {supplierLedgerEntries.map((e) => (
                         <TableRow key={e.id} className="border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-[#151517]">
                           <TableCell className="text-xs text-gray-600 dark:text-gray-400 font-mono">
-                            {new Date(e.date).toLocaleDateString()}
+                            {formatDateDDMMYYYY(e.date)}
                           </TableCell>
                           <TableCell className="text-xs font-semibold text-gray-900 dark:text-gray-100">
                             {e.supplier_name}

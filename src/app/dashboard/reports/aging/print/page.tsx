@@ -45,7 +45,7 @@ export default async function PrintInvoiceAgingPage({ searchParams }: PrintParam
     const day = String(dateObj.getDate()).padStart(2, "0");
     const month = String(dateObj.getMonth() + 1).padStart(2, "0");
     const year = dateObj.getFullYear();
-    return `${day}/${month}/${year}`;
+    return `${day}-${month}-${year}`;
   };
 
   const formatPrintDateTime = () => {
@@ -59,7 +59,7 @@ export default async function PrintInvoiceAgingPage({ searchParams }: PrintParam
     return `Print Date ${day}, ${month} ${year} ${hours}:${minutes}`;
   };
 
-  const fromDisplay = from ? formatDate(from) : "01/01/2024";
+  const fromDisplay = from ? formatDate(from) : "01-01-2024";
   const toDisplay = to ? formatDate(to) : formatDate(new Date().toISOString());
 
   const reports = data?.customer_reports || [];

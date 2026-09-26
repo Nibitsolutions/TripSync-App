@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { CITY_AIRPORT_CODES, formatTicketNumber, getAirlineByTicketNumber, incrementTicketNumber } from "@/lib/iataAirlines";
 import { validateInvoiceForPosting, validateInvoiceForDraft } from "@/lib/invoiceValidation";
+import { DatePicker } from "@/components/ui/date-picker";
+import { formatDateDDMMYYYY } from "@/lib/date-utils";
 
 interface Invoice {
   _id: string;
@@ -1233,10 +1235,9 @@ function InvoicesPageContent() {
               </div>
               <div className="w-[125px] flex-shrink-0 space-y-1">
                 <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">PP Issue Dt</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={item.passport_issue_date || ""}
-                  onChange={(e) => updateTicketLineItem(itemIdx, "passport_issue_date", e.target.value, isEdit)}
+                  onChange={(val) => updateTicketLineItem(itemIdx, "passport_issue_date", val, isEdit)}
                   className="h-8 text-[12px] bg-white dark:bg-[#161619]"
                 />
               </div>
@@ -1401,10 +1402,9 @@ function InvoicesPageContent() {
                           />
                         </td>
                         <td className="p-1">
-                          <Input
-                            type="date"
+                          <DatePicker
                             value={seg.dep_date || ""}
-                            onChange={(e) => updateFlightSegment(itemIdx, segIdx, "dep_date", e.target.value, isEdit)}
+                            onChange={(val) => updateFlightSegment(itemIdx, segIdx, "dep_date", val, isEdit)}
                             className="h-7 text-[11px] w-full bg-transparent"
                           />
                         </td>
@@ -1418,10 +1418,9 @@ function InvoicesPageContent() {
                           />
                         </td>
                         <td className="p-1">
-                          <Input
-                            type="date"
+                          <DatePicker
                             value={seg.arr_date || ""}
-                            onChange={(e) => updateFlightSegment(itemIdx, segIdx, "arr_date", e.target.value, isEdit)}
+                            onChange={(val) => updateFlightSegment(itemIdx, segIdx, "arr_date", val, isEdit)}
                             className="h-7 text-[11px] w-full bg-transparent"
                           />
                         </td>
@@ -1503,10 +1502,9 @@ function InvoicesPageContent() {
                   </div>
                   <div className="w-[125px] flex-shrink-0 space-y-1">
                     <Label className="text-[9px] text-slate-500">Dep. Date</Label>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={item.conjunction_dep_date || ""}
-                      onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_dep_date", e.target.value, isEdit)}
+                      onChange={(val) => updateTicketLineItem(itemIdx, "conjunction_dep_date", val, isEdit)}
                       className="h-6 text-[10px]"
                     />
                   </div>
@@ -1522,10 +1520,9 @@ function InvoicesPageContent() {
                   </div>
                   <div className="w-[125px] flex-shrink-0 space-y-1">
                     <Label className="text-[9px] text-slate-500">Arr. Date</Label>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={item.conjunction_arr_date || ""}
-                      onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_arr_date", e.target.value, isEdit)}
+                      onChange={(val) => updateTicketLineItem(itemIdx, "conjunction_arr_date", val, isEdit)}
                       className="h-6 text-[10px]"
                     />
                   </div>
@@ -2501,12 +2498,12 @@ function InvoicesPageContent() {
                   {/* Inv. Date */}
                   <div className="w-[115px] flex-shrink-0 space-y-1">
                     <Label className="text-[11px] font-semibold">Inv. Date *</Label>
-                    <Input type="date" value={newInvDate} onChange={(e) => setNewInvDate(e.target.value)} className="h-8 text-[11px] bg-white dark:bg-[#161619] px-1.5" />
+                    <DatePicker value={newInvDate} onChange={(val) => setNewInvDate(val)} className="h-8 text-[11px] bg-white dark:bg-[#161619] px-1.5" />
                   </div>
                   {/* Adj. Date */}
                   <div className="w-[115px] flex-shrink-0 space-y-1">
                     <Label className="text-[11px] font-semibold">Adj. Date</Label>
-                    <Input type="date" value={newAdjDate} onChange={(e) => setNewAdjDate(e.target.value)} className="h-8 text-[11px] bg-white dark:bg-[#161619] px-1.5" />
+                    <DatePicker value={newAdjDate} onChange={(val) => setNewAdjDate(val)} className="h-8 text-[11px] bg-white dark:bg-[#161619] px-1.5" />
                   </div>
                   {/* Customer */}
                   <div className="flex-1 min-w-[180px] space-y-1">
@@ -2858,13 +2855,13 @@ function InvoicesPageContent() {
                         <Label className="text-[11px] font-semibold">Inv. Date</Label>
                         <Input
                           readOnly
-                          value={currentEditInv?.created_at ? new Date(currentEditInv.created_at).toISOString().split("T")[0] : editAdjDate}
+                          value={formatDateDDMMYYYY(currentEditInv?.created_at || editAdjDate)}
                           className="h-8 text-[11px] bg-slate-100 dark:bg-[#161619] px-1.5 font-mono text-slate-500"
                         />
                       </div>
                       <div className="w-[115px] flex-shrink-0 space-y-1">
                         <Label className="text-[11px] font-semibold">Adj. Date</Label>
-                        <Input type="date" value={editAdjDate} onChange={(e) => setEditAdjDate(e.target.value)} className="h-8 text-[11px] bg-white dark:bg-[#161619] px-1.5" />
+                        <DatePicker value={editAdjDate} onChange={(val) => setEditAdjDate(val)} className="h-8 text-[11px] bg-white dark:bg-[#161619] px-1.5" />
                       </div>
                       <div className="flex-1 min-w-[180px] space-y-1">
                         <Label className="text-[11px] font-semibold">Customer *</Label>
@@ -3425,7 +3422,7 @@ function InvoicesPageContent() {
                         )}
                       </TableCell>
                       <TableCell><Badge variant="outline" className="text-[10px] font-mono">{inv.payment_mode || "CR"}</Badge></TableCell>
-                      <TableCell className="text-[12px] text-gray-500">{new Date(inv.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-[12px] text-gray-500 font-mono">{formatDateDDMMYYYY(inv.created_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

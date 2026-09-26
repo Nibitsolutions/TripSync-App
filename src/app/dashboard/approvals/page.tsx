@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Check, X, ShieldAlert, Receipt, Loader2, Clock, CheckCircle } from "lucide-react";
+import { formatDateDDMMYYYY } from "@/lib/date-utils";
 
 interface ApprovalRequest {
   _id: string;
@@ -248,8 +249,8 @@ export default function ApprovalsPage() {
                       <TableCell className="text-[13px] text-gray-500">
                         {req.resolved_by?.name || "-"}
                       </TableCell>
-                      <TableCell className="text-[13px] text-gray-500">
-                        {req.resolved_at ? new Date(req.resolved_at).toLocaleDateString() : "-"}
+                      <TableCell className="text-[13px] text-gray-500 font-mono">
+                        {req.resolved_at ? formatDateDDMMYYYY(req.resolved_at) : "-"}
                       </TableCell>
                     </TableRow>
                   ))}

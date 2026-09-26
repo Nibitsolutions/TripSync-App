@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Building2, CalendarPlus, Ban, Play, Eye, Users, Copy, Check } from "lucide-react";
+import { formatDateDDMMYYYY } from "@/lib/date-utils";
 
 interface Agency {
   _id: string;
@@ -269,7 +270,7 @@ export default function AgenciesPage() {
                             {daysRemaining(a.access_expires_at)}
                           </p>
                           {a.access_expires_at && (
-                            <p className="text-[10px] text-gray-400">{new Date(a.access_expires_at).toLocaleDateString()}</p>
+                            <p className="text-[10px] text-gray-400 font-mono">{formatDateDDMMYYYY(a.access_expires_at)}</p>
                           )}
                         </TableCell>
                         <TableCell>
@@ -278,7 +279,7 @@ export default function AgenciesPage() {
                             <span className="text-[13px] text-gray-600 dark:text-gray-300">{a.user_count} / {a.max_users}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-[13px] text-gray-500">{new Date(a.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-[13px] text-gray-500 font-mono">{formatDateDDMMYYYY(a.created_at)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1.5">
                             <Button size="sm" variant="outline" className="h-8 gap-1 text-[11px]" onClick={() => viewDetails(a._id)}>
@@ -344,7 +345,7 @@ export default function AgenciesPage() {
                   ["Currency", (detailData.agency as Record<string, unknown>)?.base_currency],
                   ["Invoice Prefix", (detailData.agency as Record<string, unknown>)?.invoice_prefix],
                   ["Max Users", (detailData.agency as Record<string, unknown>)?.max_users],
-                  ["Expires", (detailData.agency as Record<string, unknown>)?.access_expires_at ? new Date((detailData.agency as Record<string, unknown>).access_expires_at as string).toLocaleDateString() : "No expiry"],
+                  ["Expires", (detailData.agency as Record<string, unknown>)?.access_expires_at ? formatDateDDMMYYYY((detailData.agency as Record<string, unknown>).access_expires_at as string) : "No expiry"],
                   ["Contact", (detailData.agency as Record<string, unknown>)?.contact_person || "-"],
                   ["Phone", (detailData.agency as Record<string, unknown>)?.contact_phone || "-"],
                 ].map(([label, value]) => (

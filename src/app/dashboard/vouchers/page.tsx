@@ -16,6 +16,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { numberToWords } from "@/lib/numberToWords";
+import { DatePicker } from "@/components/ui/date-picker";
+import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import {
   Plus,
   Trash2,
@@ -478,11 +480,10 @@ export default function VouchersPage() {
           </div>
           <div>
             <Label className="text-xs font-medium text-gray-500 mb-1.5 block">Voucher Date <span className="text-red-500">*</span></Label>
-            <Input
-              type="date"
+            <DatePicker
               className="h-9 text-sm"
               value={form.voucher_date}
-              onChange={(e) => setForm((p) => ({ ...p, voucher_date: e.target.value }))}
+              onChange={(val) => setForm((p) => ({ ...p, voucher_date: val }))}
               disabled={isPosted}
             />
           </div>
@@ -641,11 +642,10 @@ export default function VouchersPage() {
                       disabled={isPosted}
                       list="invoice-suggestions"
                     />
-                    <Input
-                      type="date"
+                    <DatePicker
                       className="h-7 text-xs px-1"
                       value={entry.adj_date}
-                      onChange={(e) => updateEntry(idx, "adj_date", e.target.value)}
+                      onChange={(val) => updateEntry(idx, "adj_date", val)}
                       disabled={isPosted}
                     />
                     <Input
@@ -1038,8 +1038,8 @@ export default function VouchersPage() {
                               {v.voucher_type}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                            {v.voucher_date ? new Date(v.voucher_date).toLocaleDateString("en-GB") : "—"}
+                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 font-mono">
+                            {v.voucher_date ? formatDateDDMMYYYY(v.voucher_date) : "—"}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 max-w-[180px] truncate">
                             {v.name_on_voucher || "—"}
