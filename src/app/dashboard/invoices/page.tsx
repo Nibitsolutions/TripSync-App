@@ -1387,10 +1387,10 @@ function InvoicesPageContent() {
                 </Button>
               </div>
               <div className="w-full overflow-x-auto">
-                <table className="w-full min-w-[650px] text-[11px] table-fixed">
+                <table className="w-full min-w-[650px] text-[11px]">
                   <thead className="bg-slate-50 dark:bg-[#161618] border-b border-slate-200 dark:border-slate-800 text-slate-500 font-semibold">
                     <tr>
-                      <th className="p-1.5 text-left w-[75px]">City</th>
+                      <th className="p-1.5 text-left min-w-[75px]">City</th>
                       <th className="p-1.5 text-left w-[70px]">Fl.No</th>
                       <th className="p-1.5 text-left w-[45px]">Cl</th>
                       <th className="p-1.5 text-left w-[125px]">Dep. Date</th>
@@ -1413,20 +1413,6 @@ function InvoicesPageContent() {
                             className="h-7 text-[11px] uppercase font-mono w-full bg-transparent"
                           />
                         </td>
-
-...
-
-                  <div className="w-[75px] flex-shrink-0 space-y-1">
-                    <Label className="text-[9px] text-slate-500">6th City</Label>
-                    <TypeToSearch
-                      placeholder="XXX"
-                      value={item.conjunction_city || ""}
-                      onChange={(val) => updateTicketLineItem(itemIdx, "conjunction_city", val.toUpperCase(), isEdit)}
-                      onSelectOption={(opt) => updateTicketLineItem(itemIdx, "conjunction_city", opt.code || opt.value, isEdit)}
-                      options={cityOptions}
-                      className="h-6 text-[10px] uppercase font-mono"
-                    />
-                  </div>
                         <td className="p-1">
                           <Input
                             placeholder="000"
@@ -1514,7 +1500,7 @@ function InvoicesPageContent() {
               {/* Conjunction Leg Details (All Fields) */}
               <div className="w-full overflow-x-auto pb-1">
                 <div className="flex flex-nowrap items-end gap-2 min-w-[650px] pt-1 border-t border-slate-100 dark:border-slate-800">
-                  <div className="w-[75px] flex-shrink-0 space-y-1">
+                  <div className="flex-1 min-w-[75px] space-y-1">
                     <Label className="text-[9px] text-slate-500">6th City</Label>
                     <TypeToSearch
                       placeholder="XXX"
