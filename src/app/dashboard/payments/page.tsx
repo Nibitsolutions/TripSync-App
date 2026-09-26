@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Wallet, Coins, Loader2, Printer, X, ArrowLeft } from "lucide-react";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
+import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
 
 interface Payment {
   _id: string;
@@ -59,6 +60,11 @@ export default function PaymentsPage() {
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("PKR");
   const [method, setMethod] = useState("");
+
+  const customerOptions: SearchOption[] = customers.map((c) => ({
+    value: c._id,
+    label: c.name,
+  }));
 
   // Allocation state
   const [allocatingPayment, setAllocatingPayment] = useState<Payment | null>(null);
@@ -227,10 +233,17 @@ export default function PaymentsPage() {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-[13px] font-semibold">Customer *</Label>
-                <Select value={customerId} onValueChange={(v) => v && setCustomerId(v)}>
-                  <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder="Select customer" /></SelectTrigger>
-                  <SelectContent>{customers.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
+                <TypeToSearch
+                  placeholder="Select customer..."
+                  value={customers.find((c) => c._id === customerId)?.name || customerId}
+                  onChange={(val) => {
+                    const matched = customers.find((c) => c._id === val || c.name.toLowerCase() === val.trim().toLowerCase());
+                    setCustomerId(matched ? matched._id : val);
+                  }}
+                  onSelectOption={(opt) => setCustomerId(opt.value)}
+                  options={customerOptions}
+                  className="h-10 text-[13px]"
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
+import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
 
 interface Customer {
   _id: string;
@@ -121,6 +122,12 @@ export default function CustomersPage() {
   const [ledgerFromDate, setLedgerFromDate] = useState("");
   const [ledgerToDate, setLedgerToDate] = useState("");
   const [loadingLedgerFilter, setLoadingLedgerFilter] = useState(false);
+
+  const customerOptions: SearchOption[] = customers.map((c) => ({
+    value: c._id,
+    label: c.name,
+    code: c.code,
+  }));
 
   const load = useCallback(async () => {
     try {
@@ -829,10 +836,12 @@ export default function CustomersPage() {
                 <div className="flex flex-col sm:flex-row flex-wrap items-end gap-3 p-3 rounded-lg bg-slate-50 dark:bg-[#151518] border border-slate-200 dark:border-slate-800">
                   <div className="space-y-1 flex-1 min-w-[180px]">
                     <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Search Customer Name / ID</Label>
-                    <Input
+                    <TypeToSearch
                       placeholder="e.g. Customer Name or Code"
                       value={ledgerCustomerSearch}
-                      onChange={(e) => setLedgerCustomerSearch(e.target.value)}
+                      onChange={(val) => setLedgerCustomerSearch(val)}
+                      onSelectOption={(opt) => setLedgerCustomerSearch(opt.label)}
+                      options={customerOptions}
                       className="h-8 text-xs bg-white dark:bg-[#111113]"
                     />
                   </div>

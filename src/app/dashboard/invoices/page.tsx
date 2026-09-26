@@ -17,10 +17,11 @@ import {
   Printer, Plane, FileText, Calculator, Search, X, RotateCcw, AlertTriangle, Check, Layers,
   ArrowLeft, Copy, CheckCircle2, Save, ChevronLeft, ChevronRight
 } from "lucide-react";
-import { CITY_AIRPORT_CODES, formatTicketNumber, getAirlineByTicketNumber, incrementTicketNumber } from "@/lib/iataAirlines";
+import { CITY_AIRPORT_CODES, IATA_AIRLINES, formatTicketNumber, getAirlineByTicketNumber, incrementTicketNumber } from "@/lib/iataAirlines";
 import { validateInvoiceForPosting, validateInvoiceForDraft } from "@/lib/invoiceValidation";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
+import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
 
 interface Invoice {
   _id: string;
@@ -227,6 +228,32 @@ function InvoicesPageContent() {
   const [newBspBillingPeriod] = useState("");
   const [activeTicketTab, setActiveTicketTab] = useState(0);
   const [activeEditTicketTab, setActiveEditTicketTab] = useState(0);
+
+  const customerOptions: SearchOption[] = customers.map((c) => ({
+    value: c._id,
+    label: c.name,
+    code: c.code,
+  }));
+
+  const supplierOptions: SearchOption[] = suppliers.map((s) => ({
+    value: s._id,
+    label: s.name,
+    code: s.code,
+  }));
+
+  const airlineOptions: SearchOption[] = Object.values(IATA_AIRLINES).map((a) => ({
+    value: a.name,
+    label: a.name,
+    code: a.code,
+    sublabel: a.iata2,
+  }));
+
+  const cityOptions: SearchOption[] = CITY_AIRPORT_CODES.map((c) => ({
+    value: c.code,
+    label: `${c.code} - ${c.name}`,
+    code: c.code,
+    sublabel: c.country,
+  }));
 
   interface ConfiguredTaxCode {
     _id: string;
@@ -1267,37 +1294,37 @@ function InvoicesPageContent() {
               </div>
               <div className="w-[130px] flex-shrink-0 space-y-1">
                 <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Airline *</Label>
-                <Input
-                  placeholder="Auto-detected or QATAR"
+                <TypeToSearch
+                  placeholder="QATAR AIRWAYS"
                   value={item.airline_name || ""}
-                  onChange={(e) => updateTicketLineItem(itemIdx, "airline_name", e.target.value.toUpperCase(), isEdit)}
+                  onChange={(val) => updateTicketLineItem(itemIdx, "airline_name", val.toUpperCase(), isEdit)}
+                  onSelectOption={(opt) => updateTicketLineItem(itemIdx, "airline_name", opt.value.toUpperCase(), isEdit)}
+                  options={airlineOptions}
                   className="h-8 text-[12px] uppercase bg-white dark:bg-[#161619]"
                 />
               </div>
               <div className="w-[150px] flex-shrink-0 space-y-1">
                 <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Supplier / BSP *</Label>
-                <Select
-                  value={item.supplier_id || (isEdit ? editSupplierId : newSupplierId) || ""}
-                  onValueChange={(v) => {
-                    const val = v || "";
-                    updateTicketLineItem(itemIdx, "supplier_id", val, isEdit);
-                    if (isEdit) setEditSupplierId(val);
-                    else setNewSupplierId(val);
+                <TypeToSearch
+                  placeholder="BSP / Airline"
+                  value={getSupplierName(item.supplier_id || (isEdit ? editSupplierId : newSupplierId) || "")}
+                  onChange={(val) => {
+                    const matched = suppliers.find(
+                      (s) => s._id === val || s.name.toLowerCase() === val.trim().toLowerCase()
+                    );
+                    const suppId = matched ? matched._id : val;
+                    updateTicketLineItem(itemIdx, "supplier_id", suppId, isEdit);
+                    if (isEdit) setEditSupplierId(suppId);
+                    else setNewSupplierId(suppId);
                   }}
-                >
-                  <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619]">
-                    <SelectValue placeholder="BSP / Airline">
-                      {(val) => getSupplierName(val)}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((s) => (
-                      <SelectItem key={s._id} value={s._id}>
-                        {s.name} {s.code ? `(${s.code})` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onSelectOption={(opt) => {
+                    updateTicketLineItem(itemIdx, "supplier_id", opt.value, isEdit);
+                    if (isEdit) setEditSupplierId(opt.value);
+                    else setNewSupplierId(opt.value);
+                  }}
+                  options={supplierOptions}
+                  className="h-8 text-[12px] bg-white dark:bg-[#161619]"
+                />
               </div>
               <div className="w-[120px] flex-shrink-0 space-y-1">
                 <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Sector *</Label>
@@ -1377,14 +1404,29 @@ function InvoicesPageContent() {
                     {(item.flight_segments || []).map((seg, segIdx) => (
                       <tr key={segIdx} className="border-b border-slate-100 dark:border-slate-800/60">
                         <td className="p-1">
-                          <Input
+                          <TypeToSearch
                             placeholder="XXX"
                             value={seg.city}
-                            list="city-airport-options"
-                            onChange={(e) => updateFlightSegment(itemIdx, segIdx, "city", e.target.value.toUpperCase(), isEdit)}
+                            onChange={(val) => updateFlightSegment(itemIdx, segIdx, "city", val.toUpperCase(), isEdit)}
+                            onSelectOption={(opt) => updateFlightSegment(itemIdx, segIdx, "city", opt.code || opt.value, isEdit)}
+                            options={cityOptions}
                             className="h-7 text-[11px] uppercase font-mono w-full bg-transparent"
                           />
                         </td>
+
+...
+
+                  <div className="w-[75px] flex-shrink-0 space-y-1">
+                    <Label className="text-[9px] text-slate-500">6th City</Label>
+                    <TypeToSearch
+                      placeholder="XXX"
+                      value={item.conjunction_city || ""}
+                      onChange={(val) => updateTicketLineItem(itemIdx, "conjunction_city", val.toUpperCase(), isEdit)}
+                      onSelectOption={(opt) => updateTicketLineItem(itemIdx, "conjunction_city", opt.code || opt.value, isEdit)}
+                      options={cityOptions}
+                      className="h-6 text-[10px] uppercase font-mono"
+                    />
+                  </div>
                         <td className="p-1">
                           <Input
                             placeholder="000"
@@ -1474,11 +1516,12 @@ function InvoicesPageContent() {
                 <div className="flex flex-nowrap items-end gap-2 min-w-[650px] pt-1 border-t border-slate-100 dark:border-slate-800">
                   <div className="w-[75px] flex-shrink-0 space-y-1">
                     <Label className="text-[9px] text-slate-500">6th City</Label>
-                    <Input
+                    <TypeToSearch
                       placeholder="XXX"
-                      list="city-airport-options"
                       value={item.conjunction_city || ""}
-                      onChange={(e) => updateTicketLineItem(itemIdx, "conjunction_city", e.target.value.toUpperCase(), isEdit)}
+                      onChange={(val) => updateTicketLineItem(itemIdx, "conjunction_city", val.toUpperCase(), isEdit)}
+                      onSelectOption={(opt) => updateTicketLineItem(itemIdx, "conjunction_city", opt.code || opt.value, isEdit)}
+                      options={cityOptions}
                       className="h-6 text-[10px] uppercase font-mono"
                     />
                   </div>
@@ -2508,12 +2551,10 @@ function InvoicesPageContent() {
                   {/* Customer */}
                   <div className="flex-1 min-w-[180px] space-y-1">
                     <Label className="text-[11px] font-semibold">Customer *</Label>
-                    <Input
-                      type="text"
-                      placeholder="Type or select customer..."
+                    <TypeToSearch
+                      placeholder="Type customer name..."
                       value={getCustomerName(newCustomerId)}
-                      onChange={(e) => {
-                        const val = e.target.value;
+                      onChange={(val) => {
                         const matched = customers.find(
                           (c) =>
                             (c && c.name && String(c.name).toLowerCase() === val.trim().toLowerCase()) ||
@@ -2528,16 +2569,13 @@ function InvoicesPageContent() {
                           setNewPrintName(val);
                         }
                       }}
-                      className="h-8 text-[11px] bg-white dark:bg-[#161619]"
-                      list="new-customers-list"
+                      onSelectOption={(opt) => {
+                        setNewCustomerId(opt.value);
+                        setNewPrintName(opt.label);
+                      }}
+                      options={customerOptions}
+                      className="h-8 text-[11px]"
                     />
-                    <datalist id="new-customers-list">
-                      {customers.map((c) => (
-                        <option key={c._id} value={c.name}>
-                          {c.code ? `${c.code} - ${c.name}` : c.name}
-                        </option>
-                      ))}
-                    </datalist>
                   </div>
                   {/* Print Name */}
                   <div className="flex-1 min-w-[160px] space-y-1">
@@ -2865,12 +2903,10 @@ function InvoicesPageContent() {
                       </div>
                       <div className="flex-1 min-w-[180px] space-y-1">
                         <Label className="text-[11px] font-semibold">Customer *</Label>
-                        <Input
-                          type="text"
-                          placeholder="Type or select customer..."
+                        <TypeToSearch
+                          placeholder="Type customer name..."
                           value={getCustomerName(editCustomerId)}
-                          onChange={(e) => {
-                            const val = e.target.value;
+                          onChange={(val) => {
                             const matched = customers.find(
                               (c) =>
                                 (c && c.name && String(c.name).toLowerCase() === val.trim().toLowerCase()) ||
@@ -2885,16 +2921,13 @@ function InvoicesPageContent() {
                               setEditPrintName(val);
                             }
                           }}
-                          className="h-8 text-[11px] bg-white dark:bg-[#161619]"
-                          list="edit-customers-list"
+                          onSelectOption={(opt) => {
+                            setEditCustomerId(opt.value);
+                            setEditPrintName(opt.label);
+                          }}
+                          options={customerOptions}
+                          className="h-8 text-[11px]"
                         />
-                        <datalist id="edit-customers-list">
-                          {customers.map((c) => (
-                            <option key={c._id} value={c.name}>
-                              {c.code ? `${c.code} - ${c.name}` : c.name}
-                            </option>
-                          ))}
-                        </datalist>
                       </div>
                       <div className="flex-1 min-w-[160px] space-y-1">
                         <Label className="text-[11px] font-semibold">Print Name *</Label>
@@ -3311,17 +3344,20 @@ function InvoicesPageContent() {
 
               {/* Customer Filter */}
               <div className="w-44">
-                <Select value={customerFilter} onValueChange={(v) => setCustomerFilter(v || "all")}>
-                  <SelectTrigger className="h-9 text-[12px] bg-slate-50/50 dark:bg-[#161619] border-slate-200 dark:border-slate-800">
-                    <SelectValue placeholder="All Customers">
-                      {(val) => val === "all" ? "All Customers" : getCustomerName(val)}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Customers</SelectItem>
-                    {customers.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <TypeToSearch
+                  placeholder="All Customers"
+                  value={customerFilter === "all" ? "" : getCustomerName(customerFilter)}
+                  onChange={(val) => {
+                    if (!val) setCustomerFilter("all");
+                    else {
+                      const matched = customers.find((c) => c._id === val || c.name.toLowerCase().includes(val.toLowerCase()));
+                      setCustomerFilter(matched ? matched._id : val);
+                    }
+                  }}
+                  onSelectOption={(opt) => setCustomerFilter(opt.value)}
+                  options={customerOptions}
+                  className="h-9 text-[12px] bg-slate-50/50 dark:bg-[#161619] border-slate-200 dark:border-slate-800"
+                />
               </div>
 
               {/* Reset Filters Button */}

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Building2, Plus, Phone, Mail, BadgeDollarSign, Loader2, Landmark, X, ArrowLeft, Search } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
+import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
 
 interface Supplier {
   _id: string;
@@ -48,6 +49,12 @@ export default function SuppliersPage() {
   const [ledgerSearch, setLedgerSearch] = useState("");
   const [ledgerFromDate, setLedgerFromDate] = useState("");
   const [ledgerToDate, setLedgerToDate] = useState("");
+
+  const supplierOptions: SearchOption[] = suppliers.map((s) => ({
+    value: s._id,
+    label: s.name,
+    code: s.code,
+  }));
 
   const load = useCallback(async () => {
     const res = await fetch("/api/suppliers");
@@ -198,10 +205,12 @@ export default function SuppliersPage() {
               <div className="flex flex-col sm:flex-row flex-wrap items-end gap-3 p-3 rounded-lg bg-slate-50 dark:bg-[#151518] border border-slate-200 dark:border-slate-800">
                 <div className="space-y-1 flex-1 min-w-[200px]">
                   <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Search Supplier Name / ID / Ref</Label>
-                  <Input
+                  <TypeToSearch
                     placeholder="e.g. Supplier Name, Code, PNR..."
                     value={ledgerSearch}
-                    onChange={(e) => setLedgerSearch(e.target.value)}
+                    onChange={(val) => setLedgerSearch(val)}
+                    onSelectOption={(opt) => setLedgerSearch(opt.label)}
+                    options={supplierOptions}
                     className="h-8 text-xs bg-white dark:bg-[#111113]"
                   />
                 </div>

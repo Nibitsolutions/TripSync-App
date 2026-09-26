@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { numberToWords } from "@/lib/numberToWords";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
+import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
 import {
   Plus,
   Trash2,
@@ -162,6 +163,17 @@ export default function VouchersPage() {
   const [accountSuggestions, setAccountSuggestions] = useState<string[]>([]);
   const [invoicesList, setInvoicesList] = useState<Array<{ invoice_number: string; customer_name: string; total_amount: number; due_amount: number }>>([]);
   const [suggestionFor, setSuggestionFor] = useState<number | null>(null);
+
+  const accountOptions: SearchOption[] = accountSuggestions.map((name) => ({
+    value: name,
+    label: name,
+  }));
+
+  const invoiceOptions: SearchOption[] = invoicesList.map((inv) => ({
+    value: inv.invoice_number,
+    label: `${inv.invoice_number} - ${inv.customer_name}`,
+    sublabel: `Due: PKR ${inv.due_amount.toLocaleString()}`,
+  }));
 
   const fetchVouchers = useCallback(async () => {
     setLoading(true);
@@ -489,11 +501,28 @@ export default function VouchersPage() {
           </div>
           <div>
             <Label className="text-xs font-medium text-gray-500 mb-1.5 block">Name on Voucher <span className="text-red-500">*</span></Label>
-            <Input
+            <TypeToSearch
               className="h-9 text-sm"
               placeholder="Payee / Payer name"
               value={form.name_on_voucher}
-              onChange={(e) => setForm((p) => ({ ...p, name_on_voucher: e.target.value }))}
+              onChange={(val) => setForm((p) => ({ ...p, name_on_voucher: val }))}
+              onSelectOption={(opt) => setForm((p) => ({ ...p, name_on_voucher: opt.value }))}
+              options={accountOptions}
+              disabled={isPosted}
+            />
+          </div>
+
+...
+
+          <div>
+            <Label className="text-xs font-medium text-gray-500 mb-1.5 block">Debit Account <span className="text-red-500">*</span></Label>
+            <TypeToSearch
+              className="h-9 text-sm font-medium text-primary"
+              placeholder="Associated account"
+              value={form.debit_account}
+              onChange={(val) => setForm((p) => ({ ...p, debit_account: val }))}
+              onSelectOption={(opt) => setForm((p) => ({ ...p, debit_account: opt.value }))}
+              options={accountOptions}
               disabled={isPosted}
             />
           </div>
@@ -532,13 +561,14 @@ export default function VouchersPage() {
           </div>
           <div>
             <Label className="text-xs font-medium text-gray-500 mb-1.5 block">Debit Account <span className="text-red-500">*</span></Label>
-            <Input
+            <TypeToSearch
               className="h-9 text-sm font-medium text-primary"
               placeholder="Associated account"
               value={form.debit_account}
-              onChange={(e) => setForm((p) => ({ ...p, debit_account: e.target.value }))}
+              onChange={(val) => setForm((p) => ({ ...p, debit_account: val }))}
+              onSelectOption={(opt) => setForm((p) => ({ ...p, debit_account: opt.value }))}
+              options={accountOptions}
               disabled={isPosted}
-              list="account-suggestions"
             />
           </div>
           <div>
@@ -634,13 +664,14 @@ export default function VouchersPage() {
                       onChange={(e) => updateEntry(idx, "ref_code", e.target.value)}
                       disabled={isPosted}
                     />
-                    <Input
+                    <TypeToSearch
                       className="h-7 text-xs font-mono px-1.5"
                       placeholder="Inv / Ref #"
                       value={entry.ref_no}
-                      onChange={(e) => updateEntry(idx, "ref_no", e.target.value)}
+                      onChange={(val) => updateEntry(idx, "ref_no", val)}
+                      onSelectOption={(opt) => updateEntry(idx, "ref_no", opt.value)}
+                      options={invoiceOptions}
                       disabled={isPosted}
-                      list="invoice-suggestions"
                     />
                     <DatePicker
                       className="h-7 text-xs px-1"
@@ -656,13 +687,14 @@ export default function VouchersPage() {
                       disabled={isPosted}
                     />
                     <div className="relative">
-                      <Input
+                      <TypeToSearch
                         className="h-7 text-xs font-mono px-1.5"
                         placeholder="Type account name..."
                         value={entry.account_code}
-                        onChange={(e) => updateEntry(idx, "account_code", e.target.value)}
+                        onChange={(val) => updateEntry(idx, "account_code", val)}
+                        onSelectOption={(opt) => updateEntry(idx, "account_code", opt.value)}
+                        options={accountOptions}
                         disabled={isPosted}
-                        list="account-suggestions"
                       />
                     </div>
                     <Input

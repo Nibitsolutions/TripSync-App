@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, Clock, TrendingUp, TrendingDown, Loader2, Printer, FileText, UserCheck, FileSpreadsheet, BookOpen, Search, ArrowUpRight, ArrowDownRight, RotateCcw, Building2 } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
+import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
 
 interface Customer { _id: string; name: string; }
 interface SupplierOption { _id: string; name: string; code?: string; }
@@ -213,6 +214,17 @@ function ReportsPageContent() {
   const [supplierLedgerSummary, setSupplierLedgerSummary] = useState<SupplierLedgerSummary | null>(null);
   const [loadingSupplierLedger, setLoadingSupplierLedger] = useState(false);
 
+  const customerOptions: SearchOption[] = customers.map((c) => ({
+    value: c._id,
+    label: c.name,
+  }));
+
+  const supplierOptions: SearchOption[] = suppliers.map((s) => ({
+    value: s._id,
+    label: s.name,
+    code: s.code,
+  }));
+
   useEffect(() => {
     fetch("/api/customers").then((r) => r.json()).then((d) => setCustomers(d.customers || []));
     fetch("/api/suppliers").then((r) => r.json()).then((d) => setSuppliers(d.suppliers || []));
@@ -369,13 +381,20 @@ function ReportsPageContent() {
               <div className="flex flex-col sm:flex-row gap-4 sm:items-end mb-6">
                 <div className="space-y-1.5 w-full sm:w-60">
                   <Label className="text-[13px] font-semibold">Customer Filter</Label>
-                  <Select value={selectedCustomerId} onValueChange={(v) => setSelectedCustomerId(v || "all")}>
-                    <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder="All Customers" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Customers</SelectItem>
-                      {customers.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <TypeToSearch
+                    placeholder="All Customers"
+                    value={selectedCustomerId === "all" ? "" : customers.find((c) => c._id === selectedCustomerId)?.name || selectedCustomerId}
+                    onChange={(val) => {
+                      if (!val) setSelectedCustomerId("all");
+                      else {
+                        const matched = customers.find((c) => c._id === val || c.name.toLowerCase().includes(val.toLowerCase()));
+                        setSelectedCustomerId(matched ? matched._id : val);
+                      }
+                    }}
+                    onSelectOption={(opt) => setSelectedCustomerId(opt.value)}
+                    options={customerOptions}
+                    className="h-10 text-[13px]"
+                  />
                 </div>
                 <div className="space-y-1.5 w-full sm:w-auto"><Label className="text-[13px] font-semibold">From Date</Label><DatePicker value={fromDate} onChange={(val) => setFromDate(val)} className="h-10 text-[13px]" /></div>
                 <div className="space-y-1.5 w-full sm:w-auto"><Label className="text-[13px] font-semibold">To Date</Label><DatePicker value={toDate} onChange={(val) => setToDate(val)} className="h-10 text-[13px]" /></div>
@@ -719,10 +738,15 @@ function ReportsPageContent() {
                 {/* Search Customer Field */}
                 <div className="space-y-1.5 w-full sm:w-60">
                   <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Search Customer Name / ID</Label>
-                  <Input
-                    placeholder="e.g. Customer Name or Code..."
+                  <TypeToSearch
+                    placeholder="Type customer name or code..."
                     value={customerSearchQuery}
-                    onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                    onChange={(val) => setCustomerSearchQuery(val)}
+                    onSelectOption={(opt) => {
+                      setCustomerSearchQuery(opt.label);
+                      setSelectedLedgerCustomerId(opt.value);
+                    }}
+                    options={customerOptions}
                     className="h-9 text-[13px] bg-white dark:bg-[#111113]"
                   />
                 </div>
@@ -884,10 +908,15 @@ function ReportsPageContent() {
                 {/* Search Supplier Field */}
                 <div className="space-y-1.5 w-full sm:w-60">
                   <Label className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">Supplier Name / ID / Ref</Label>
-                  <Input
-                    placeholder="Search supplier name, code, PNR..."
+                  <TypeToSearch
+                    placeholder="Type supplier name or code..."
                     value={supplierSearchQuery}
-                    onChange={(e) => setSupplierSearchQuery(e.target.value)}
+                    onChange={(val) => setSupplierSearchQuery(val)}
+                    onSelectOption={(opt) => {
+                      setSupplierSearchQuery(opt.label);
+                      setSelectedLedgerSupplierId(opt.value);
+                    }}
+                    options={supplierOptions}
                     className="h-9 text-[13px] bg-white dark:bg-[#111113]"
                   />
                 </div>
