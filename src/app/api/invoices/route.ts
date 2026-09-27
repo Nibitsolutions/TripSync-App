@@ -97,6 +97,8 @@ export async function GET(req: NextRequest) {
           { ticket_number: { $regex: search, $options: "i" } },
           { gds_pnr: { $regex: search, $options: "i" } },
           { description: { $regex: search, $options: "i" } },
+          { "pax_list.name": { $regex: search, $options: "i" } },
+          { "service_details.reference_no": { $regex: search, $options: "i" } },
         ],
       }).select("invoice_id").lean();
       const lineInvoiceIds = matchingLines.map((l) => l.invoice_id);
@@ -406,6 +408,10 @@ export async function POST(req: NextRequest) {
         supplier_net: parseFloat(String(item.supplier_net || 0)) || 0,
         supplier_gross_wo_wht: parseFloat(String(item.supplier_gross_wo_wht || 0)) || 0,
         agency_margin: parseFloat(String(item.agency_margin || 0)) || 0,
+
+        // Non-ticket service details
+        service_details: item.service_details && typeof item.service_details === "object" ? item.service_details : {},
+        pax_list: Array.isArray(item.pax_list) ? item.pax_list : [],
       }))
     );
 

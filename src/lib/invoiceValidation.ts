@@ -1,3 +1,5 @@
+import { validateServiceItemForPosting, SERVICE_LABELS, ServiceDetails, PaxEntry } from "@/lib/serviceInvoice";
+
 export interface InvoicePostingValidationInput {
   inv_date?: string;
   customer_id?: string | { _id: string; name?: string };
@@ -17,6 +19,8 @@ export interface InvoicePostingValidationInput {
     trip_type?: string;
     description?: string;
     amount?: number | string;
+    service_details?: ServiceDetails;
+    pax_list?: PaxEntry[];
   }>;
 }
 
@@ -109,6 +113,25 @@ export function validateInvoiceForPosting(data: InvoicePostingValidationInput): 
         if (!item.trip_type || !String(item.trip_type).trim()) {
           errors.push(`${ticketLabel}: Trip Type is missing`);
         }
+      } else {
+        const typeLabel = SERVICE_LABELS[item.service_type] || item.service_type;
+        const serviceLabel = data.line_items!.length > 1 ? `${typeLabel} #${index + 1}` : typeLabel;
+        const suppId = typeof item.supplier_id === "object" && item.supplier_id !== null ? item.supplier_id._id : item.supplier_id;
+        errors.push(
+          ...validateServiceItemForPosting(
+            {
+              service_type: item.service_type,
+              description: String(item.description || ""),
+              amount: String(item.amount ?? "0"),
+              commission_override_rate: "",
+              tax_code_id: "",
+              supplier_id: suppId ? String(suppId) : "",
+              service_details: item.service_details,
+              pax_list: item.pax_list,
+            },
+            serviceLabel
+          )
+        );
       }
     });
   }

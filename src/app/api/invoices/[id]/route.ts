@@ -227,6 +227,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           supplier_net: parseFloat(li.supplier_net) || 0,
           supplier_gross_wo_wht: parseFloat(li.supplier_gross_wo_wht) || 0,
           agency_margin: parseFloat(li.agency_margin) || 0,
+
+          // Non-ticket service details
+          service_details: li.service_details && typeof li.service_details === "object" ? li.service_details : {},
+          pax_list: Array.isArray(li.pax_list) ? li.pax_list : [],
         });
       }
       invoice.total_amount = total;

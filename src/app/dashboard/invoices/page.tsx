@@ -22,6 +22,8 @@ import { validateInvoiceForPosting, validateInvoiceForDraft } from "@/lib/invoic
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
+import { ServiceDetails, PaxEntry, SERVICE_LABELS, createDefaultServiceItem, fromStoredServiceItem } from "@/lib/serviceInvoice";
+import { ServiceInvoiceEditor } from "./ServiceInvoiceEditor";
 
 interface Invoice {
   _id: string;
@@ -158,6 +160,10 @@ interface LineItemInput {
   supplier_net?: number;
   supplier_gross_wo_wht?: number;
   agency_margin?: number;
+
+  // Non-ticket services (Hotel / Transport / Visa / General)
+  service_details?: ServiceDetails;
+  pax_list?: PaxEntry[];
 }
 
 interface AuditLogEntry {
@@ -294,7 +300,8 @@ function InvoicesPageContent() {
     loadTaxCodes();
   }, [loadTaxCodes]);
 
-  const defaultType = (typeFilter && typeFilter !== "Other") ? typeFilter : "Ticket";
+  const defaultType = typeFilter || "Ticket";
+  const serviceLabel = SERVICE_LABELS[defaultType] || defaultType;
 
   const createDefaultTicketItem = (taxList?: ConfiguredTaxCode[]): LineItemInput => {
     const codes = Array.isArray(taxList) ? taxList : Array.isArray(configuredTaxCodes) ? configuredTaxCodes : [];
@@ -408,11 +415,19 @@ function InvoicesPageContent() {
     };
   };
 
-  const [lineItems, setLineItems] = useState<LineItemInput[]>([
-    defaultType === "Ticket"
-      ? createDefaultTicketItem()
-      : { service_type: defaultType, description: "", amount: "", commission_override_rate: "", tax_code_id: "" },
-  ]);
+  const createDefaultItem = (type: string): LineItemInput =>
+    type === "Ticket" ? createDefaultTicketItem() : createDefaultServiceItem(type);
+
+  const [lineItems, setLineItems] = useState<LineItemInput[]>([createDefaultItem(defaultType)]);
+
+  // Switching invoice type from the sidebar closes any open form and resets the new-invoice items
+  useEffect(() => {
+    setShowNew(false);
+    setEditInvoiceId(null);
+    setLineItems([createDefaultItem(typeFilter || "Ticket")]);
+    setActiveTicketTab(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typeFilter]);
 
   // Audit Logs state
   const [auditDialogInvoice, setAuditDialogInvoice] = useState<Invoice | null>(null);
@@ -1003,7 +1018,7 @@ function InvoicesPageContent() {
     setEditClientXo(data.invoice?.client_xo || "");
     setEditDocStatus(data.invoice?.status || "Draft");
 
-    const items: LineItemInput[] = (data.line_items || []).map((li: Record<string, unknown>) => ({
+    const items: LineItemInput[] = (data.line_items || []).map((li: Record<string, unknown>) => li.service_type && li.service_type !== "Ticket" ? fromStoredServiceItem(li) : ({
       service_type: String(li.service_type || "Ticket"),
       description: String(li.description || ""),
       amount: String(li.amount),
@@ -2288,7 +2303,7 @@ function InvoicesPageContent() {
                 ) : (
                   <>
                     <FileText className="h-4 w-4 text-primary" />
-                    New Ticket Sales Invoice
+                    New {serviceLabel} Sales Invoice
                   </>
                 )}
               </h2>
@@ -2303,7 +2318,7 @@ function InvoicesPageContent() {
                 onClick={() => {
                   setEditInvoiceId(null);
                   setShowNew(true);
-                  setLineItems([createDefaultTicketItem()]);
+                  setLineItems([createDefaultItem(defaultType)]);
                   setActiveTicketTab(0);
                 }}
               >
@@ -2513,7 +2528,7 @@ function InvoicesPageContent() {
           <CardHeader className="px-3 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              {defaultType === "Ticket" ? "Ticket Booking & Sale Invoice" : "Create New Invoice"}
+              {defaultType === "Ticket" ? "Ticket Booking & Sale Invoice" : `${serviceLabel} Sale Invoice`}
             </CardTitle>
             <Button variant="ghost" size="sm" onClick={() => setShowNew(false)} className="h-8 w-8 p-0">
               <X className="h-4 w-4" />
@@ -2820,34 +2835,17 @@ function InvoicesPageContent() {
                 )}
               </div>
               ) : (
-                /* Non-ticket Line Items */
-                lineItems.map((li, idx) => (
-                  <div key={idx} className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 space-y-3 bg-gray-50/50">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Description"
-                        value={li.description}
-                        onChange={(e) => {
-                          const arr = [...lineItems];
-                          arr[idx].description = e.target.value;
-                          setLineItems(arr);
-                        }}
-                        className="flex-1 h-9 text-[13px]"
-                      />
-                      <Input
-                        placeholder="Amount"
-                        type="number"
-                        value={li.amount}
-                        onChange={(e) => {
-                          const arr = [...lineItems];
-                          arr[idx].amount = e.target.value;
-                          setLineItems(arr);
-                        }}
-                        className="w-32 h-9 text-[13px] font-mono"
-                      />
-                    </div>
-                  </div>
-                ))
+                /* Non-ticket Service Items (Hotel / Transport / Visa / General) */
+                <ServiceInvoiceEditor
+                  serviceType={lineItems[0]?.service_type || defaultType}
+                  items={lineItems}
+                  onItemsChange={setLineItems}
+                  activeIndex={activeTicketTab}
+                  onActiveIndexChange={setActiveTicketTab}
+                  supplierOptions={supplierOptions}
+                  suppliers={suppliers}
+                  getSupplierName={(id) => (id ? getSupplierName(id) : "")}
+                />
               )}
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
@@ -3167,21 +3165,17 @@ function InvoicesPageContent() {
                       )}
                     </div>
                   ) : (
-                    /* Non-ticket Line Items */
-                    editLineItems.map((li, idx) => (
-                      <div key={idx} className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 space-y-3 bg-gray-50/50">
-                        <Input
-                          placeholder="Description"
-                          value={li.description}
-                          onChange={(e) => {
-                            const arr = [...editLineItems];
-                            arr[idx].description = e.target.value;
-                            setEditLineItems(arr);
-                          }}
-                          className="h-9 text-[13px]"
-                        />
-                      </div>
-                    ))
+                    /* Non-ticket Service Items (Hotel / Transport / Visa / General) */
+                    <ServiceInvoiceEditor
+                      serviceType={editLineItems[0]?.service_type || "Other"}
+                      items={editLineItems}
+                      onItemsChange={setEditLineItems}
+                      activeIndex={activeEditTicketTab}
+                      onActiveIndexChange={setActiveEditTicketTab}
+                      supplierOptions={supplierOptions}
+                      suppliers={suppliers}
+                      getSupplierName={(id) => (id ? getSupplierName(id) : "")}
+                    />
                   )}
 
                   <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
@@ -3209,18 +3203,20 @@ function InvoicesPageContent() {
           <div className="flex items-center justify-between mb-2">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">
-                Invoices{typeFilter ? ` — ${typeFilter}s` : ""}
+                Invoices{typeFilter ? ` — ${serviceLabel}` : ""}
               </h1>
               <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Manage ticket sales, airline billing, and travel invoices</p>
             </div>
             <Button
               onClick={() => {
                 setEditInvoiceId(null);
+                setLineItems([createDefaultItem(defaultType)]);
+                setActiveTicketTab(0);
                 setShowNew(true);
               }}
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors cursor-pointer"
             >
-              <Plus className="h-4 w-4" /> New Invoice / Ticket Sale
+              <Plus className="h-4 w-4" /> {defaultType === "Ticket" ? "New Invoice / Ticket Sale" : `New ${serviceLabel} Invoice`}
             </Button>
           </div>
 

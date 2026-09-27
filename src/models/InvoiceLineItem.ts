@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export type ServiceType = "Ticket" | "Hotel" | "Package" | "Umrah" | "Visa" | "Other";
+export type ServiceType = "Ticket" | "Hotel" | "Transport" | "Package" | "Umrah" | "Hajj" | "Visa" | "Other";
 
 export interface IFlightSegment {
   city: string;
@@ -111,6 +111,10 @@ export interface IInvoiceLineItem extends Document {
   supplier_gross_wo_wht: number;
   agency_margin: number;
 
+  // Non-ticket services (Hotel / Transport / Visa / General): type-specific fields
+  service_details: Record<string, unknown>;
+  pax_list: Array<{ name: string; pax_type: string }>;
+
   created_at: Date;
   updated_at: Date;
 }
@@ -119,7 +123,7 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
   {
     invoice_id: { type: Schema.Types.ObjectId, ref: "Invoice", required: true, index: true },
     tenant_id: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true },
-    service_type: { type: String, enum: ["Ticket", "Hotel", "Package", "Umrah", "Visa", "Other"], required: true },
+    service_type: { type: String, enum: ["Ticket", "Hotel", "Transport", "Package", "Umrah", "Hajj", "Visa", "Other"], required: true },
     description: { type: String, required: true },
     amount: { type: Number, required: true },
     tax_code_id: { type: Schema.Types.ObjectId, ref: "TaxCode", default: null },
@@ -234,6 +238,15 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
     supplier_net: { type: Number, default: 0 },
     supplier_gross_wo_wht: { type: Number, default: 0 },
     agency_margin: { type: Number, default: 0 },
+
+    // Non-ticket services (Hotel / Transport / Visa / General): type-specific fields
+    service_details: { type: Schema.Types.Mixed, default: {} },
+    pax_list: [
+      {
+        name: { type: String, default: "" },
+        pax_type: { type: String, default: "A" },
+      },
+    ],
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );
