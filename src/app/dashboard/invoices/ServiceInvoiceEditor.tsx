@@ -17,6 +17,15 @@ import {
   VEHICLES, TRANSPORT_SECTORS, VISA_TYPES, GENERAL_TEMPLATES,
   calculateServiceTotals, createDefaultServiceItem, getQuantityFactor, paxCount,
 } from "@/lib/serviceInvoice";
+import { invoiceTypeOf, taxCodeLabel, taxCodesForInvoiceType } from "@/lib/taxCodes";
+
+interface ServiceTaxCode {
+  _id: string;
+  name: string;
+  code: string;
+  active: boolean;
+  applicable_invoice_types?: string[];
+}
 
 interface Props<T extends ServiceLineItem> {
   serviceType: string;
@@ -27,6 +36,8 @@ interface Props<T extends ServiceLineItem> {
   supplierOptions: SearchOption[];
   suppliers: { _id: string; name: string }[];
   getSupplierName: (id: string) => string;
+  /** All configured tax codes; filtered here to those tagged for this invoice type. */
+  taxCodes?: ServiceTaxCode[];
 }
 
 const SERVICE_ICONS: Record<string, typeof Hotel> = {
@@ -76,6 +87,7 @@ export function ServiceInvoiceEditor<T extends ServiceLineItem>({
   supplierOptions,
   suppliers,
   getSupplierName,
+  taxCodes = [],
 }: Props<T>) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [fetchingRate, setFetchingRate] = useState(false);
@@ -246,9 +258,30 @@ export function ServiceInvoiceEditor<T extends ServiceLineItem>({
     </div>
   );
 
+  // Tax codes tagged for this invoice type (General invoices on the INSURANCE template count as Insurance).
+  // A code already on the item stays listed so existing invoices keep showing it.
+  const availableTaxCodes = taxCodesForInvoiceType(taxCodes, invoiceTypeOf(serviceType, d.template));
+  const selectedTax = taxCodes.find((t) => t._id === item.tax_code_id);
+  const taxOptions = selectedTax && !availableTaxCodes.includes(selectedTax) ? [...availableTaxCodes, selectedTax] : availableTaxCodes;
+
+  const taxCodeField = (
+    <Select value={item.tax_code_id || "none"} onValueChange={(v) => setField("tax_code_id", v && v !== "none" ? v : "")}>
+      <SelectTrigger className={`${inputCls} w-full`}>
+        <SelectValue>{() => (selectedTax ? taxCodeLabel(selectedTax) : "None")}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">None</SelectItem>
+        {taxOptions.map((t) => (
+          <SelectItem key={t._id} value={t._id}>{taxCodeLabel(t)}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
   const commonTail = (
     <>
       <Field label="Category" required>{searchField("category", CATEGORIES)}</Field>
+      <Field label="Tax Code">{taxCodeField}</Field>
       {serviceType !== "Visa" && !isGeneral && (
         <Field label="Booking Name" required className="sm:col-span-2">{textField("booking_name", "Counter Sale")}</Field>
       )}

@@ -14,7 +14,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return errorResponse("Decision must be 'approve' or 'reject'");
     }
 
-    const request = await ApprovalRequest.findOne({ _id: id, tenant_id: user.tenant_id });
+    // Legacy credit-limit override rows can no longer be resolved
+    const request = await ApprovalRequest.findOne({ _id: id, tenant_id: user.tenant_id, type: { $ne: "CreditLimitOverride" } });
     if (!request) return errorResponse("Approval request not found", 404);
     if (request.status !== "Pending") return errorResponse("Request already resolved");
 

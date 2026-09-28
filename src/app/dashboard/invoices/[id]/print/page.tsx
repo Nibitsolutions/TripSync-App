@@ -151,6 +151,16 @@ export default async function PrintInvoicePage({ params }: PrintParams) {
     };
   });
 
+  // Customer-facing remarks only: entered per ticket, with the invoice-level field as fallback.
+  // Internal remarks are never printed.
+  const customerRemarks = Array.from(
+    new Set(
+      [...lineItems.map((li) => li.customer_remarks), invoice.customer_remarks]
+        .map((r) => String(r || "").trim())
+        .filter(Boolean)
+    )
+  ).join(" / ");
+
   const agentName = (invoice.spo_id as { name?: string })?.name || "E";
   const amountWordsText = numberToWords(grandTotal, "Rupees").replace("Rupees", "").replace("Only", "").trim();
 
@@ -175,7 +185,7 @@ export default async function PrintInvoicePage({ params }: PrintParams) {
     .grid-boxes { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; margin-bottom: 16px; }
     .info-box { border: 1px solid #777777; padding: 8px 12px; font-size: 12px; line-height: 1.6; min-height: 110px; }
     .info-row { display: flex; margin-bottom: 2px; }
-    .info-label { width: 110px; color: #111111; }
+    .info-label { width: 135px; color: #111111; }
     .info-val { font-weight: bold; color: #000000; flex: 1; }
 
     .invoice-grid-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px; border: 1px solid #777777; }
@@ -268,6 +278,12 @@ export default async function PrintInvoicePage({ params }: PrintParams) {
               <span className="info-label">Invoice No:</span>
               <span className="info-val">{invoice.invoice_number}</span>
             </div>
+            {invoice.custom_invoice_number && (
+              <div className="info-row">
+                <span className="info-label">Cus. Invoice Number:</span>
+                <span className="info-val">{invoice.custom_invoice_number}</span>
+              </div>
+            )}
             <div className="info-row">
               <span className="info-label">Invoice Date:</span>
               <span>{formatDate(invoice.created_at)}</span>
@@ -282,7 +298,7 @@ export default async function PrintInvoicePage({ params }: PrintParams) {
             </div>
             <div className="info-row">
               <span className="info-label">Remarks:</span>
-              <span>{invoice.customer_remarks || "—"}</span>
+              <span>{customerRemarks || "—"}</span>
             </div>
           </div>
         </div>

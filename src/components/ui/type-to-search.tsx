@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useId } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useId } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 export interface SearchOption {
@@ -22,6 +23,9 @@ interface TypeToSearchProps {
   maxSuggestions?: number;
   id?: string;
   name?: string;
+  /** When set, a "create new" entry is offered if the typed text matches no suggestion. */
+  onCreateNew?: (query: string) => void;
+  createNewLabel?: string;
 }
 
 export function TypeToSearch({
@@ -35,6 +39,8 @@ export function TypeToSearch({
   maxSuggestions = 8,
   id,
   name,
+  onCreateNew,
+  createNewLabel = "Create New",
 }: TypeToSearchProps) {
   const [inputValue, setInputValue] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
@@ -47,10 +53,34 @@ export function TypeToSearch({
     setInputValue(value);
   }, [value]);
 
+  // Outside dialogs the panel is portaled to <body> with fixed positioning, so
+  // scroll/overflow containers (e.g. the invoice header row) can't clip it.
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!isOpen || !el || el.closest('[role="dialog"]')) {
+      setPanelPos(null);
+      return;
+    }
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      setPanelPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [isOpen]);
+
   // Click outside listener
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (listRef.current?.contains(target)) return;
+      if (containerRef.current && !containerRef.current.contains(target)) {
         setIsOpen(false);
         setHighlightedIndex(-1);
       }
@@ -72,6 +102,16 @@ export function TypeToSearch({
         })
         .slice(0, maxSuggestions)
     : [];
+
+  // Offer "create new" only when nothing matches what was typed
+  const showCreate = !!onCreateNew && query.length > 0 && suggestions.length === 0;
+  const itemCount = showCreate ? 1 : suggestions.length;
+
+  const handleCreate = () => {
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+    onCreateNew?.(inputValue.trim());
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -102,7 +142,7 @@ export function TypeToSearch({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!isOpen || suggestions.length === 0) {
+    if (!isOpen || itemCount === 0) {
       if (e.key === "ArrowDown" && inputValue.trim().length > 0) {
         setIsOpen(true);
       }
@@ -111,14 +151,15 @@ export function TypeToSearch({
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlightedIndex((prev) => (prev + 1) % suggestions.length);
+      setHighlightedIndex((prev) => (prev + 1) % itemCount);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlightedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+      setHighlightedIndex((prev) => (prev - 1 + itemCount) % itemCount);
     } else if (e.key === "Enter") {
-      if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+      if (highlightedIndex >= 0 && highlightedIndex < itemCount) {
         e.preventDefault();
-        handleSelect(suggestions[highlightedIndex]);
+        if (showCreate) handleCreate();
+        else handleSelect(suggestions[highlightedIndex]);
       }
     } else if (e.key === "Escape") {
       setIsOpen(false);
@@ -136,6 +177,8 @@ export function TypeToSearch({
     }
   }, [highlightedIndex]);
 
+  const mountPanel = (panel: React.ReactElement) => (panelPos ? createPortal(panel, document.body) : panel);
+
   return (
     <div ref={containerRef} className="relative inline-block w-full">
       <input
@@ -147,7 +190,7 @@ export function TypeToSearch({
         onKeyDown={handleKeyDown}
         onFocus={() => {
           // Rule: Nothing opens on click if query is empty
-          if (inputValue.trim().length > 0 && suggestions.length > 0) {
+          if (inputValue.trim().length > 0 && itemCount > 0) {
             setIsOpen(true);
           }
         }}
@@ -161,11 +204,30 @@ export function TypeToSearch({
       />
 
       {/* Floating Suggestions Panel (Google Search style) */}
-      {isOpen && suggestions.length > 0 && (
+      {isOpen && itemCount > 0 && mountPanel(
         <ul
           ref={listRef}
-          className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#161619] py-1 shadow-lg text-xs select-none"
+          style={panelPos ? { position: "fixed", top: panelPos.top, left: panelPos.left, width: panelPos.width } : undefined}
+          className={cn(
+            "z-[60] max-h-56 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#161619] py-1 shadow-lg text-xs select-none",
+            !panelPos && "absolute left-0 right-0 mt-1"
+          )}
         >
+          {showCreate && (
+            <li
+              onClick={handleCreate}
+              onMouseEnter={() => setHighlightedIndex(0)}
+              className={cn(
+                "px-3 py-1.5 cursor-pointer flex items-center gap-2 transition-colors font-semibold",
+                highlightedIndex === 0
+                  ? "bg-primary/10 text-primary dark:bg-primary/20"
+                  : "text-primary hover:bg-slate-100 dark:hover:bg-slate-800"
+              )}
+            >
+              <span className="whitespace-nowrap flex-shrink-0">+ {createNewLabel}</span>
+              <span className="truncate font-normal text-slate-500 dark:text-slate-400">&ldquo;{inputValue.trim()}&rdquo;</span>
+            </li>
+          )}
           {suggestions.map((opt, idx) => {
             const isHighlighted = idx === highlightedIndex;
             return (

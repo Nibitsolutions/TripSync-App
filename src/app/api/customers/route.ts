@@ -44,13 +44,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     const name = body.name ? String(body.name).trim() : "";
-    const code = body.code ? String(body.code).trim() : "";
     const customer_type = body.customer_type ? String(body.customer_type).trim() : "Corporate";
     const gl_account = body.gl_account ? String(body.gl_account).trim() : "101001";
     const spo_name = body.spo_name ? String(body.spo_name).trim() : "SPO 1";
 
     const missing: string[] = [];
-    if (!code) missing.push("Code");
     if (!name) missing.push("Title");
     if (!customer_type) missing.push("Customer Type");
     if (!gl_account) missing.push("GL Account");
@@ -59,6 +57,9 @@ export async function POST(req: NextRequest) {
     if (missing.length > 0) {
       return errorResponse(`Required fields missing: ${missing.join(", ")}`, 400);
     }
+
+    // Customer code is always system-assigned (CUST-000001, ...); any code sent by the client is ignored
+    const code = await generateCustomerCode(user.tenant_id);
 
     const customer = await Customer.create({
       tenant_id: user.tenant_id,

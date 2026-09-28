@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Landmark, X, Edit, Check, Power } from "lucide-react";
+import { INVOICE_TYPES, InvoiceType, normalizeInvoiceTypes } from "@/lib/taxCodes";
 
 export type TaxCategory = "Income Tax" | "WHT" | "Airline Tax" | "Other Taxes";
 
@@ -17,6 +18,7 @@ interface TaxCode {
   code: string;
   category: TaxCategory;
   default_percentage: number | null;
+  applicable_invoice_types?: string[];
   active: boolean;
 }
 
@@ -31,6 +33,10 @@ export default function TaxCodesPage() {
   const [code, setCode] = useState("");
   const [category, setCategory] = useState<TaxCategory>("Airline Tax");
   const [defaultPercentage, setDefaultPercentage] = useState("");
+  const [applicableTypes, setApplicableTypes] = useState<InvoiceType[]>([]);
+
+  const toggleApplicableType = (t: InvoiceType) =>
+    setApplicableTypes((prev) => normalizeInvoiceTypes(prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
   const load = useCallback(async () => {
     try {
@@ -53,6 +59,7 @@ export default function TaxCodesPage() {
     setCode("");
     setCategory("Airline Tax");
     setDefaultPercentage("");
+    setApplicableTypes([]);
     setEditingId(null);
     setShowForm(false);
   };
@@ -68,17 +75,25 @@ export default function TaxCodesPage() {
     setCode(t.code || "");
     setCategory(t.category || "Airline Tax");
     setDefaultPercentage(t.default_percentage !== null && t.default_percentage !== undefined ? String(t.default_percentage) : "");
+    // Legacy codes with no tags apply to every type; show that as all boxes ticked
+    const types = normalizeInvoiceTypes(t.applicable_invoice_types);
+    setApplicableTypes(types.length > 0 ? types : [...INVOICE_TYPES]);
     setShowForm(true);
   };
 
   async function handleSubmit() {
     if (!name.trim() || !code.trim() || !category) return;
+    if (applicableTypes.length === 0) {
+      alert("Please select at least one Applicable Invoice Type.");
+      return;
+    }
 
     const payload = {
       name: name.trim(),
       code: code.trim(),
       category,
       default_percentage: defaultPercentage.trim() !== "" ? parseFloat(defaultPercentage) : null,
+      applicable_invoice_types: applicableTypes,
     };
 
     if (editingId) {
@@ -206,11 +221,50 @@ export default function TaxCodesPage() {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[13px] font-semibold">Applicable Invoice Type(s) *</Label>
+                  <button
+                    type="button"
+                    onClick={() => setApplicableTypes(applicableTypes.length === INVOICE_TYPES.length ? [] : [...INVOICE_TYPES])}
+                    className="text-[12px] font-medium text-primary hover:underline"
+                  >
+                    {applicableTypes.length === INVOICE_TYPES.length ? "Clear all" : "Select all"}
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {INVOICE_TYPES.map((t) => {
+                    const selected = applicableTypes.includes(t);
+                    return (
+                      <label
+                        key={t}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[12px] font-medium cursor-pointer transition-colors ${
+                          selected
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => toggleApplicableType(t)}
+                          className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        {t}
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  This tax code will be selectable on new invoices of the chosen type(s).
+                </p>
+              </div>
+
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <Button variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
-                <Button onClick={handleSubmit} disabled={!name.trim() || !code.trim()} className="gap-2">
+                <Button onClick={handleSubmit} disabled={!name.trim() || !code.trim() || applicableTypes.length === 0} className="gap-2">
                   <Check className="h-4 w-4" /> {editingId ? "Save Changes" : "Create Tax Code"}
                 </Button>
               </div>
@@ -240,6 +294,7 @@ export default function TaxCodesPage() {
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Tax Code</TableHead>
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Category</TableHead>
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 text-right">Default %</TableHead>
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Invoice Types</TableHead>
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Status</TableHead>
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 text-right">Actions</TableHead>
                   </TableRow>
@@ -247,7 +302,7 @@ export default function TaxCodesPage() {
                 <TableBody>
                   {taxCodes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12 text-[13px] text-gray-400">
+                      <TableCell colSpan={7}className="text-center py-12 text-[13px] text-gray-400">
                         No tax codes configured yet
                       </TableCell>
                     </TableRow>
@@ -267,6 +322,23 @@ export default function TaxCodesPage() {
                         </TableCell>
                         <TableCell className="text-right font-mono text-[13px] text-gray-700 dark:text-gray-300">
                           {t.default_percentage !== null && t.default_percentage !== undefined ? `${t.default_percentage}%` : "—"}
+                        </TableCell>
+                        <TableCell className="max-w-[260px]">
+                          {(() => {
+                            const types = normalizeInvoiceTypes(t.applicable_invoice_types);
+                            if (types.length === 0 || types.length === INVOICE_TYPES.length) {
+                              return <span className="text-[12px] text-gray-500 dark:text-gray-400">All types</span>;
+                            }
+                            return (
+                              <div className="flex flex-wrap gap-1">
+                                {types.map((type) => (
+                                  <span key={type} className="inline-flex px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                    {type}
+                                  </span>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium ${t.active ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"}`}>

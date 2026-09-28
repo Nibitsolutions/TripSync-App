@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { withAuth, successResponse } from "@/lib/api-helpers";
-import { ApprovalRequest, Expense, Invoice } from "@/models";
+import { ApprovalRequest, Expense } from "@/models";
 
 // GET /api/approval-requests - List approval requests
 export async function GET(req: NextRequest) {
@@ -8,7 +8,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status"); // optional filter
 
-    const query: Record<string, unknown> = { tenant_id: user.tenant_id };
+    // Credit-limit overrides no longer exist; hide any legacy rows from the queue and history
+    const query: Record<string, unknown> = { tenant_id: user.tenant_id, type: { $ne: "CreditLimitOverride" } };
     if (status) {
       query.status = status;
     }
@@ -32,20 +33,6 @@ export async function GET(req: NextRequest) {
               amount: expense.amount,
               description: expense.description,
               type_name: (expense.expense_type_id as { name?: string } | null)?.name || "Unknown Type",
-            };
-          }
-        } else if (request.type === "CreditLimitOverride") {
-          const invoice = await Invoice.findById(request.related_entity_id)
-            .populate("customer_id", "name credit_limit current_balance")
-            .lean();
-          if (invoice) {
-            details = {
-              invoice_number: invoice.invoice_number,
-              amount: invoice.total_amount,
-              currency: invoice.currency,
-              customer_name: (invoice.customer_id as { name?: string } | null)?.name || "Unknown Customer",
-              credit_limit: (invoice.customer_id as { credit_limit?: number } | null)?.credit_limit,
-              current_balance: (invoice.customer_id as { current_balance?: number } | null)?.current_balance,
             };
           }
         }

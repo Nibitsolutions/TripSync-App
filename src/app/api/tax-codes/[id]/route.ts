@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { TaxCode } from "@/models";
+import { normalizeInvoiceTypes } from "@/lib/taxCodes";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -31,6 +32,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         const val = parseFloat(default_percentage);
         taxCode.default_percentage = isNaN(val) ? null : val;
       }
+    }
+    if (body.applicable_invoice_types !== undefined) {
+      const types = normalizeInvoiceTypes(body.applicable_invoice_types);
+      if (types.length === 0) return errorResponse("Select at least one Applicable Invoice Type");
+      taxCode.applicable_invoice_types = types;
     }
     if (active !== undefined) taxCode.active = Boolean(active);
     taxCode.updated_by = user.user_id;

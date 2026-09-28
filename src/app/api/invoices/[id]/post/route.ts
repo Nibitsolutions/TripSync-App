@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
-import { Invoice, Customer, ApprovalRequest, ExchangeRate, Tenant, InvoiceLineItem, Commission, User } from "@/models";
+import { Invoice, Customer, ExchangeRate, Tenant, InvoiceLineItem, Commission, User } from "@/models";
 import { logChanges } from "@/lib/audit";
 import { validateInvoiceForPosting } from "@/lib/invoiceValidation";
 
-// POST /api/invoices/[id]/post - Post a draft invoice (triggers credit-limit check)
+// POST /api/invoices/[id]/post - Post a draft invoice
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (user) => {
     const { id } = await params;
@@ -29,47 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const customer = await Customer.findOne({ _id: invoice.customer_id, tenant_id: user.tenant_id });
     if (!customer) return errorResponse("Customer not found", 404);
 
-    // Credit limit check
-    if (customer.credit_limit !== null) {
-      const newBalance = customer.current_balance + invoice.total_amount;
-      if (newBalance > customer.credit_limit) {
-        // Check if there's already an approved override
-        const approved = await ApprovalRequest.findOne({
-          tenant_id: user.tenant_id,
-          type: "CreditLimitOverride",
-          related_entity_id: invoice._id,
-          status: "Approved",
-        });
-
-        if (!approved) {
-          // Create approval request if none exists
-          const existing = await ApprovalRequest.findOne({
-            tenant_id: user.tenant_id,
-            type: "CreditLimitOverride",
-            related_entity_id: invoice._id,
-            status: "Pending",
-          });
-
-          if (!existing) {
-            const approvalReq = await ApprovalRequest.create({
-              tenant_id: user.tenant_id,
-              type: "CreditLimitOverride",
-              related_entity_id: invoice._id,
-              requested_by: user.user_id,
-              status: "Pending",
-            });
-            return errorResponse(
-              `Credit limit exceeded. Approval required. Request ID: ${approvalReq._id}`,
-              409
-            );
-          }
-          return errorResponse(
-            `Credit limit exceeded. Pending approval: ${existing._id}`,
-            409
-          );
-        }
-      }
-    }
+    // No credit-limit approval: invoices post even when they take the customer over their limit.
 
     // Get FX rate
     const tenant = await Tenant.findById(user.tenant_id);

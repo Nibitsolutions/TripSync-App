@@ -22,6 +22,8 @@ import { validateInvoiceForPosting, validateInvoiceForDraft } from "@/lib/invoic
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
+import { CustomerForm, CustomerRecord } from "@/components/customers/CustomerForm";
+import { InvoiceType, taxCodeLabel, taxCodesForInvoiceType } from "@/lib/taxCodes";
 import { ServiceDetails, PaxEntry, SERVICE_LABELS, createDefaultServiceItem, fromStoredServiceItem } from "@/lib/serviceInvoice";
 import { ServiceInvoiceEditor } from "./ServiceInvoiceEditor";
 
@@ -214,6 +216,9 @@ function InvoicesPageContent() {
   const [creditAmount, setCreditAmount] = useState("");
   const [creditReason, setCreditReason] = useState("");
 
+  // "Create New Customer" pop-up launched from the invoice Customer field
+  const [createCustomerFor, setCreateCustomerFor] = useState<{ mode: "new" | "edit"; name: string } | null>(null);
+
   // Invoice Header State
   const [newCustomerId, setNewCustomerId] = useState("");
   const [newCurrency] = useState("PKR");
@@ -229,6 +234,7 @@ function InvoicesPageContent() {
   const [newAdjDate, setNewAdjDate] = useState(new Date().toISOString().split("T")[0]);
   const [newOurXo, setNewOurXo] = useState("E");
   const [newClientXo, setNewClientXo] = useState("");
+  const [newCustomInvoiceNumber, setNewCustomInvoiceNumber] = useState("");
   const [newDocStatus, setNewDocStatus] = useState("Draft");
   const [newBsp] = useState(false);
   const [newBspBillingPeriod] = useState("");
@@ -267,10 +273,25 @@ function InvoicesPageContent() {
     code: string;
     category: string;
     default_percentage: number | null;
+    applicable_invoice_types?: string[];
     active: boolean;
   }
 
   const [configuredTaxCodes, setConfiguredTaxCodes] = useState<ConfiguredTaxCode[]>([]);
+
+  // Tax codes selectable on an invoice type. A code already on the line item stays listed
+  // (e.g. deactivated or re-tagged since) so existing invoices keep showing their value.
+  const taxCodeOptionsFor = (type: InvoiceType, selectedId?: string) => {
+    const list = taxCodesForInvoiceType(configuredTaxCodes, type);
+    const selected = selectedId && !list.some((t) => t._id === selectedId) ? configuredTaxCodes.find((t) => t._id === selectedId) : undefined;
+    return selected ? [...list, selected] : list;
+  };
+
+  const getTaxCodeLabel = (id?: string | null) => {
+    if (!id || id === "none") return "None";
+    const t = configuredTaxCodes.find((c) => c._id === id);
+    return t ? taxCodeLabel(t) : "None";
+  };
 
   const loadTaxCodes = useCallback(async () => {
     try {
@@ -298,6 +319,10 @@ function InvoicesPageContent() {
 
   useEffect(() => {
     loadTaxCodes();
+    // Refresh when the user comes back to this tab, so tax codes added on the
+    // Tax Codes screen meanwhile are offered right away.
+    window.addEventListener("focus", loadTaxCodes);
+    return () => window.removeEventListener("focus", loadTaxCodes);
   }, [loadTaxCodes]);
 
   const defaultType = typeFilter || "Ticket";
@@ -450,6 +475,7 @@ function InvoicesPageContent() {
   const [editAdjDate, setEditAdjDate] = useState("");
   const [editOurXo, setEditOurXo] = useState("");
   const [editClientXo, setEditClientXo] = useState("");
+  const [editCustomInvoiceNumber, setEditCustomInvoiceNumber] = useState("");
   const [editDocStatus, setEditDocStatus] = useState("Draft");
   const [editBsp, setEditBsp] = useState(false);
   const [editBspBillingPeriod, setEditBspBillingPeriod] = useState("");
@@ -505,6 +531,37 @@ function InvoicesPageContent() {
     fetch("/api/suppliers").then((r) => r.json()).then((d) => setSuppliers(d.suppliers || []));
     fetch("/api/users").then((r) => r.json()).then((d) => setStaffUsers(d.users || []));
   }, [loadCustomers]);
+
+  // Open the print view in a fully separate tab. `noopener` puts it in its own browsing
+  // context group (own process), so a blocking print dialog there doesn't freeze this app.
+  const openInvoicePrint = (id: string) => {
+    window.open(`/dashboard/invoices/${id}/print`, "_blank", "noopener,noreferrer");
+  };
+
+  // A customer created from the invoice pop-up is added to the list and selected on the invoice
+  const handleCustomerCreated = (c: CustomerRecord) => {
+    setCustomers((prev) => (prev.some((p) => p._id === c._id) ? prev : [...prev, { _id: c._id, name: c.name, code: c.code }]));
+    if (createCustomerFor?.mode === "edit") {
+      setEditCustomerId(c._id);
+      setEditPrintName(c.name);
+    } else {
+      setNewCustomerId(c._id);
+      setNewPrintName(c.name);
+    }
+    setCreateCustomerFor(null);
+    loadCustomers();
+  };
+
+  // A typed name that isn't a saved customer must go through "Create New Customer" first,
+  // so the invoice always has the customer's contact / billing details on file.
+  const requireExistingCustomer = (customerId: string, mode: "new" | "edit") => {
+    const id = (customerId || "").trim();
+    if (!id || /^[a-f0-9]{24}$/i.test(id)) return true;
+    if (confirm(`"${id}" is not a saved customer.\n\nCreate this customer now with their full details?`)) {
+      setCreateCustomerFor({ mode, name: id });
+    }
+    return false;
+  };
 
   // Helper functions to resolve display names
   const getCustomerName = (id: string) => {
@@ -858,6 +915,10 @@ function InvoicesPageContent() {
     if (isCreating) return null;
     setIsCreating(true);
     try {
+      if (!requireExistingCustomer(newCustomerId, "new")) {
+        setIsCreating(false);
+        return null;
+      }
       if ((newDocStatus || "Draft") === "Posted") {
         const valErrors = validateInvoiceForPosting({
           inv_date: newInvDate,
@@ -915,6 +976,7 @@ function InvoicesPageContent() {
           adj_date: newAdjDate,
           our_xo: newOurXo,
           client_xo: newClientXo,
+          custom_invoice_number: newCustomInvoiceNumber,
           status: newDocStatus || "Draft",
           line_items: lineItems,
         }),
@@ -923,6 +985,7 @@ function InvoicesPageContent() {
         const data = await res.json();
         const createdInv = data.invoice;
         setShowNew(false);
+        setNewCustomInvoiceNumber("");
         if (createdInv && createdInv._id) {
           openEditDialog(createdInv);
         }
@@ -1016,6 +1079,7 @@ function InvoicesPageContent() {
     setEditAdjDate(data.invoice?.adj_date ? new Date(data.invoice.adj_date).toISOString().split("T")[0] : "");
     setEditOurXo(data.invoice?.our_xo || "E");
     setEditClientXo(data.invoice?.client_xo || "");
+    setEditCustomInvoiceNumber(data.invoice?.custom_invoice_number || "");
     setEditDocStatus(data.invoice?.status || "Draft");
 
     const items: LineItemInput[] = (data.line_items || []).map((li: Record<string, unknown>) => li.service_type && li.service_type !== "Ticket" ? fromStoredServiceItem(li) : ({
@@ -1111,6 +1175,10 @@ function InvoicesPageContent() {
     if (!editInvoiceId || isSavingEdit) return false;
     setIsSavingEdit(true);
     try {
+      if (!requireExistingCustomer(editCustomerId, "edit")) {
+        setIsSavingEdit(false);
+        return false;
+      }
       if (editDocStatus === "Posted") {
         const valErrors = validateInvoiceForPosting({
           inv_date: "valid",
@@ -1168,6 +1236,7 @@ function InvoicesPageContent() {
           adj_date: editAdjDate,
           our_xo: editOurXo,
           client_xo: editClientXo,
+          custom_invoice_number: editCustomInvoiceNumber,
           status: editDocStatus,
           line_items: editLineItems,
         }),
@@ -1372,6 +1441,20 @@ function InvoicesPageContent() {
                   <SelectContent>
                     <SelectItem value="International">International (I)</SelectItem>
                     <SelectItem value="Domestic">Domestic (D)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[160px] flex-shrink-0 space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Tax Code</Label>
+                <Select value={item.tax_code_id || "none"} onValueChange={(v) => updateTicketLineItem(itemIdx, "tax_code_id", v && v !== "none" ? v : "", isEdit)}>
+                  <SelectTrigger className="h-8 text-[12px] bg-white dark:bg-[#161619] px-2 text-[11px]">
+                    <SelectValue>{(val) => getTaxCodeLabel(val)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {taxCodeOptionsFor("Ticket", item.tax_code_id).map((t) => (
+                      <SelectItem key={t._id} value={t._id}>{taxCodeLabel(t)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -2318,6 +2401,7 @@ function InvoicesPageContent() {
                 onClick={() => {
                   setEditInvoiceId(null);
                   setShowNew(true);
+                  setNewCustomInvoiceNumber("");
                   setLineItems([createDefaultItem(defaultType)]);
                   setActiveTicketTab(0);
                 }}
@@ -2465,22 +2549,17 @@ function InvoicesPageContent() {
                 size="sm"
                 className="h-8 text-xs gap-1.5 border-slate-300 dark:border-slate-700 bg-white dark:bg-[#161619]"
                 onClick={async () => {
-                  const win = window.open("", "_blank");
+                  let printId: string | null = null;
                   if (editInvoiceId) {
-                    const ok = await saveEditInvoice();
-                    if (ok) {
-                      if (win) win.location.href = `/dashboard/invoices/${editInvoiceId}/print`;
-                    } else {
-                      if (win) win.close();
-                    }
+                    // Only drafts are editable, so only drafts get their pending edits saved first.
+                    // Posted/voided invoices print as-is — no edit check, no change to the invoice.
+                    const curStatus = invoices.find((i) => i._id === editInvoiceId)?.status || editDocStatus || "Draft";
+                    if (curStatus === "Draft" && !(await saveEditInvoice())) return;
+                    printId = editInvoiceId;
                   } else {
-                    const createdId = await createInvoice();
-                    if (createdId) {
-                      if (win) win.location.href = `/dashboard/invoices/${createdId}/print`;
-                    } else {
-                      if (win) win.close();
-                    }
+                    printId = await createInvoice();
                   }
+                  if (printId) openInvoicePrint(printId);
                 }}
               >
                 <Printer className="h-3.5 w-3.5 text-purple-600" /> Print
@@ -2574,6 +2653,8 @@ function InvoicesPageContent() {
                         setNewCustomerId(opt.value);
                         setNewPrintName(opt.label);
                       }}
+                      onCreateNew={(q) => setCreateCustomerFor({ mode: "new", name: q })}
+                      createNewLabel="Create New Customer"
                       options={customerOptions}
                       className="h-8 text-[11px]"
                     />
@@ -2583,6 +2664,13 @@ function InvoicesPageContent() {
                     <Label className="text-[11px] font-semibold">Print Name *</Label>
                     <Input value={newPrintName} onChange={(e) => setNewPrintName(e.target.value)} placeholder="Print Name" className="h-8 text-[11px] bg-white dark:bg-[#161619]" />
                   </div>
+                  {/* Custom Invoice Number (optional, ticket only) */}
+                  {lineItems[0]?.service_type === "Ticket" && (
+                    <div className="w-[130px] flex-shrink-0 space-y-1">
+                      <Label className="text-[11px] font-semibold">Custom Invoice No.</Label>
+                      <Input value={newCustomInvoiceNumber} onChange={(e) => setNewCustomInvoiceNumber(e.target.value)} placeholder="Optional" className="h-8 text-[11px] bg-white dark:bg-[#161619]" />
+                    </div>
+                  )}
                   {/* SPO / Agent */}
                   <div className="w-[140px] flex-shrink-0 space-y-1">
                     <Label className="text-[11px] font-semibold">SPO / Agent</Label>
@@ -2845,6 +2933,7 @@ function InvoicesPageContent() {
                   supplierOptions={supplierOptions}
                   suppliers={suppliers}
                   getSupplierName={(id) => (id ? getSupplierName(id) : "")}
+                  taxCodes={configuredTaxCodes}
                 />
               )}
 
@@ -2909,6 +2998,8 @@ function InvoicesPageContent() {
                             setEditCustomerId(opt.value);
                             setEditPrintName(opt.label);
                           }}
+                          onCreateNew={(q) => setCreateCustomerFor({ mode: "edit", name: q })}
+                          createNewLabel="Create New Customer"
                           options={customerOptions}
                           className="h-8 text-[11px]"
                         />
@@ -2917,6 +3008,12 @@ function InvoicesPageContent() {
                         <Label className="text-[11px] font-semibold">Print Name *</Label>
                         <Input value={editPrintName} onChange={(e) => setEditPrintName(e.target.value)} className="h-8 text-[11px] bg-white dark:bg-[#161619]" />
                       </div>
+                      {(editLineItems[0]?.service_type || "Ticket") === "Ticket" && (
+                        <div className="w-[130px] flex-shrink-0 space-y-1">
+                          <Label className="text-[11px] font-semibold">Custom Invoice No.</Label>
+                          <Input value={editCustomInvoiceNumber} onChange={(e) => setEditCustomInvoiceNumber(e.target.value)} placeholder="Optional" className="h-8 text-[11px] bg-white dark:bg-[#161619]" />
+                        </div>
+                      )}
                       <div className="w-[140px] flex-shrink-0 space-y-1">
                         <Label className="text-[11px] font-semibold">SPO / Agent</Label>
                         <Select value={editSpoId} onValueChange={(v) => setEditSpoId(v || "")}>
@@ -3175,6 +3272,7 @@ function InvoicesPageContent() {
                       supplierOptions={supplierOptions}
                       suppliers={suppliers}
                       getSupplierName={(id) => (id ? getSupplierName(id) : "")}
+                      taxCodes={configuredTaxCodes}
                     />
                   )}
 
@@ -3451,6 +3549,23 @@ function InvoicesPageContent() {
       </Card>
         </div>
       )}
+
+      {/* Create New Customer Dialog (from invoice Customer field) */}
+      <Dialog open={!!createCustomerFor} onOpenChange={(open) => { if (!open) setCreateCustomerFor(null); }}>
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Create New Customer</DialogTitle>
+          </DialogHeader>
+          {createCustomerFor && (
+            <CustomerForm
+              customers={customers}
+              initialName={createCustomerFor.name}
+              onSaved={handleCustomerCreated}
+              onCancel={() => setCreateCustomerFor(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteInvoiceId} onOpenChange={() => setDeleteInvoiceId(null)}>

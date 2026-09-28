@@ -5,12 +5,12 @@ import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Check, X, ShieldAlert, Receipt, Loader2, Clock, CheckCircle } from "lucide-react";
+import { Check, X, Receipt, Loader2, Clock, CheckCircle } from "lucide-react";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
 
 interface ApprovalRequest {
   _id: string;
-  type: "CreditLimitOverride" | "ExpenseApproval";
+  type: "ExpenseApproval";
   related_entity_id: string;
   requested_by: { name: string; email: string };
   resolved_by: { name: string; email: string } | null;
@@ -21,11 +21,6 @@ interface ApprovalRequest {
     amount: number;
     description?: string;
     type_name?: string;
-    invoice_number?: string;
-    currency?: string;
-    customer_name?: string;
-    credit_limit?: number;
-    current_balance?: number;
   } | null;
 }
 
@@ -111,7 +106,7 @@ export default function ApprovalsPage() {
               </div>
               <p className="text-[15px] font-semibold text-gray-900 dark:text-gray-100 mb-1">All caught up!</p>
               <p className="text-[13px] text-gray-400 dark:text-gray-500 max-w-sm">
-                No pending requests. Over-limit sales and certain expense types will appear here when submitted.
+                No pending requests. Expenses that require manager approval will appear here when submitted.
               </p>
             </div>
           ) : (
@@ -123,42 +118,20 @@ export default function ApprovalsPage() {
                 >
                   <div className="flex items-start gap-3">
                     <div className="h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      {req.type === "CreditLimitOverride" ? (
-                        <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                      ) : (
-                        <Receipt className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                      )}
+                      <Receipt className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div className="space-y-1">
                       <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-50">
-                        {req.type === "CreditLimitOverride"
-                          ? "Credit Limit Override Request"
-                          : "Expense Approval Request"}
+                        Expense Approval Request
                       </p>
                       <div className="text-[12px] text-gray-500 dark:text-gray-400 space-y-1">
-                        {req.type === "CreditLimitOverride" ? (
-                          <>
-                            <p>
-                              Agent <span className="font-semibold">{req.requested_by?.name}</span> requested posting for{" "}
-                              <span className="font-semibold">{req.details?.customer_name}</span>.
-                            </p>
-                            <p className="font-mono text-[11px] text-gray-400">
-                              Invoice Amount: {req.details?.currency} {req.details?.amount?.toLocaleString()} | Customer Balance:{" "}
-                              {req.details?.currency} {req.details?.current_balance?.toLocaleString()} | Credit Limit:{" "}
-                              {req.details?.currency} {req.details?.credit_limit?.toLocaleString() || "None"}
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <p>
-                              Submitted by <span className="font-semibold">{req.requested_by?.name}</span> for{" "}
-                              <span className="font-semibold">{req.details?.type_name}</span>.
-                            </p>
-                            <p className="font-mono text-[11px] text-gray-400">
-                              Amount: PKR {req.details?.amount?.toLocaleString()} | Description: {req.details?.description || "None"}
-                            </p>
-                          </>
-                        )}
+                        <p>
+                          Submitted by <span className="font-semibold">{req.requested_by?.name}</span> for{" "}
+                          <span className="font-semibold">{req.details?.type_name}</span>.
+                        </p>
+                        <p className="font-mono text-[11px] text-gray-400">
+                          Amount: PKR {req.details?.amount?.toLocaleString()} | Description: {req.details?.description || "None"}
+                        </p>
                         <p className="text-[10px] text-gray-400 mt-1">
                           Submitted on {new Date(req.created_at).toLocaleString()}
                         </p>
@@ -231,15 +204,13 @@ export default function ApprovalsPage() {
                   {historyRequests.map((req) => (
                     <TableRow key={req._id} className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-50/50 dark:hover:bg-[#151517]">
                       <TableCell className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">
-                        {req.type === "CreditLimitOverride" ? "Credit Limit Override" : "Expense Approval"}
+                        Expense Approval
                       </TableCell>
                       <TableCell className="text-[13px] text-gray-600 dark:text-gray-300">
                         {req.requested_by?.name || "-"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-[13px] font-semibold text-gray-900 dark:text-gray-100">
-                        {req.type === "CreditLimitOverride"
-                          ? `${req.details?.currency} ${req.details?.amount?.toLocaleString()}`
-                          : `PKR ${req.details?.amount?.toLocaleString()}`}
+                        {`PKR ${req.details?.amount?.toLocaleString()}`}
                       </TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusStyles[req.status] || ""}`}>

@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const {
       customer_id, currency, bsp_flag, bsp_billing_period, line_items, status,
       payment_mode, remarks, internal_remarks, customer_remarks, visit_type, spo_id, supplier_id,
-      print_name, cost_center, adj_date, our_xo, client_xo,
+      print_name, cost_center, adj_date, our_xo, client_xo, custom_invoice_number,
     } = body;
 
     if (status === "Posted") {
@@ -122,6 +122,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (adj_date !== undefined) invoice.adj_date = adj_date ? new Date(adj_date) : null;
     if (our_xo !== undefined) invoice.our_xo = our_xo;
     if (client_xo !== undefined) invoice.client_xo = client_xo;
+    if (custom_invoice_number !== undefined) invoice.custom_invoice_number = String(custom_invoice_number || "").trim();
 
     invoice.updated_by = toValidObjectId(user.user_id) || invoice.updated_by;
     await invoice.save();

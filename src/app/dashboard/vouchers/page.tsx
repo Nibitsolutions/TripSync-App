@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -138,13 +139,18 @@ const BANK_ACCOUNTS = [
   { name: "Petty Cash", account: "Petty Cash Account" },
 ];
 
-export default function VouchersPage() {
+function VouchersContent() {
+  // Voucher type screen opened from the sidebar (?type=PV etc.); null on "All Vouchers"
+  const searchParams = useSearchParams();
+  const routeType = VOUCHER_TYPES.find((t) => t.value === searchParams.get("type"))?.value ?? null;
+  const routeTypeInfo = VOUCHER_TYPES.find((t) => t.value === routeType);
+
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
   // Filters
-  const [filterType, setFilterType] = useState("all");
+  const [filterType, setFilterType] = useState<string>(routeType ?? "all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -195,6 +201,13 @@ export default function VouchersPage() {
       setLoading(false);
     }
   }, [filterType, filterStatus, search, page]);
+
+  // Switching between voucher type screens in the sidebar keeps this page mounted,
+  // so follow the URL's type whenever it changes.
+  useEffect(() => {
+    setFilterType(routeType ?? "all");
+    setPage(1);
+  }, [routeType]);
 
   useEffect(() => {
     fetchVouchers();
@@ -959,16 +972,18 @@ export default function VouchersPage() {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50">
-                Vouchers
+                {routeTypeInfo ? `${routeTypeInfo.label}s` : "Vouchers"}
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Receipt, Payment, Journal, Debit Note &amp; Cash Deposit vouchers
+                {routeTypeInfo
+                  ? `Showing ${routeTypeInfo.value} vouchers only`
+                  : <>Receipt, Payment, Journal, Debit Note &amp; Cash Deposit vouchers</>}
               </p>
             </div>
 
             {/* Quick Create Voucher Type Buttons */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              {VOUCHER_TYPES.map((t) => (
+              {VOUCHER_TYPES.filter((t) => !routeType || t.value === routeType).map((t) => (
                 <Button
                   key={t.value}
                   size="sm"
@@ -994,20 +1009,25 @@ export default function VouchersPage() {
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
-            <Select value={filterType} onValueChange={(v) => { setFilterType(v ?? "all"); setPage(1); }}>
-              <SelectTrigger className="h-9 w-44 text-sm">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {VOUCHER_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.value} — {t.label.split(" - ")[1]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Type filter only on "All Vouchers"; a type screen is fixed to its own type */}
+            {!routeType && (
+              <Select value={filterType} onValueChange={(v) => { setFilterType(v ?? "all"); setPage(1); }}>
+                <SelectTrigger className="h-9 w-44 text-sm">
+                  <SelectValue placeholder="All Types">
+                    {(val) => (!val || val === "all" ? "All Types" : `${val} — ${VOUCHER_TYPES.find((t) => t.value === val)?.label.split(" - ")[1] ?? ""}`)}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {VOUCHER_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.value} — {t.label.split(" - ")[1]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v ?? "all"); setPage(1); }}>
               <SelectTrigger className="h-9 w-36 text-sm">
-                <SelectValue placeholder="All Status" />
+                <SelectValue placeholder="All Status">{(val) => (!val || val === "all" ? "All Status" : val)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
@@ -1149,5 +1169,13 @@ export default function VouchersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function VouchersPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-12"><RefreshCw className="h-6 w-6 animate-spin text-primary" /></div>}>
+      <VouchersContent />
+    </Suspense>
   );
 }

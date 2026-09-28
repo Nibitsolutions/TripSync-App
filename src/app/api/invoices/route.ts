@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
     const {
       customer_id, currency, line_items, status, bsp_flag, bsp_billing_period,
       payment_mode, remarks, internal_remarks, customer_remarks, visit_type, spo_id, supplier_id,
-      print_name, cost_center, adj_date, our_xo, client_xo,
+      print_name, cost_center, adj_date, our_xo, client_xo, custom_invoice_number,
     } = body;
 
     if (!customer_id || !line_items?.length) {
@@ -295,6 +295,7 @@ export async function POST(req: NextRequest) {
       adj_date: adj_date ? new Date(adj_date) : null,
       our_xo: our_xo || "",
       client_xo: client_xo || "",
+      custom_invoice_number: String(custom_invoice_number || "").trim(),
       created_by: user.user_id,
       updated_by: user.user_id,
     });

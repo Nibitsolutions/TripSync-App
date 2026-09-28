@@ -34,7 +34,7 @@ This document specifies TripSync's Finance Management module in enough detail fo
 | Partial/overpayment | Customer-level running ledger (B2B statement model). Payments are **manually allocated by staff** against specific invoices — no automatic FIFO. |
 | Invoice numbering | Strictly sequential, gapless, per tenant. No number is ever reused or skipped, including for voided invoices. |
 | BSP reporting | Reference-only (light). Invoices/tickets carry a BSP flag and billing period. No auto-reconciliation against IATA billing — that remains a manual, outside-TripSync accountant task. |
-| Credit limit | Enforced as a **hard stop**. A sale that would exceed a customer's credit limit is blocked until a manager approves an override. |
+| Credit limit | Recorded per customer for reference only. **No manager approval** — a sale that takes a customer over their limit is not blocked. |
 | Expense approval | Per-expense-**type** toggle, set at creation time (`requires_approval: true/false`). Not a blanket rule. |
 | Audit log | Field-level. Every change captured as: who, what field, old value, new value, when. |
 | Hard delete | Never, on any posted financial record. Void/Refund/CreditNote only. |
@@ -51,9 +51,9 @@ This document specifies TripSync's Finance Management module in enough detail fo
 | Customer Ledger | Running per-customer balance across all invoices and payments, supporting statement-style (monthly/quarterly) billing |
 | Manual Payment Allocation | Staff assign an incoming payment across one or more specific outstanding invoices |
 | Agent Commission Management | Default commission rate per agent; per-invoice override; commission computed and tracked per sale |
-| Credit Limit Enforcement | Hard-stop block on new sales exceeding a customer's limit, with manager-approval override path |
+| Credit Limit | Per-customer credit limit shown on the customer profile and ledger; not enforced and no approval required |
 | Expense Tracking | Categorized expense entry with per-type approval requirement |
-| Approval Workflow (generic) | Shared mechanism covering both credit-limit overrides and expense approvals |
+| Approval Workflow | Manager approval for expenses whose type requires it |
 | Multi-Currency Support | Transactions recorded in original currency; auto-fetched FX rate at time of entry; base-currency reporting with always-current conversion |
 | Tax Code Management | Supports both IATA/BSP and FBR tax codes, tenant-configurable |
 | BSP Reference Tagging | Light-touch BSP flag + billing period field on relevant transactions, no reconciliation logic |
@@ -213,8 +213,8 @@ This document specifies TripSync's Finance Management module in enough detail fo
 |---|---|---|
 | id | UUID (PK) | |
 | tenant_id | UUID (FK) | |
-| type | enum | CreditLimitOverride / ExpenseApproval |
-| related_entity_id | UUID | Points to the Invoice (credit limit case) or Expense (expense case) |
+| type | enum | ExpenseApproval |
+| related_entity_id | UUID | Points to the Expense |
 | requested_by | UUID (FK → User) | |
 | status | enum | Pending / Approved / Rejected |
 | resolved_by | UUID (FK → User), nullable | Must be role = Owner or Accountant with manager privilege |
@@ -276,7 +276,7 @@ This document specifies TripSync's Finance Management module in enough detail fo
 
 **Commission calculation:** On posting an InvoiceLineItem, the system checks for an invoice-level commission override on that line item. If present, `rate_source = InvoiceOverride` and that rate is used. If absent, the system pulls `User.default_commission_rate` for the assigned agent (`rate_source = AgentDefault`). The resulting `Commission` record is always created — there is no "no commission" state for an agent-attributed sale unless the rate is explicitly zero.
 
-**Credit limit enforcement (hard stop):** Before an Invoice can move from Draft to Posted, the system checks `Customer.current_balance + new_invoice_total` against `Customer.credit_limit`. If it would exceed the limit, the Invoice is blocked from posting and an `ApprovalRequest (type: CreditLimitOverride)` is created. Only a user with Owner or Accountant (manager-level) role can resolve it. The invoice cannot post until `ApprovalRequest.status = Approved`.
+**Credit limit (no approval):** `Customer.credit_limit` is informational only. Posting an Invoice never checks it, never creates an `ApprovalRequest`, and is never blocked by it.
 
 **Expense approval:** On Expense creation, the system checks `ExpenseType.requires_approval`. If true, the Expense enters `PendingApproval` status and an `ApprovalRequest (type: ExpenseApproval)` is created; it cannot post until approved. If false, it posts directly.
 
@@ -293,7 +293,7 @@ This document specifies TripSync's Finance Management module in enough detail fo
 | Endpoint | Method | Purpose | Request / Response Shape | Auth / Tenant-Scoping |
 |---|---|---|---|---|
 | `/invoices` | POST | Create a draft invoice | Req: customer_id, line_items[]; Resp: Invoice object | Requires authenticated User; tenant_id injected from session, never client-supplied |
-| `/invoices/{id}/post` | POST | Post a draft invoice (triggers credit-limit check) | Resp: Invoice object or 409 with ApprovalRequest id if blocked | Same tenant as invoice owner |
+| `/invoices/{id}/post` | POST | Post a draft invoice | Resp: Invoice object | Same tenant as invoice owner |
 | `/invoices/{id}/void` | POST | Void a posted invoice | Req: reason; Resp: updated Invoice | Requires Accountant or Owner role |
 | `/invoices/{id}/credit-notes` | POST | Issue a credit note against an invoice | Req: amount, reason; Resp: CreditNote object | Requires Accountant or Owner role |
 | `/customers/{id}/ledger` | GET | Retrieve running ledger (invoices, payments, balance) | Resp: paginated ledger entries + current_balance | Tenant-scoped; Viewer role gets read-only |

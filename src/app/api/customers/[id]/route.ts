@@ -24,13 +24,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const oldDoc = customer.toObject();
 
     const name = body.name !== undefined ? String(body.name).trim() : customer.name;
-    const code = body.code !== undefined ? String(body.code).trim() : customer.code;
     const customer_type = body.customer_type !== undefined ? String(body.customer_type).trim() : customer.customer_type;
     const gl_account = body.gl_account !== undefined ? String(body.gl_account).trim() : customer.gl_account;
     const spo_name = body.spo_name !== undefined ? String(body.spo_name).trim() : customer.spo_name;
 
     const missing: string[] = [];
-    if (!code) missing.push("Code");
     if (!name) missing.push("Title");
     if (!customer_type) missing.push("Customer Type");
     if (!gl_account) missing.push("GL Account");
@@ -41,8 +39,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // Apply updates
+    // Customer code is system-assigned and never changed by an update
     customer.name = name;
-    customer.code = code;
     customer.customer_type = customer_type;
     customer.gl_account = gl_account;
     customer.spo_name = spo_name;

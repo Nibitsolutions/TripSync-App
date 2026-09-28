@@ -25,6 +25,7 @@ export interface IInvoice extends Document {
   adj_date: Date | null;
   our_xo: string;
   client_xo: string;
+  custom_invoice_number?: string;
   created_by: Types.ObjectId;
   updated_by: Types.ObjectId;
   created_at: Date;
@@ -55,6 +56,8 @@ const InvoiceSchema = new Schema<IInvoice>(
     adj_date: { type: Date, default: null },
     our_xo: { type: String, default: "" },
     client_xo: { type: String, default: "" },
+    // Optional customer-supplied reference number, printed as "Cus. Invoice Number"
+    custom_invoice_number: { type: String, default: "" },
     created_by: { type: Schema.Types.ObjectId, ref: "User" },
     updated_by: { type: Schema.Types.ObjectId, ref: "User" },
   },
@@ -65,4 +68,9 @@ InvoiceSchema.index({ tenant_id: 1, invoice_number: 1 }, { unique: true });
 InvoiceSchema.index({ tenant_id: 1, status: 1 });
 InvoiceSchema.index({ tenant_id: 1, customer_id: 1, status: 1 });
 
-export default mongoose.models.Invoice || mongoose.model<IInvoice>("Invoice", InvoiceSchema);
+// In dev, hot reload keeps the previously compiled model; drop it so schema changes take effect.
+if (process.env.NODE_ENV !== "production" && mongoose.models.Invoice) {
+  mongoose.deleteModel("Invoice");
+}
+
+export default mongoose.models.Invoice ||mongoose.model<IInvoice>("Invoice", InvoiceSchema);

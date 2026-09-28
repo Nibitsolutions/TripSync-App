@@ -251,4 +251,10 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );
 
-export default mongoose.models.InvoiceLineItem || mongoose.model<IInvoiceLineItem>("InvoiceLineItem", InvoiceLineItemSchema);
+// In dev, hot reload keeps the previously compiled model; drop it so schema changes
+// (e.g. new fields like customer_remarks) take effect instead of being silently stripped.
+if (process.env.NODE_ENV !== "production" && mongoose.models.InvoiceLineItem) {
+  mongoose.deleteModel("InvoiceLineItem");
+}
+
+export default mongoose.models.InvoiceLineItem ||mongoose.model<IInvoiceLineItem>("InvoiceLineItem", InvoiceLineItemSchema);

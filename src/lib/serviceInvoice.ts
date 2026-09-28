@@ -361,6 +361,10 @@ export function fromStoredServiceItem(li: Record<string, unknown>): ServiceLineI
     description: String(li.description || ""),
     amount: String(li.amount ?? "0"),
     commission_override_rate: li.commission_override_rate ? String(li.commission_override_rate) : "",
+    tax_code_id:
+      li.tax_code_id && typeof li.tax_code_id === "object" && "_id" in (li.tax_code_id as object)
+        ? String((li.tax_code_id as { _id: unknown })._id)
+        : String(li.tax_code_id || ""),
     supplier_id: supplier,
     auto_update: li.auto_update !== undefined ? Boolean(li.auto_update) : true,
     pax_name: String(li.pax_name || ""),
