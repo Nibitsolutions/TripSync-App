@@ -67,6 +67,7 @@ const navSections: NavSection[] = [
         label: "Invoices",
         icon: FileText,
         children: [
+          { href: "/dashboard/invoices", label: "All Invoices", type: "" },
           { href: "/dashboard/invoices?type=Ticket", label: "Tickets", type: "Ticket" },
           { href: "/dashboard/invoices?type=Hotel", label: "Hotels", type: "Hotel" },
           { href: "/dashboard/invoices?type=Transport", label: "Transport", type: "Transport" },

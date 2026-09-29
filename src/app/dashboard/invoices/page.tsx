@@ -26,6 +26,7 @@ import { CustomerForm, CustomerRecord } from "@/components/customers/CustomerFor
 import { InvoiceType, taxCodeLabel, taxCodesForInvoiceType } from "@/lib/taxCodes";
 import { ServiceDetails, PaxEntry, SERVICE_LABELS, createDefaultServiceItem, fromStoredServiceItem } from "@/lib/serviceInvoice";
 import { ServiceInvoiceEditor } from "./ServiceInvoiceEditor";
+import { InvoiceSummaryCards, AllInvoicesTable } from "./AllInvoicesDashboard";
 
 interface Invoice {
   _id: string;
@@ -37,6 +38,8 @@ interface Invoice {
   paid_amount?: number;
   due_amount?: number;
   payment_status?: "Paid" | "Partial" | "Unpaid";
+  credit_amount?: number;
+  invoice_type?: string;
   bsp_flag: boolean;
   payment_mode?: string;
   remarks?: string;
@@ -3303,7 +3306,9 @@ function InvoicesPageContent() {
               <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">
                 Invoices{typeFilter ? ` — ${serviceLabel}` : ""}
               </h1>
-              <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Manage ticket sales, airline billing, and travel invoices</p>
+              <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
+                {typeFilter ? "Manage ticket sales, airline billing, and travel invoices" : "All invoices across Ticket, Hotel, Umrah, Hajj, Visa, Transport and General"}
+              </p>
             </div>
             <Button
               onClick={() => {
@@ -3317,6 +3322,9 @@ function InvoicesPageContent() {
               <Plus className="h-4 w-4" /> {defaultType === "Ticket" ? "New Invoice / Ticket Sale" : `New ${serviceLabel} Invoice`}
             </Button>
           </div>
+
+          {/* All Invoices: today's totals across every invoice type */}
+          {!typeFilter && <InvoiceSummaryCards refreshKey={invoices} />}
 
           {/* Modern Search & Filters Bar */}
           <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm mb-5">
@@ -3461,7 +3469,7 @@ function InvoicesPageContent() {
       <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">
         <CardHeader className="px-6 pt-5 pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-[15px] font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
-            <span>Invoice Register</span>
+            <span>{typeFilter ? "Invoice Register" : "All Invoices"}</span>
             <Badge variant="secondary" className="text-[11px] font-mono font-normal">
               {invoices.length} {invoices.length === 1 ? "invoice" : "invoices"}
             </Badge>
@@ -3472,6 +3480,15 @@ function InvoicesPageContent() {
             <div className="flex items-center justify-center py-12">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
+          ) : !typeFilter ? (
+            <AllInvoicesTable
+              invoices={invoices}
+              onOpen={(row) => {
+                const inv = invoices.find((i) => i._id === row._id);
+                if (inv) openEditDialog(inv);
+              }}
+              emptyText={hasActiveFilters ? "No invoices found matching your filters. Try clearing filters." : "No invoices recorded yet."}
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>

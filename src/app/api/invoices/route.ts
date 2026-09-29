@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
     // Attach payment allocations & credit notes to calculate Paid / Due / Status
     const invoiceIds = invoices.map((i) => i._id);
 
-    const [allocations, credits] = await Promise.all([
+    const [allocations, credits, lineTypes] = await Promise.all([
       PaymentAllocation.aggregate([
         { $match: { invoice_id: { $in: invoiceIds } } },
         { $group: { _id: "$invoice_id", total_allocated: { $sum: "$allocated_amount" } } },
@@ -133,10 +133,17 @@ export async function GET(req: NextRequest) {
         { $match: { invoice_id: { $in: invoiceIds }, status: "Posted" } },
         { $group: { _id: "$invoice_id", total_credit: { $sum: "$amount" } } },
       ]),
+      // Invoice type = service type of the invoice's first line item
+      InvoiceLineItem.aggregate([
+        { $match: { invoice_id: { $in: invoiceIds } } },
+        { $sort: { created_at: 1, _id: 1 } },
+        { $group: { _id: "$invoice_id", service_type: { $first: "$service_type" } } },
+      ]),
     ]);
 
     const allocMap = new Map(allocations.map((a) => [String(a._id), a.total_allocated]));
     const creditMap = new Map(credits.map((c) => [String(c._id), c.total_credit]));
+    const typeMap = new Map(lineTypes.map((t) => [String(t._id), t.service_type as string]));
 
     let enhancedInvoices = invoices.map((inv) => {
       const invId = String(inv._id);
@@ -157,6 +164,7 @@ export async function GET(req: NextRequest) {
         credit_amount: credit,
         due_amount: due,
         payment_status: payStatus,
+        invoice_type: typeMap.get(invId) || "Ticket",
       };
     });
 
