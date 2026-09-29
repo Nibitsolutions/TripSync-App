@@ -4,23 +4,14 @@ import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Plus, Phone, Mail, BadgeDollarSign, Loader2, Landmark, X, ArrowLeft, Search } from "lucide-react";
+import { Building2, Plus, Phone, Mail, BadgeDollarSign, Loader2, Landmark, X, ArrowLeft, Search, Pencil } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
+import { SupplierForm, SupplierRecord } from "@/components/suppliers/SupplierForm";
 
-interface Supplier {
-  _id: string;
-  name: string;
-  code: string;
-  currency: string;
-  contact_email?: string;
-  contact_phone?: string;
-  current_balance: number;
-}
+type Supplier = SupplierRecord;
 
 interface Booking {
   _id: string;
@@ -36,11 +27,7 @@ export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
-  const [currency, setCurrency] = useState("PKR");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [editSupplier, setEditSupplier] = useState<Supplier | null>(null);
 
   // Ledger state
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
@@ -67,23 +54,10 @@ export default function SuppliersPage() {
     load();
   }, [load]);
 
-  async function create() {
-    const res = await fetch("/api/suppliers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, code, currency, contact_email: email, contact_phone: phone }),
-    });
-    if (res.ok) {
-      setShowNew(false);
-      setName("");
-      setCode("");
-      setEmail("");
-      setPhone("");
-      load();
-    } else {
-      const d = await res.json();
-      alert(d.error || "Failed to create supplier");
-    }
+  function openForm(sup: Supplier | null) {
+    setEditSupplier(sup);
+    setSelectedSupplier(null);
+    setShowNew(true);
   }
 
   async function openSupplierLedger(sup: Supplier, search = ledgerSearch, from = ledgerFromDate, to = ledgerToDate) {
@@ -110,7 +84,7 @@ export default function SuppliersPage() {
         </div>
         {!showNew && !selectedSupplier && (
           <Button
-            onClick={() => { setShowNew(true); setSelectedSupplier(null); }}
+            onClick={() => openForm(null)}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors cursor-pointer"
           >
             <Plus className="h-4 w-4" /> Add Supplier
@@ -118,53 +92,25 @@ export default function SuppliersPage() {
         )}
       </div>
 
-      {/* Inline Create Supplier Form Card */}
+      {/* Supplier Creation / Edit Form Card */}
       {showNew && (
-        <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111113] shadow-md">
-          <CardHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
+        <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111113] shadow-lg">
+          <CardHeader className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between bg-slate-50/50 dark:bg-[#151518]">
             <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
-              <Landmark className="h-5 w-5 text-primary" /> Add New Supplier
+              <Landmark className="h-5 w-5 text-primary" />
+              {editSupplier ? `Edit Supplier — ${editSupplier.name}` : "Create New Supplier"}
             </CardTitle>
             <Button variant="ghost" size="sm" onClick={() => setShowNew(false)} className="h-8 w-8 p-0">
               <X className="h-4 w-4" />
             </Button>
           </CardHeader>
-          <CardContent className="p-5">
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label className="text-[13px] font-semibold">Supplier Name *</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. flydubai" className="h-10 text-[13px]" />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-[13px] font-semibold">Supplier Code</Label>
-                  <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. FZ" className="h-10 text-[13px]" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[13px] font-semibold">Currency</Label>
-                  <Select value={currency} onValueChange={(v) => v && setCurrency(v)}>
-                    <SelectTrigger className="h-10 text-[13px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>{["PKR", "USD", "GBP", "SAR", "AED"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-[13px] font-semibold">Contact Phone</Label>
-                  <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. +971 4 292 2222" className="h-10 text-[13px]" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[13px] font-semibold">Contact Email</Label>
-                  <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. vendor@supplier.com" className="h-10 text-[13px]" />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <Button variant="outline" onClick={() => setShowNew(false)}>Cancel</Button>
-                <Button onClick={create} disabled={!name} className="gap-2">
-                  <Landmark className="h-4 w-4" /> Add Supplier
-                </Button>
-              </div>
-            </div>
+          <CardContent className="p-6">
+            <SupplierForm
+              key={editSupplier?._id || "new"}
+              editSupplier={editSupplier}
+              onSaved={() => { setShowNew(false); setEditSupplier(null); load(); }}
+              onCancel={() => setShowNew(false)}
+            />
           </CardContent>
         </Card>
       )}
@@ -322,7 +268,10 @@ export default function SuppliersPage() {
                     <TableRow key={sup._id} className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-50/50 dark:hover:bg-[#151517]">
                       <TableCell className="text-[13px] font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2 py-3.5">
                         <Building2 className="h-4 w-4 text-gray-400" />
-                        {sup.name}
+                        <div>
+                          {sup.name}
+                          {sup.short_name && <span className="block text-[11px] font-normal text-gray-400">{sup.short_name}</span>}
+                        </div>
                       </TableCell>
                       <TableCell className="font-mono text-[13px] text-gray-500">{sup.code || "—"}</TableCell>
                       <TableCell className="text-[13px] text-gray-500">{sup.currency}</TableCell>
@@ -334,9 +283,14 @@ export default function SuppliersPage() {
                         {sup.contact_email && <p className="flex items-center gap-1 mt-0.5"><Mail className="h-3 w-3 text-gray-400" /> {sup.contact_email}</p>}
                       </TableCell>
                       <TableCell>
-                        <Button size="sm" variant="outline" className="h-8 gap-1.5 text-[12px] cursor-pointer" onClick={() => openSupplierLedger(sup)}>
-                          <BadgeDollarSign className="h-3.5 w-3.5" /> Ledger
-                        </Button>
+                        <div className="flex gap-1.5">
+                          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-[12px] cursor-pointer" onClick={() => openForm(sup)}>
+                            <Pencil className="h-3.5 w-3.5 text-blue-500" /> Edit
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-[12px] cursor-pointer" onClick={() => openSupplierLedger(sup)}>
+                            <BadgeDollarSign className="h-3.5 w-3.5" /> Ledger
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

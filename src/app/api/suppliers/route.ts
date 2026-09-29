@@ -1,7 +1,8 @@
-﻿import { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Supplier } from "@/models";
 import { logChanges } from "@/lib/audit";
+import { parseSupplierPayload } from "@/lib/supplier-utils";
 
 // GET /api/suppliers — list all suppliers
 export async function GET(req: NextRequest) {
@@ -13,7 +14,11 @@ export async function GET(req: NextRequest) {
 
     const filter: Record<string, unknown> = { tenant_id: user.tenant_id };
     if (search) {
-      filter.name = { $regex: search, $options: "i" };
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { code: { $regex: search, $options: "i" } },
+        { short_name: { $regex: search, $options: "i" } },
+      ];
     }
 
     const [suppliers, total] = await Promise.all([
@@ -33,17 +38,16 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   return withAuth(async (user) => {
     const body = await req.json();
-    const { name, code, currency, contact_email, contact_phone } = body;
+    const { fields, missing } = parseSupplierPayload(body);
 
-    if (!name) return errorResponse("Supplier name is required");
+    if (missing.length > 0) return errorResponse(`Required fields missing: ${missing.join(", ")}`, 400);
+
+    const duplicate = await Supplier.findOne({ tenant_id: user.tenant_id, code: fields.code }).select("_id").lean();
+    if (duplicate) return errorResponse(`Supplier code "${fields.code}" is already in use`, 400);
 
     const supplier = await Supplier.create({
       tenant_id: user.tenant_id,
-      name,
-      code: code || "",
-      currency: currency || "PKR",
-      contact_email: contact_email || "",
-      contact_phone: contact_phone || "",
+      ...fields,
       current_balance: 0,
       created_by: user.user_id,
       updated_by: user.user_id,
