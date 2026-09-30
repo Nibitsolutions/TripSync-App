@@ -25,6 +25,7 @@ export interface ISupplier extends Document {
   name: string; // Title*
   short_name: string;
   details: string;
+  business_email: string;
 
   // Account Information
   gl_account: string; // GL Account*
@@ -51,7 +52,7 @@ export interface ISupplier extends Document {
   // Vendors (Airline / Hotel / Transport / Visa Agency / General tabs)
   vendors: ISupplierVendor[];
 
-  // Quick-reference contact shown in lists (derived from Phone 1 / first contact person)
+  // Quick-reference contact shown in lists (derived from Phone 1 / Business Email / first contact person)
   contact_email: string;
   contact_phone: string;
 
@@ -71,6 +72,7 @@ const SupplierSchema = new Schema<ISupplier>(
     name: { type: String, required: true },
     short_name: { type: String, default: "" },
     details: { type: String, default: "" },
+    business_email: { type: String, default: "" },
 
     // Account Information
     gl_account: { type: String, default: "201001" },

@@ -6,17 +6,19 @@ export interface ICustomer extends Document {
   name: string; // Title / Name*
   short_name?: string;
   details?: string;
+  business_email?: string;
 
   // Customer Information
   parent_customer_id?: Types.ObjectId | string | null;
-  customer_type: string; // Customer Type* (Corporate, Travel Agent, Branches, Industrial, Walking)
+  customer_type: string; // Customer Type* (Branches, Corporate, Travel Agent, Walking; older records may be Industrial)
   credit_limit: number | null;
   credit_term?: string;
   ntn_number?: string;
   sale_tax_number?: string;
   date_of_creation?: string;
   date_expiry?: string;
-  iata_number?: string;
+  iata_number?: string; // required for Travel Agent
+  branch_location?: string; // Branch customers only
 
   // Account Information
   gl_account: string; // GL Account*
@@ -26,7 +28,7 @@ export interface ICustomer extends Document {
 
   // SPO
   spo_id?: Types.ObjectId | string | null;
-  spo_name: string; // SPO*
+  spo_name: string; // SPO* for Corporate / Travel Agent
 
   // Address Tab
   address_1?: string;
@@ -60,6 +62,7 @@ const CustomerSchema = new Schema<ICustomer>(
     name: { type: String, required: true },
     short_name: { type: String, default: "" },
     details: { type: String, default: "" },
+    business_email: { type: String, default: "" },
 
     // Customer Information
     parent_customer_id: { type: Schema.Types.Mixed, default: null },
@@ -71,6 +74,7 @@ const CustomerSchema = new Schema<ICustomer>(
     date_of_creation: { type: String, default: "" },
     date_expiry: { type: String, default: "" },
     iata_number: { type: String, default: "" },
+    branch_location: { type: String, default: "" },
 
     // Account Information
     gl_account: { type: String, default: "101001" },

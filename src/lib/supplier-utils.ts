@@ -25,7 +25,7 @@ function cleanVendors(list: unknown): ISupplierVendor[] {
 
 /**
  * Normalise a supplier create/update payload and check the compulsory (*) fields:
- * Code*, Title*, GL Account*, and Name* / Designation* on every contact person.
+ * Code*, Title*, GL Account*, and a name on every contact person that has any details.
  */
 export function parseSupplierPayload(body: Record<string, unknown>) {
   const contact_persons = cleanContactPersons(body.contact_persons);
@@ -36,6 +36,7 @@ export function parseSupplierPayload(body: Record<string, unknown>) {
     name: str(body.name),
     short_name: str(body.short_name),
     details: str(body.details),
+    business_email: str(body.business_email),
 
     gl_account: str(body.gl_account) || "201001",
     credit_limit: body.credit_limit !== undefined && body.credit_limit !== null && body.credit_limit !== "" ? parseFloat(String(body.credit_limit)) : null,
@@ -58,7 +59,7 @@ export function parseSupplierPayload(body: Record<string, unknown>) {
     vendors: cleanVendors(body.vendors),
 
     contact_phone: str(body.phone_1) || firstContact?.cell_phone || firstContact?.phone || "",
-    contact_email: firstContact?.email || "",
+    contact_email: str(body.business_email) || firstContact?.email || "",
   };
 
   if (fields.credit_limit !== null && Number.isNaN(fields.credit_limit)) fields.credit_limit = null;
@@ -68,8 +69,7 @@ export function parseSupplierPayload(body: Record<string, unknown>) {
   if (!fields.name) missing.push("Title");
   if (!fields.gl_account) missing.push("GL Account");
   contact_persons.forEach((c, i) => {
-    if (!c.name) missing.push(`Contact Person ${i + 1} Name`);
-    if (!c.designation) missing.push(`Contact Person ${i + 1} Designation`);
+    if (!c.name) missing.push(contact_persons.length > 1 ? `Contact Person ${i + 1} Name` : "Contact Person Name");
   });
 
   return { fields, missing };

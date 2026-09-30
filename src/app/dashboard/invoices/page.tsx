@@ -26,7 +26,7 @@ import { CustomerForm, CustomerRecord } from "@/components/customers/CustomerFor
 import { InvoiceType, taxCodeLabel, taxCodesForInvoiceType } from "@/lib/taxCodes";
 import { ServiceDetails, PaxEntry, SERVICE_LABELS, createDefaultServiceItem, fromStoredServiceItem } from "@/lib/serviceInvoice";
 import { ServiceInvoiceEditor } from "./ServiceInvoiceEditor";
-import { InvoiceSummaryCards, AllInvoicesTable } from "./AllInvoicesDashboard";
+import { AllInvoicesView } from "./AllInvoicesDashboard";
 
 interface Invoice {
   _id: string;
@@ -480,6 +480,10 @@ function InvoicesPageContent() {
   const [editClientXo, setEditClientXo] = useState("");
   const [editCustomInvoiceNumber, setEditCustomInvoiceNumber] = useState("");
   const [editDocStatus, setEditDocStatus] = useState("Draft");
+  // Status as stored on the server (null while loading). The Status dropdown above is only
+  // what the user wants on the next save; printing and action buttons go by the saved status.
+  const [editSavedStatus, setEditSavedStatus] = useState<string | null>(null);
+  const [editInvoiceNumber, setEditInvoiceNumber] = useState("");
   const [editBsp, setEditBsp] = useState(false);
   const [editBspBillingPeriod, setEditBspBillingPeriod] = useState("");
   const [editLineItems, setEditLineItems] = useState<LineItemInput[]>([]);
@@ -1027,6 +1031,7 @@ function InvoicesPageContent() {
     if (res.ok) {
       if (editInvoiceId === id) {
         setEditDocStatus("Posted");
+        setEditSavedStatus("Posted");
       }
       loadInvoices();
     } else {
@@ -1040,6 +1045,7 @@ function InvoicesPageContent() {
     if (res.ok) {
       if (editInvoiceId === id) {
         setEditDocStatus("Draft");
+        setEditSavedStatus("Draft");
       }
       loadInvoices();
     } else {
@@ -1052,6 +1058,7 @@ function InvoicesPageContent() {
     if (!voidDialog) return;
     const res = await fetch(`/api/invoices/${voidDialog}/void`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: voidReason }) });
     if (!res.ok) { const d = await res.json(); alert(d.error); }
+    else if (voidDialog === editInvoiceId) setEditSavedStatus("Voided");
     setVoidDialog(null); setVoidReason(""); loadInvoices();
   }
 
@@ -1064,6 +1071,8 @@ function InvoicesPageContent() {
 
   async function openEditDialog(inv: Invoice) {
     setEditInvoiceId(inv._id);
+    setEditSavedStatus(null);
+    setEditInvoiceNumber(inv.invoice_number || "");
     setEditLoading(true);
     const res = await fetch(`/api/invoices/${inv._id}`);
     const data = await res.json();
@@ -1084,6 +1093,7 @@ function InvoicesPageContent() {
     setEditClientXo(data.invoice?.client_xo || "");
     setEditCustomInvoiceNumber(data.invoice?.custom_invoice_number || "");
     setEditDocStatus(data.invoice?.status || "Draft");
+    setEditSavedStatus(data.invoice?.status || "Draft");
 
     const items: LineItemInput[] = (data.line_items || []).map((li: Record<string, unknown>) => li.service_type && li.service_type !== "Ticket" ? fromStoredServiceItem(li) : ({
       service_type: String(li.service_type || "Ticket"),
@@ -1244,7 +1254,9 @@ function InvoicesPageContent() {
           line_items: editLineItems,
         }),
       });
-      if (!res.ok) { const d = await res.json(); alert(d.error || "Failed to save"); return false; }
+      const saved = await res.json();
+      if (!res.ok) { alert(saved.error || "Failed to save"); return false; }
+      if (saved.invoice?.status) setEditSavedStatus(saved.invoice.status);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
       loadInvoices();
@@ -2375,10 +2387,10 @@ function InvoicesPageContent() {
                 {editInvoiceId ? (
                   <>
                     <Pencil className="h-4 w-4 text-primary" />
-                    Editing Invoice #{invoices.find((i) => i._id === editInvoiceId)?.invoice_number || "..."}
+                    Editing Invoice #{editInvoiceNumber || invoices.find((i) => i._id === editInvoiceId)?.invoice_number || "..."}
                     {(() => {
                       const curInv = invoices.find((i) => i._id === editInvoiceId);
-                      const st = curInv?.status || editDocStatus || "Draft";
+                      const st = editSavedStatus || curInv?.status || "Draft";
                       return (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ml-1 ${statusStyles[st] || ""}`}>
                           {st}
@@ -2441,7 +2453,7 @@ function InvoicesPageContent() {
               {/* Status-specific action buttons for Edit mode */}
               {editInvoiceId && (() => {
                 const curInv = invoices.find((i) => i._id === editInvoiceId);
-                const st = curInv?.status || editDocStatus || "Draft";
+                const st = editSavedStatus || curInv?.status || "Draft";
                 return (
                   <>
                     {st === "Draft" && (
@@ -2556,8 +2568,9 @@ function InvoicesPageContent() {
                   if (editInvoiceId) {
                     // Only drafts are editable, so only drafts get their pending edits saved first.
                     // Posted/voided invoices print as-is — no edit check, no change to the invoice.
-                    const curStatus = invoices.find((i) => i._id === editInvoiceId)?.status || editDocStatus || "Draft";
-                    if (curStatus === "Draft" && !(await saveEditInvoice())) return;
+                    // Go by the status stored on the server, not the Status dropdown or the list row.
+                    if (!editSavedStatus) return; // invoice still loading
+                    if (editSavedStatus === "Draft" && !(await saveEditInvoice())) return;
                     printId = editInvoiceId;
                   } else {
                     printId = await createInvoice();
@@ -3323,9 +3336,11 @@ function InvoicesPageContent() {
             </Button>
           </div>
 
-          {/* All Invoices: today's totals across every invoice type */}
-          {!typeFilter && <InvoiceSummaryCards refreshKey={invoices} />}
-
+          {/* All Invoices: summary cards + filterable, sortable, paginated grid */}
+          {!typeFilter ? (
+            <AllInvoicesView refreshKey={invoices} onOpen={(row) => openEditDialog(row as unknown as Invoice)} />
+          ) : (
+          <>
           {/* Modern Search & Filters Bar */}
           <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm mb-5">
         <CardContent className="p-4">
@@ -3469,7 +3484,7 @@ function InvoicesPageContent() {
       <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">
         <CardHeader className="px-6 pt-5 pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-[15px] font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-2">
-            <span>{typeFilter ? "Invoice Register" : "All Invoices"}</span>
+            <span>Invoice Register</span>
             <Badge variant="secondary" className="text-[11px] font-mono font-normal">
               {invoices.length} {invoices.length === 1 ? "invoice" : "invoices"}
             </Badge>
@@ -3480,15 +3495,6 @@ function InvoicesPageContent() {
             <div className="flex items-center justify-center py-12">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
-          ) : !typeFilter ? (
-            <AllInvoicesTable
-              invoices={invoices}
-              onOpen={(row) => {
-                const inv = invoices.find((i) => i._id === row._id);
-                if (inv) openEditDialog(inv);
-              }}
-              emptyText={hasActiveFilters ? "No invoices found matching your filters. Try clearing filters." : "No invoices recorded yet."}
-            />
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -3564,6 +3570,8 @@ function InvoicesPageContent() {
           )}
         </CardContent>
       </Card>
+          </>
+          )}
         </div>
       )}
 

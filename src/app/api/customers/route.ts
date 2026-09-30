@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Customer } from "@/models";
 import { logChanges } from "@/lib/audit";
-import { generateCustomerCode } from "@/lib/customer-utils";
+import { generateCustomerCode, missingCustomerFields } from "@/lib/customer-utils";
 
 export async function GET(req: NextRequest) {
   return withAuth(async (user) => {
@@ -46,13 +46,11 @@ export async function POST(req: NextRequest) {
     const name = body.name ? String(body.name).trim() : "";
     const customer_type = body.customer_type ? String(body.customer_type).trim() : "Corporate";
     const gl_account = body.gl_account ? String(body.gl_account).trim() : "101001";
-    const spo_name = body.spo_name ? String(body.spo_name).trim() : "SPO 1";
+    const spo_name = body.spo_name !== undefined ? String(body.spo_name || "").trim() : "SPO 1";
+    const iata_number = String(body.iata_number || "").trim();
+    const branch_location = String(body.branch_location || "").trim();
 
-    const missing: string[] = [];
-    if (!name) missing.push("Title");
-    if (!customer_type) missing.push("Customer Type");
-    if (!gl_account) missing.push("GL Account");
-    if (!spo_name) missing.push("SPO");
+    const missing = missingCustomerFields({ name, customer_type, gl_account, spo_name, iata_number, branch_location });
 
     if (missing.length > 0) {
       return errorResponse(`Required fields missing: ${missing.join(", ")}`, 400);
@@ -67,6 +65,7 @@ export async function POST(req: NextRequest) {
       name,
       short_name: body.short_name || "",
       details: body.details || "",
+      business_email: body.business_email || "",
 
       // Customer Information
       parent_customer_id: body.parent_customer_id || null,
@@ -77,7 +76,8 @@ export async function POST(req: NextRequest) {
       sale_tax_number: body.sale_tax_number || "",
       date_of_creation: body.date_of_creation || new Date().toISOString().split("T")[0],
       date_expiry: body.date_expiry || "",
-      iata_number: body.iata_number || "",
+      iata_number,
+      branch_location,
 
       // Account Information
       gl_account,
@@ -106,7 +106,10 @@ export async function POST(req: NextRequest) {
       contact_person_phone: body.contact_person_phone || "",
       contact_person_email: body.contact_person_email || body.contact_info?.email || "",
 
-      contact_info: body.contact_info || { phone: body.phone_1, email: body.contact_person_email },
+      contact_info: body.contact_info || {
+        phone: body.phone_1 || body.contact_person_phone || "",
+        email: body.business_email || body.contact_person_email || "",
+      },
       created_by: user.user_id,
       updated_by: user.user_id,
     });

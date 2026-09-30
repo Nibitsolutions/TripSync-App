@@ -64,10 +64,9 @@ const navSections: NavSection[] = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       {
         href: "/dashboard/invoices",
-        label: "Invoices",
+        label: "All Invoices",
         icon: FileText,
         children: [
-          { href: "/dashboard/invoices", label: "All Invoices", type: "" },
           { href: "/dashboard/invoices?type=Ticket", label: "Tickets", type: "Ticket" },
           { href: "/dashboard/invoices?type=Hotel", label: "Hotels", type: "Hotel" },
           { href: "/dashboard/invoices?type=Transport", label: "Transport", type: "Transport" },
@@ -382,10 +381,15 @@ function renderNavItem(
 ) {
   const Icon = item.icon;
   const isActive = checkIsItemActive(item.href, pathname, searchParams);
+  // The parent is a page of its own (e.g. All Invoices); when one of its sub-items is the
+  // current page, the parent stays open but only the sub-item is highlighted.
+  const hasActiveChild = isActive && !!item.children?.some((c) => checkIsChildActive(c, searchParams));
 
-  const parentClass = isActive
+  const parentClass = isActive && !hasActiveChild
     ? "bg-[#1a1a1d] text-white shadow-sm font-semibold"
-    : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#1a1a1d] hover:text-gray-900 dark:hover:text-gray-200 font-medium";
+    : isActive
+      ? "text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-[#1a1a1d] font-semibold"
+      : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#1a1a1d] hover:text-gray-900 dark:hover:text-gray-200 font-medium";
 
   if (collapsed) {
     return (

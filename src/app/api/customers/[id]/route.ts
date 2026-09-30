@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Customer, Invoice } from "@/models";
 import { logChanges } from "@/lib/audit";
+import { missingCustomerFields } from "@/lib/customer-utils";
 
 // GET /api/customers/[id]
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -26,13 +27,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const name = body.name !== undefined ? String(body.name).trim() : customer.name;
     const customer_type = body.customer_type !== undefined ? String(body.customer_type).trim() : customer.customer_type;
     const gl_account = body.gl_account !== undefined ? String(body.gl_account).trim() : customer.gl_account;
-    const spo_name = body.spo_name !== undefined ? String(body.spo_name).trim() : customer.spo_name;
+    const spo_name = body.spo_name !== undefined ? String(body.spo_name || "").trim() : customer.spo_name || "";
+    const iata_number = body.iata_number !== undefined ? String(body.iata_number || "").trim() : customer.iata_number || "";
+    const branch_location = body.branch_location !== undefined ? String(body.branch_location || "").trim() : customer.branch_location || "";
 
-    const missing: string[] = [];
-    if (!name) missing.push("Title");
-    if (!customer_type) missing.push("Customer Type");
-    if (!gl_account) missing.push("GL Account");
-    if (!spo_name) missing.push("SPO");
+    const missing = missingCustomerFields({ name, customer_type, gl_account, spo_name, iata_number, branch_location });
 
     if (missing.length > 0) {
       return errorResponse(`Required fields missing: ${missing.join(", ")}`, 400);
@@ -44,9 +43,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     customer.customer_type = customer_type;
     customer.gl_account = gl_account;
     customer.spo_name = spo_name;
+    customer.iata_number = iata_number;
+    customer.branch_location = branch_location;
 
     if (body.short_name !== undefined) customer.short_name = body.short_name;
     if (body.details !== undefined) customer.details = body.details;
+    if (body.business_email !== undefined) customer.business_email = body.business_email;
     if (body.parent_customer_id !== undefined) customer.parent_customer_id = body.parent_customer_id || null;
     if (body.credit_limit !== undefined) customer.credit_limit = body.credit_limit !== null && body.credit_limit !== "" ? parseFloat(body.credit_limit) : null;
     if (body.credit_term !== undefined) customer.credit_term = body.credit_term;
@@ -54,7 +56,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (body.sale_tax_number !== undefined) customer.sale_tax_number = body.sale_tax_number;
     if (body.date_of_creation !== undefined) customer.date_of_creation = body.date_of_creation;
     if (body.date_expiry !== undefined) customer.date_expiry = body.date_expiry;
-    if (body.iata_number !== undefined) customer.iata_number = body.iata_number;
 
     if (body.create_auto_ledger !== undefined) customer.create_auto_ledger = Boolean(body.create_auto_ledger);
     if (body.visible_to_all_branches !== undefined) customer.visible_to_all_branches = Boolean(body.visible_to_all_branches);
@@ -79,7 +80,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     customer.contact_info = {
       phone: customer.phone_1 || customer.contact_person_phone,
-      email: customer.contact_person_email,
+      email: customer.business_email || customer.contact_person_email,
     };
 
     customer.updated_by = user.user_id;

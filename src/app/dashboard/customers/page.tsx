@@ -14,7 +14,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
-import { CustomerForm, CustomerRecord } from "@/components/customers/CustomerForm";
+import { CustomerForm, CustomerRecord, customerTypeLabel } from "@/components/customers/CustomerForm";
 
 type Customer = CustomerRecord;
 
@@ -123,7 +123,8 @@ export default function CustomersPage() {
       (c.code && c.code.toLowerCase().includes(q)) ||
       (c.ntn_number && c.ntn_number.toLowerCase().includes(q)) ||
       (c.spo_name && c.spo_name.toLowerCase().includes(q)) ||
-      (c.customer_type && c.customer_type.toLowerCase().includes(q))
+      (c.customer_type && c.customer_type.toLowerCase().includes(q)) ||
+      customerTypeLabel(c.customer_type).toLowerCase().includes(q)
     );
   });
 
@@ -358,11 +359,11 @@ export default function CustomersPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-[10px] font-semibold">
-                          {c.customer_type || "Corporate"}
+                          {customerTypeLabel(c.customer_type)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-[12px] font-mono text-gray-600 dark:text-gray-300">{c.gl_account || "101001"}</TableCell>
-                      <TableCell className="text-[12px] text-gray-600 dark:text-gray-300">{c.spo_name || "SPO 1"}</TableCell>
+                      <TableCell className="text-[12px] text-gray-600 dark:text-gray-300">{c.spo_name || "—"}</TableCell>
                       <TableCell className="text-[12px] text-gray-500">
                         <div>{c.phone_1 || c.contact_info?.phone || "-"}</div>
                         {(c.contact_person_email || c.contact_info?.email) && (

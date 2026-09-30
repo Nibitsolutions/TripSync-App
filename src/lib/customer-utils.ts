@@ -2,6 +2,29 @@ import { Customer } from "@/models";
 import mongoose, { Types } from "mongoose";
 
 /**
+ * Required fields for a customer of the given type; returns the labels that are missing.
+ * SPO applies to Corporate / Travel Agent accounts only, IATA is compulsory for Travel Agents,
+ * and Branch customers need their branch location.
+ */
+export function missingCustomerFields(f: {
+  name: string;
+  customer_type: string;
+  gl_account: string;
+  spo_name: string;
+  iata_number: string;
+  branch_location: string;
+}): string[] {
+  const missing: string[] = [];
+  if (!f.name) missing.push("Title");
+  if (!f.customer_type) missing.push("Customer Type");
+  if (!f.gl_account) missing.push("GL Account");
+  if ((f.customer_type === "Corporate" || f.customer_type === "Travel Agent") && !f.spo_name) missing.push("SPO");
+  if (f.customer_type === "Travel Agent" && !f.iata_number) missing.push("IATA Number");
+  if (f.customer_type === "Branches" && !f.branch_location) missing.push("Branch Location");
+  return missing;
+}
+
+/**
  * Generate next sequential Customer Code (e.g., CUST-000001, CUST-000002) for a given tenant.
  */
 export async function generateCustomerCode(tenantId: Types.ObjectId | string): Promise<string> {
