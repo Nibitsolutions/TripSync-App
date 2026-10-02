@@ -15,6 +15,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [totp, setTotp] = useState("");
+  const [needsTotp, setNeedsTotp] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,17 +26,21 @@ export default function LoginPage() {
     const res = await signIn("credentials", {
       email,
       password,
+      totp,
       redirect: false,
     });
 
-    if (res?.error) {
+    if (res?.error === "TOTP_REQUIRED") {
+      setNeedsTotp(true);
+      setLoading(false);
+    } else if (res?.error) {
       setError(res.error === "CredentialsSignin" ? "Invalid email or password" : res.error);
       setLoading(false);
     } else {
       // Fetch session to check role
       const sessionRes = await fetch("/api/auth/session");
       const session = await sessionRes.json();
-      if (session?.user?.role === "SuperAdmin") {
+      if (["SuperAdmin", "Manager", "SalesExecutive"].includes(session?.user?.role)) {
         router.push("/admin");
       } else {
         router.push("/dashboard");
@@ -86,6 +92,21 @@ export default function LoginPage() {
                   className="h-10"
                 />
               </div>
+              {needsTotp && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="totp" className="text-[13px] font-medium">Authentication code</Label>
+                  <Input
+                    id="totp"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="6-digit code from your authenticator app"
+                    value={totp}
+                    onChange={(e) => setTotp(e.target.value)}
+                    autoFocus
+                    className="h-10 font-mono tracking-widest"
+                  />
+                </div>
+              )}
               <Button type="submit" className="w-full h-10 gap-2" disabled={loading}>
                 {loading ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</>
@@ -97,6 +118,10 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
+        <div className="text-[12px] text-center mt-4 space-x-3">
+          <a href="/set-password" className="text-muted-foreground hover:underline">Forgot password?</a>
+          <a href="/trial" className="text-muted-foreground hover:underline">Start a free trial</a>
+        </div>
         <div className="text-[11px] text-center text-muted-foreground mt-4 space-y-0.5">
           <p>Super Admin: admin@tripsync.pk / superadmin123</p>
           <p>Agency: ahmed@tripsync.pk / password123</p>

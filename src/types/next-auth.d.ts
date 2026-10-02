@@ -9,6 +9,7 @@ declare module "next-auth" {
       role?: string;
       tenant_id?: string;
       user_id?: string;
+      session_epoch?: number;
     };
   }
 }
@@ -18,5 +19,6 @@ declare module "next-auth/jwt" {
     role?: string;
     tenant_id?: string;
     user_id?: string;
+    session_epoch?: number;
   }
 }

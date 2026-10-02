@@ -1,391 +1,143 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Building2, CalendarPlus, Ban, Play, Eye, Users, Copy, Check } from "lucide-react";
-import { formatDateDDMMYYYY } from "@/lib/date-utils";
-
-interface Agency {
-  _id: string;
-  name: string;
-  status: string;
-  access_expires_at: string | null;
-  max_users: number;
-  contact_person: string;
-  contact_email: string;
-  user_count: number;
-  owner: { name: string; email: string } | null;
-  is_expired: boolean;
-  created_at: string;
-}
+import { Ban, CalendarPlus, Download, Eye, LogOut as Offboard, Play, Plus, Search } from "lucide-react";
+import {
+  ActionDialog, api, DataTable, dmy, ago, ErrorNote, LinkNotice, Loading, NativeSelect, PageHeader, Pager, Panel,
+  StatusBadge, Td, Th, label, qs, useApi, useCan, useDebounced, useMe,
+} from "@/components/platform/kit";
+import { AccessCell, AgencyRow, useAgencyActions } from "@/components/platform/agency-shared";
 
 export default function AgenciesPage() {
-  const [agencies, setAgencies] = useState<Agency[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showNew, setShowNew] = useState(false);
-  const [extendDialog, setExtendDialog] = useState<string | null>(null);
-  const [extendDays, setExtendDays] = useState("30");
-  const [detailDialog, setDetailDialog] = useState<string | null>(null);
-  const [detailData, setDetailData] = useState<Record<string, unknown> | null>(null);
-  const [copiedCreds, setCopiedCreds] = useState(false);
-  const [createdCreds, setCreatedCreds] = useState<{ email: string; password: string } | null>(null);
+  const can = useCan();
+  const me = useMe();
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({ status: "", source: "", sales_owner: "", expiring_days: "", consent: "", created_from: "", created_to: "", sort: "created_desc" });
+  const q = useDebounced(search);
+  const query = qs({ page, page_size: 25, q, ...filters });
+  const { data, loading, error, reload } = useApi<{ data: AgencyRow[]; total: number; page_size: number }>(`/api/admin/agencies${query}`, []);
+  const lookups = useApi<{ sales_executives: { id: string; name: string }[] }>("/api/admin/lookups");
+  const actions = useAgencyActions(reload);
+  const [link, setLink] = useState<string | null>(null);
 
-  // New agency form
-  const [form, setForm] = useState({
-    agency_name: "", invoice_prefix: "INV", base_currency: "PKR", max_users: "10",
-    access_days: "30", contact_person: "", contact_email: "", contact_phone: "",
-    owner_name: "", owner_email: "", owner_password: "", notes: "",
-  });
-
-  const load = useCallback(async () => {
-    const res = await fetch("/api/admin/agencies");
-    const data = await res.json();
-    setAgencies(data.agencies || []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  function updateForm(key: string, value: string) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  async function createAgency() {
-    const res = await fetch("/api/admin/agencies", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setCreatedCreds(data.credentials);
-      setShowNew(false);
-      setForm({ agency_name: "", invoice_prefix: "INV", base_currency: "PKR", max_users: "10", access_days: "30", contact_person: "", contact_email: "", contact_phone: "", owner_name: "", owner_email: "", owner_password: "", notes: "" });
-      load();
-    } else {
-      alert(data.error);
-    }
-  }
-
-  async function extendAccess() {
-    if (!extendDialog) return;
-    await fetch(`/api/admin/agencies/${extendDialog}/extend`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ days: parseInt(extendDays) }),
-    });
-    setExtendDialog(null);
-    setExtendDays("30");
-    load();
-  }
-
-  async function toggleAgency(id: string, action: "suspend" | "activate") {
-    await fetch(`/api/admin/agencies/${id}/toggle`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
-    load();
-  }
-
-  async function viewDetails(id: string) {
-    setDetailDialog(id);
-    const res = await fetch(`/api/admin/agencies/${id}`);
-    setDetailData(await res.json());
-  }
-
-  function copyCredentials() {
-    if (!createdCreds) return;
-    navigator.clipboard.writeText(`Email: ${createdCreds.email}\nPassword: ${createdCreds.password}`);
-    setCopiedCreds(true);
-    setTimeout(() => setCopiedCreds(false), 2000);
-  }
-
-  function daysRemaining(expiryDate: string | null) {
-    if (!expiryDate) return "No expiry";
-    const diff = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    if (diff < 0) return "Expired";
-    if (diff === 0) return "Expires today";
-    return `${diff} days left`;
-  }
-
-  const statusStyles: Record<string, string> = {
-    Active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
-    Suspended: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
-    Expired: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
+  const set = (k: keyof typeof filters) => (v: string) => {
+    setFilters((f) => ({ ...f, [k]: v }));
+    setPage(1);
   };
+
+  const createTrial = () =>
+    actions.setSpec({
+      title: "Create trial agency",
+      description: "Creates a 7-day trial. The owner receives a link to set their password. Paid onboarding goes through Orders.",
+      fields: [
+        { name: "business_name", label: "Business name", required: true },
+        { name: "owner_name", label: "Owner name", required: true },
+        { name: "owner_email", label: "Owner email", required: true },
+        { name: "owner_phone", label: "Owner phone" },
+        { name: "business_address", label: "Business address" },
+        ...(me?.user.role !== "SalesExecutive"
+          ? [{ name: "sales_owner_id", label: "Sales owner", type: "select" as const, options: (lookups.data?.sales_executives ?? []).map((s) => ({ value: s.id, label: s.name })) }]
+          : []),
+        { name: "internal_note", label: "Internal note", type: "textarea" as const },
+      ],
+      confirmLabel: "Create trial",
+      run: (v) => api<{ set_password_link: string }>("/api/admin/agencies", { body: v }),
+      onDone: (r) => {
+        setLink((r as { set_password_link: string }).set_password_link);
+        reload();
+      },
+    });
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">Agencies</h1>
-          <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Create and manage travel agency accounts</p>
-        </div>
-        <Dialog open={showNew} onOpenChange={setShowNew}>
-          <DialogTrigger className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-[13px] font-medium text-white hover:bg-red-700 shadow-sm transition-colors">
-            <Plus className="h-4 w-4" /> New Agency
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-semibold">Create New Agency</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-5 pt-2">
-              {/* Agency Info */}
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Agency Information</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <Label className="text-[13px]">Agency Name *</Label>
-                    <Input value={form.agency_name} onChange={(e) => updateForm("agency_name", e.target.value)} className="h-10" placeholder="e.g. Karachi Travels" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[13px]">Invoice Prefix</Label>
-                    <Input value={form.invoice_prefix} onChange={(e) => updateForm("invoice_prefix", e.target.value)} className="h-10 font-mono" placeholder="INV" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[13px]">Base Currency</Label>
-                    <Select value={form.base_currency} onValueChange={(v) => v && updateForm("base_currency", v)}>
-                      <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                      <SelectContent>{["PKR", "USD", "GBP", "SAR", "AED"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[13px]">Max Users</Label>
-                    <Input type="number" value={form.max_users} onChange={(e) => updateForm("max_users", e.target.value)} className="h-10 font-mono" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[13px]">Access Duration (days)</Label>
-                    <Input type="number" value={form.access_days} onChange={(e) => updateForm("access_days", e.target.value)} className="h-10 font-mono" placeholder="30" />
-                  </div>
-                </div>
-              </div>
+      <PageHeader
+        title="Agencies"
+        subtitle="Directory and lifecycle control"
+        actions={
+          <>
+            <a href={`/api/admin/agencies${qs({ q, ...filters, format: "csv" })}`}>
+              <Button variant="outline" className="gap-1.5"><Download className="h-4 w-4" /> Export</Button>
+            </a>
+            {can("agencies.create_trial") && (
+              <Button onClick={createTrial} className="gap-1.5 bg-red-600 hover:bg-red-700 text-white"><Plus className="h-4 w-4" /> Create trial</Button>
+            )}
+          </>
+        }
+      />
+      <LinkNotice link={link} onClose={() => setLink(null)} title="Trial created — owner set-password link" />
 
-              {/* Contact Info */}
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Contact Details</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1.5"><Label className="text-[13px]">Contact Person</Label><Input value={form.contact_person} onChange={(e) => updateForm("contact_person", e.target.value)} className="h-10" /></div>
-                  <div className="space-y-1.5"><Label className="text-[13px]">Email</Label><Input value={form.contact_email} onChange={(e) => updateForm("contact_email", e.target.value)} className="h-10" /></div>
-                  <div className="space-y-1.5"><Label className="text-[13px]">Phone</Label><Input value={form.contact_phone} onChange={(e) => updateForm("contact_phone", e.target.value)} className="h-10" /></div>
-                </div>
-              </div>
-
-              {/* Owner Account */}
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Owner Account (Login Credentials)</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1.5"><Label className="text-[13px]">Owner Name *</Label><Input value={form.owner_name} onChange={(e) => updateForm("owner_name", e.target.value)} className="h-10" /></div>
-                  <div className="space-y-1.5"><Label className="text-[13px]">Owner Email *</Label><Input value={form.owner_email} onChange={(e) => updateForm("owner_email", e.target.value)} className="h-10" /></div>
-                  <div className="space-y-1.5"><Label className="text-[13px]">Password *</Label><Input value={form.owner_password} onChange={(e) => updateForm("owner_password", e.target.value)} className="h-10 font-mono" /></div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div className="space-y-1.5">
-                <Label className="text-[13px]">Notes</Label>
-                <Textarea value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} placeholder="Any notes about this agency..." className="min-h-[60px]" />
-              </div>
-
-              <Button onClick={createAgency} disabled={!form.agency_name || !form.owner_name || !form.owner_email || !form.owner_password} className="w-full h-10 gap-2 bg-red-600 hover:bg-red-700">
-                <Building2 className="h-4 w-4" /> Create Agency
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Created Credentials Banner */}
-      {createdCreds && (
-        <div className="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-200 dark:border-emerald-500/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[13px] font-semibold text-emerald-800 dark:text-emerald-300">Agency created! Share these credentials:</p>
-              <p className="text-[13px] font-mono mt-1 text-emerald-700 dark:text-emerald-400">
-                Email: {createdCreds.email} | Password: {createdCreds.password}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="gap-1.5 text-[12px]" onClick={copyCredentials}>
-                {copiedCreds ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                {copiedCreds ? "Copied!" : "Copy"}
-              </Button>
-              <Button size="sm" variant="ghost" className="text-[12px]" onClick={() => setCreatedCreds(null)}>Dismiss</Button>
-            </div>
+      <Panel>
+        <div className="flex flex-wrap gap-2 py-2">
+          <div className="relative">
+            <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-gray-400" />
+            <Input placeholder="Search name, owner, email, phone" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="h-9 pl-8 w-[260px]" />
           </div>
-        </div>
-      )}
-
-      {/* Agencies Table */}
-      <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">
-        <CardHeader className="px-6 pt-5 pb-3">
-          <CardTitle className="text-[15px] font-semibold text-gray-900 dark:text-gray-50">All Agencies</CardTitle>
-        </CardHeader>
-        <CardContent className="px-6 pb-5">
-          {loading ? (
-            <div className="flex items-center justify-center py-12"><div className="h-5 w-5 animate-spin rounded-full border-2 border-red-600 border-t-transparent" /></div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-gray-100 dark:border-[#1e1e21]">
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Agency</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Owner</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Status</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Access</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Users</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Created</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {agencies.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-12 text-[13px] text-gray-400">No agencies yet. Create your first agency to get started.</TableCell></TableRow>
-                  ) : agencies.map((a) => {
-                    const displayStatus = a.is_expired ? "Expired" : a.status;
-                    return (
-                      <TableRow key={a._id} className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-50/50 dark:hover:bg-[#151517]">
-                        <TableCell>
-                          <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{a.name}</p>
-                          <p className="text-[11px] text-gray-400">{a.contact_email || "-"}</p>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-[13px] text-gray-600 dark:text-gray-300">{a.owner?.name || "-"}</p>
-                          <p className="text-[11px] text-gray-400 font-mono">{a.owner?.email || ""}</p>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusStyles[displayStatus] || ""}`}>
-                            {displayStatus}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <p className={`text-[12px] font-medium ${a.is_expired ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-300"}`}>
-                            {daysRemaining(a.access_expires_at)}
-                          </p>
-                          {a.access_expires_at && (
-                            <p className="text-[10px] text-gray-400 font-mono">{formatDateDDMMYYYY(a.access_expires_at)}</p>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1.5">
-                            <Users className="h-3 w-3 text-gray-400" />
-                            <span className="text-[13px] text-gray-600 dark:text-gray-300">{a.user_count} / {a.max_users}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-[13px] text-gray-500 font-mono">{formatDateDDMMYYYY(a.created_at)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1.5">
-                            <Button size="sm" variant="outline" className="h-8 gap-1 text-[11px]" onClick={() => viewDetails(a._id)}>
-                              <Eye className="h-3 w-3" /> View
-                            </Button>
-                            <Button size="sm" variant="outline" className="h-8 gap-1 text-[11px]" onClick={() => setExtendDialog(a._id)}>
-                              <CalendarPlus className="h-3 w-3" /> Extend
-                            </Button>
-                            {a.status === "Active" && !a.is_expired ? (
-                              <Button size="sm" variant="outline" className="h-8 gap-1 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10" onClick={() => toggleAgency(a._id, "suspend")}>
-                                <Ban className="h-3 w-3" /> Suspend
-                              </Button>
-                            ) : (
-                              <Button size="sm" variant="outline" className="h-8 gap-1 text-[11px] text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10" onClick={() => toggleAgency(a._id, "activate")}>
-                                <Play className="h-3 w-3" /> Activate
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+          <NativeSelect value={filters.status} onChange={set("status")} placeholder="All statuses" options={["TRIAL", "ACTIVE", "EXPIRED", "SUSPENDED", "OFFBOARDED", "PENDING", "REJECTED"]} />
+          <NativeSelect value={filters.source} onChange={set("source")} placeholder="All sources" options={["PUBLIC_TRIAL", "PUBLIC_PURCHASE", "SALES_EXEC", "ADMIN_CREATED", "LEGACY"]} />
+          {me?.user.role !== "SalesExecutive" && (
+            <NativeSelect value={filters.sales_owner} onChange={set("sales_owner")} placeholder="Any sales owner" options={[{ value: "none", label: "No owner" }, ...(lookups.data?.sales_executives ?? []).map((s) => ({ value: s.id, label: s.name }))]} />
           )}
-        </CardContent>
-      </Card>
-
-      {/* Extend Dialog */}
-      <Dialog open={!!extendDialog} onOpenChange={() => setExtendDialog(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle className="text-lg font-semibold">Extend Access</DialogTitle></DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-[13px]">Number of days to extend</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {["15", "30", "90", "365"].map((d) => (
-                  <Button key={d} variant={extendDays === d ? "default" : "outline"} size="sm" onClick={() => setExtendDays(d)} className="text-[12px]">
-                    {d} days
-                  </Button>
-                ))}
-              </div>
-              <Input type="number" value={extendDays} onChange={(e) => setExtendDays(e.target.value)} className="h-10 font-mono mt-2" />
-            </div>
-            <Button onClick={extendAccess} className="w-full h-10 gap-2 bg-red-600 hover:bg-red-700">
-              <CalendarPlus className="h-4 w-4" /> Extend by {extendDays} days
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Detail Dialog */}
-      <Dialog open={!!detailDialog} onOpenChange={() => { setDetailDialog(null); setDetailData(null); }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle className="text-lg font-semibold">Agency Details</DialogTitle></DialogHeader>
-          {detailData && (
-            <div className="space-y-5 pt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[
-                  ["Name", (detailData.agency as Record<string, unknown>)?.name],
-                  ["Status", (detailData.agency as Record<string, unknown>)?.status],
-                  ["Currency", (detailData.agency as Record<string, unknown>)?.base_currency],
-                  ["Invoice Prefix", (detailData.agency as Record<string, unknown>)?.invoice_prefix],
-                  ["Max Users", (detailData.agency as Record<string, unknown>)?.max_users],
-                  ["Expires", (detailData.agency as Record<string, unknown>)?.access_expires_at ? formatDateDDMMYYYY((detailData.agency as Record<string, unknown>).access_expires_at as string) : "No expiry"],
-                  ["Contact", (detailData.agency as Record<string, unknown>)?.contact_person || "-"],
-                  ["Phone", (detailData.agency as Record<string, unknown>)?.contact_phone || "-"],
-                ].map(([label, value]) => (
-                  <div key={label as string}>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{label as string}</p>
-                    <p className="text-[13px] font-medium text-gray-900 dark:text-gray-100 mt-0.5">{value as string}</p>
-                  </div>
-                ))}
-              </div>
-
-              {Boolean((detailData.agency as Record<string, unknown>)?.notes) && (
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Notes</p>
-                  <p className="text-[13px] text-gray-600 dark:text-gray-300 mt-0.5">{(detailData.agency as Record<string, unknown>).notes as string}</p>
-                </div>
-              )}
-
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Users</p>
-                <div className="space-y-2">
-                  {((detailData.users as Array<Record<string, unknown>>) || []).map((u) => (
-                    <div key={u._id as string} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-[#0e0e10] border border-gray-100 dark:border-[#1e1e21]">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Users className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{u.name as string}</p>
-                        <p className="text-[11px] text-gray-400 font-mono">{u.email as string}</p>
-                      </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                        {u.role as string}
-                      </span>
+          <NativeSelect value={filters.expiring_days} onChange={set("expiring_days")} placeholder="Any expiry" options={[{ value: "7", label: "Expiring ≤ 7d" }, { value: "14", label: "Expiring ≤ 14d" }, { value: "30", label: "Expiring ≤ 30d" }]} />
+          <NativeSelect value={filters.consent} onChange={set("consent")} placeholder="Any consent" options={[{ value: "yes", label: "Marketing consent" }, { value: "no", label: "No consent" }]} />
+          <Input type="date" value={filters.created_from} onChange={(e) => set("created_from")(e.target.value)} className="h-9 w-[140px]" title="Created from" />
+          <Input type="date" value={filters.created_to} onChange={(e) => set("created_to")(e.target.value)} className="h-9 w-[140px]" title="Created to" />
+          <NativeSelect value={filters.sort} onChange={set("sort")} options={[{ value: "created_desc", label: "Newest" }, { value: "created_asc", label: "Oldest" }, { value: "expires_asc", label: "Expiry soonest" }, { value: "name_asc", label: "Name A–Z" }, { value: "last_active_desc", label: "Last active" }]} />
+        </div>
+        <ErrorNote message={error} />
+        {loading && !data ? (
+          <Loading />
+        ) : (
+          <>
+            <DataTable
+              empty={!data?.data.length}
+              head={<><Th>Agency</Th><Th>Owner</Th><Th>Status</Th><Th>Access</Th><Th>Plan</Th><Th>Users</Th><Th>Branches</Th><Th>Source</Th><Th>Sales owner</Th><Th>Last active</Th><Th>Created</Th><Th>Actions</Th></>}
+            >
+              {data?.data.map((a) => (
+                <tr key={a._id} className="hover:bg-gray-50/50 dark:hover:bg-[#151517]">
+                  <Td>
+                    <Link href={`/admin/agencies/${a._id}`} className="font-semibold text-gray-900 dark:text-gray-100 hover:underline">{a.name}</Link>
+                    <p className="text-[11px] text-gray-400">{a.email || "-"}</p>
+                    {a.possible_duplicate && <p className="text-[10px] text-amber-600 font-semibold">Possible duplicate</p>}
+                  </Td>
+                  <Td><p>{a.owner.name || "-"}</p><p className="text-[11px] text-gray-400 font-mono">{a.owner.email}</p></Td>
+                  <Td><StatusBadge status={a.status} /></Td>
+                  <Td><AccessCell a={a} /></Td>
+                  <Td className="whitespace-nowrap">{a.seat_limit} seats / {a.branch_limit} br</Td>
+                  <Td>{a.user_count} / {a.seat_limit}</Td>
+                  <Td>{a.branches_used} / {a.branch_limit}</Td>
+                  <Td className="text-[12px]">{label(a.source)}</Td>
+                  <Td className="text-[12px]">{a.sales_owner_name ?? <span className="text-gray-400">—</span>}</Td>
+                  <Td className="text-[12px]">{a.last_active_at ? ago(a.last_active_at) : "-"}</Td>
+                  <Td className="font-mono text-[12px]">{dmy(a.created_at)}</Td>
+                  <Td>
+                    <div className="flex gap-1">
+                      <Link href={`/admin/agencies/${a._id}`}><Button size="sm" variant="outline" className="h-7 gap-1 text-[11px]"><Eye className="h-3 w-3" /> View</Button></Link>
+                      {can("agencies.extend_complimentary") && ["TRIAL", "ACTIVE", "EXPIRED"].includes(a.status) && (
+                        <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px]" title="Complimentary extension" onClick={() => actions.extend(a)}><CalendarPlus className="h-3 w-3" /></Button>
+                      )}
+                      {can("agencies.suspend") && ["TRIAL", "ACTIVE", "EXPIRED"].includes(a.status) && (
+                        <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px] text-red-600" onClick={() => actions.suspend(a)}><Ban className="h-3 w-3" /> Suspend</Button>
+                      )}
+                      {can("agencies.activate") && a.status === "SUSPENDED" && (
+                        <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px] text-emerald-600" onClick={() => actions.activate(a)}><Play className="h-3 w-3" /> Activate</Button>
+                      )}
+                      {can("agencies.offboard") && ["TRIAL", "ACTIVE", "EXPIRED", "SUSPENDED"].includes(a.status) && (
+                        <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px]" title="Offboard" onClick={() => actions.offboard(a)}><Offboard className="h-3 w-3" /></Button>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+                  </Td>
+                </tr>
+              ))}
+            </DataTable>
+            {data && <Pager page={page} pageSize={data.page_size} total={data.total} onPage={setPage} />}
+          </>
+        )}
+      </Panel>
+      <ActionDialog spec={actions.spec} onClose={() => actions.setSpec(null)} />
     </div>
   );
 }

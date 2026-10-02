@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongodb";
 import { Tenant, User, Customer, ExpenseType, TaxCode, ExchangeRate } from "@/models";
+import { PriceBook } from "@/models/platform";
 
 // GET /api/seed - Seed demo data (remove in production)
 export async function GET() {
@@ -20,6 +21,20 @@ export async function GET() {
     });
   }
 
+  // Default price book (illustrative values — change in Pricing & Promotions)
+  if (!(await PriceBook.exists({}))) {
+    await PriceBook.create({
+      name: "Launch price book",
+      effective_from: new Date(),
+      base_monthly_fee: 3000,
+      included_seats: 5,
+      included_branches: 1,
+      seat_monthly_rate: 500,
+      branch_monthly_rate: 1500,
+      note: "Seed values",
+    });
+  }
+
   // Check if already seeded
   const existing = await Tenant.findOne({ name: "TripSync Demo Agency" });
   if (existing) {
@@ -34,8 +49,11 @@ export async function GET() {
     name: "TripSync Demo Agency",
     base_currency: "PKR",
     invoice_prefix: "TS",
-    status: "Active",
+    status: "ACTIVE",
     access_expires_at: expiryDate,
+    owner_name: "Ahmed Khan",
+    owner_email: "ahmed@tripsync.pk",
+    source: "ADMIN_CREATED",
     max_users: 10,
     contact_person: "Ahmed Khan",
     contact_email: "ahmed@tripsync.pk",

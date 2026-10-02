@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { TenantGate } from "@/components/platform/tenant-gate";
 import {
   LayoutDashboard,
   FileText,
@@ -121,8 +122,8 @@ const navSections: NavSection[] = [
       { href: "/dashboard/agents", label: "Team & Agents", icon: UserCheck },
       { href: "/dashboard/settings?tab=profile", label: "Profile", icon: User },
       { href: "/dashboard/settings?tab=agency", label: "Agency Details", icon: Building2 },
-      { href: "/dashboard/settings?tab=billing", label: "Billing", icon: CreditCard },
-      { href: "/dashboard/settings?tab=support", label: "Support", icon: HelpCircle },
+      { href: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
+      { href: "/dashboard/support", label: "Support", icon: HelpCircle },
     ],
   },
 ];
@@ -318,6 +319,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         isCollapsed ? "lg:ml-16" : "lg:ml-[200px]"
       }`}>
         <div className="w-full px-3 md:px-6 py-5">
+          {(user as Record<string, unknown>).tenant_id ? <TenantGate /> : null}
           {children}
         </div>
       </main>
