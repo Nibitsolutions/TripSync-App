@@ -6,7 +6,7 @@ import { getAuthSession } from "@/lib/api-helpers";
 import User from "@/models/User";
 import Tenant from "@/models/Tenant";
 import { can, isPlatformRole, Permission, PlatformRole } from "./permissions";
-import { getSetting } from "./settings";
+import { getSetting, isTwoFactorEnforced } from "./settings";
 
 export interface PlatformUser {
   id: string;
@@ -82,7 +82,7 @@ export async function withPlatform(
 
     if (!options.allowWithout2fa && (dbUser.role === "SuperAdmin" || dbUser.role === "Manager") && !dbUser.totp_enabled) {
       const security = await getSetting("security");
-      if (security.enforce_2fa) {
+      if (isTwoFactorEnforced(security)) {
         return apiError(403, "TWO_FACTOR_SETUP_REQUIRED", "Set up two-factor authentication before continuing");
       }
     }

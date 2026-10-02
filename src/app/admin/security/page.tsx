@@ -8,7 +8,7 @@ import { ErrorNote, Field, PageHeader, Panel, api, useMe } from "@/components/pl
 
 export default function SecurityPage() {
   const me = useMe();
-  const [setup, setSetup] = useState<{ secret: string; otpauth_uri: string } | null>(null);
+  const [setup, setSetup] = useState<{ secret: string; otpauth_uri: string; qr_data_url: string } | null>(null);
   const [code, setCode] = useState("");
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export default function SecurityPage() {
             <p className="flex items-center gap-2 text-[13px] text-emerald-600"><ShieldCheck className="h-4 w-4" /> Enabled — you will be asked for a 6-digit code at sign-in.</p>
             {me?.user.role === "SalesExecutive" && (
               <div className="flex gap-2">
-                <Input placeholder="Current code to disable" value={code} onChange={(e) => setCode(e.target.value)} className="w-48 font-mono" />
+                <Input placeholder="Current code to disable" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} className="w-48 font-mono" />
                 <Button variant="outline" onClick={() => call({ action: "disable", code }, () => { setEnabled(false); setCode(""); })}>Disable</Button>
               </div>
             )}
@@ -48,16 +48,18 @@ export default function SecurityPage() {
         ) : !setup ? (
           <div className="py-2">
             <p className="text-[13px] text-gray-600 dark:text-gray-300 mb-3">Use Google Authenticator, Microsoft Authenticator, Authy or 1Password.</p>
-            <Button onClick={() => call({ action: "setup" }, (r) => setSetup(r as { secret: string; otpauth_uri: string }))}>Set up 2FA</Button>
+            <Button onClick={() => call({ action: "setup" }, (r) => setSetup(r as { secret: string; otpauth_uri: string; qr_data_url: string }))}>Set up 2FA</Button>
           </div>
         ) : (
           <div className="space-y-3 py-2 text-[13px]">
-            <p>1. In your authenticator app choose <b>Enter a setup key</b> and enter:</p>
+            <p>1. Scan this QR code with your authenticator app:</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={setup.qr_data_url} alt="2FA QR code" width={220} height={220} className="rounded-lg bg-white p-2 border" />
+            <p className="text-[12px] text-gray-500">Can&apos;t scan? Choose <b>Enter a setup key</b> in the app and type this key (account: {me?.user.email}, time-based):</p>
             <p className="font-mono text-base tracking-wider bg-gray-50 dark:bg-[#0e0e10] rounded-lg px-3 py-2 break-all select-all">{setup.secret.match(/.{1,4}/g)?.join(" ")}</p>
-            <p className="text-[12px] text-gray-500">Account: {me?.user.email} · Type: time-based. (Or open this link on your phone: <a className="underline break-all" href={setup.otpauth_uri}>otpauth link</a>)</p>
             <p>2. Enter the 6-digit code it shows:</p>
             <div className="flex gap-2">
-              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" className="w-40 font-mono" />
+              <Input name="totp-code" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="123456" inputMode="numeric" autoComplete="one-time-code" maxLength={6} className="w-40 font-mono tracking-widest" />
               <Button onClick={() => call({ action: "enable", code }, () => { setEnabled(true); setSetup(null); setCode(""); setMsg("2FA enabled."); setTimeout(() => window.location.reload(), 800); })}>Verify & enable</Button>
             </div>
           </div>
@@ -65,8 +67,8 @@ export default function SecurityPage() {
       </Panel>
       <Panel title="Change password" className="mt-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
-          <Field label="Current password"><Input type="password" value={pw.current_password} onChange={(e) => setPw({ ...pw, current_password: e.target.value })} /></Field>
-          <Field label="New password (min 8)"><Input type="password" value={pw.new_password} onChange={(e) => setPw({ ...pw, new_password: e.target.value })} /></Field>
+          <Field label="Current password"><Input type="password" name="current-password" autoComplete="current-password" value={pw.current_password} onChange={(e) => setPw({ ...pw, current_password: e.target.value })} /></Field>
+          <Field label="New password (min 8)"><Input type="password" name="new-password" autoComplete="new-password" value={pw.new_password} onChange={(e) => setPw({ ...pw, new_password: e.target.value })} /></Field>
         </div>
         <Button onClick={() => call({ action: "change_password", ...pw }, () => { setPw({ current_password: "", new_password: "" }); setMsg("Password changed."); })}>Change password</Button>
       </Panel>

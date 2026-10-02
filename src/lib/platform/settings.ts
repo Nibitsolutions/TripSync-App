@@ -19,6 +19,11 @@ export interface SettingsShape {
 
 export type SettingKey = keyof SettingsShape;
 
+/** 2FA is mandatory for Super Admin / Manager unless turned off in Settings or with PLATFORM_ENFORCE_2FA=false. */
+export function isTwoFactorEnforced(security: SettingsShape["security"]) {
+  return security.enforce_2fa && process.env.PLATFORM_ENFORCE_2FA !== "false";
+}
+
 export const SETTING_DEFAULTS: SettingsShape = {
   smtp: { host: "", port: 587, secure: false, username: "", password: "" },
   email_from: { address: "no-reply@tripsync.pk", name: "TripSync", reply_to: "" },

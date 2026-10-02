@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import QRCode from "qrcode";
 import User from "@/models/User";
 import { apiError, readJson, withPlatform } from "@/lib/platform/http";
 import { decryptString, encryptString } from "@/lib/platform/crypto";
 import { generateTotpSecret, totpUri, verifyTotp } from "@/lib/platform/totp";
 import { platformActor, writeAudit } from "@/lib/platform/audit";
-import { getSetting } from "@/lib/platform/settings";
+import { getSetting, isTwoFactorEnforced } from "@/lib/platform/settings";
 
 // POST /api/admin/security - 2FA setup/enable/disable and password change
 // body: { action: "setup" | "enable" | "disable" | "change_password", code?, current_password?, new_password? }
@@ -23,7 +24,9 @@ export async function POST(req: NextRequest) {
         const secret = generateTotpSecret();
         user.totp_secret_encrypted = encryptString(secret);
         await user.save();
-        return NextResponse.json({ secret, otpauth_uri: totpUri(secret, user.email) });
+        const uri = totpUri(secret, user.email);
+        const qr_data_url = await QRCode.toDataURL(uri, { margin: 1, width: 220, errorCorrectionLevel: "M" });
+        return NextResponse.json({ secret, otpauth_uri: uri, qr_data_url });
       }
 
       if (body.action === "enable") {
@@ -37,7 +40,7 @@ export async function POST(req: NextRequest) {
 
       if (body.action === "disable") {
         const security = await getSetting("security");
-        if (security.enforce_2fa && (ctx.user.role === "SuperAdmin" || ctx.user.role === "Manager")) {
+        if (isTwoFactorEnforced(security) && (ctx.user.role === "SuperAdmin" || ctx.user.role === "Manager")) {
           return apiError(403, "FORBIDDEN", "Two-factor authentication is mandatory for your role");
         }
         if (!user.totp_enabled || !verifyTotp(decryptString(user.totp_secret_encrypted), body.code || "")) {
