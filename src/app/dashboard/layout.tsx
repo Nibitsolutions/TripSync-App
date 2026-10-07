@@ -230,7 +230,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Navigation */}
-        <nav className={`flex-1 py-4 overflow-y-auto ${
+        <nav className={`sidebar-scroll flex-1 py-4 overflow-y-auto ${
           isFullView ? "px-3" : "px-2"
         }`}>
           <Suspense fallback={<div className="text-xs text-gray-400 px-3">Loading menu...</div>}>
