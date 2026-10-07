@@ -151,11 +151,17 @@ export default async function PrintInvoicePage({ params }: PrintParams) {
     };
   });
 
-  // Customer-facing remarks only: entered per ticket, with the invoice-level field as fallback.
-  // Internal remarks are never printed.
+  // Customer-facing remarks only: entered per ticket (or in service_details for Hotel/Transport/
+  // Visa/Other), with the invoice-level field as fallback. Internal remarks are never printed.
   const customerRemarks = Array.from(
     new Set(
-      [...lineItems.map((li) => li.customer_remarks), invoice.customer_remarks]
+      [
+        ...lineItems.flatMap((li) => [
+          li.customer_remarks,
+          (li.service_details as { remarks?: unknown } | undefined)?.remarks,
+        ]),
+        invoice.customer_remarks,
+      ]
         .map((r) => String(r || "").trim())
         .filter(Boolean)
     )
