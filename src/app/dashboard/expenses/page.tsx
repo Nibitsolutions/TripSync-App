@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Receipt, ShieldCheck, X } from "lucide-react";
+import { Plus, Receipt, Tags, X } from "lucide-react";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import { apiFetch, notify } from "@/lib/notify";
 
@@ -22,7 +22,7 @@ interface Expense {
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [types, setTypes] = useState<{ _id: string; name: string; requires_approval: boolean }[]>([]);
+  const [types, setTypes] = useState<{ _id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [showNewType, setShowNewType] = useState(false);
@@ -30,13 +30,12 @@ export default function ExpensesPage() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [newTypeName, setNewTypeName] = useState("");
-  const [requiresApproval, setRequiresApproval] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const [expData, typeData] = await Promise.all([
         apiFetch<{ expenses?: Expense[] }>("/api/expenses"),
-        apiFetch<{ expense_types?: { _id: string; name: string; requires_approval: boolean }[] }>("/api/expense-types"),
+        apiFetch<{ expense_types?: { _id: string; name: string }[] }>("/api/expense-types"),
       ]);
       setExpenses(expData.expenses || []); setTypes(typeData.expense_types || []);
     } catch (e) {
@@ -54,9 +53,8 @@ export default function ExpensesPage() {
     if (!(parseFloat(amount) > 0)) missing.push("Amount (must be greater than 0)");
     if (missing.length) { notify.error("Please fill in all required fields", missing); return; }
     try {
-      const d = await apiFetch<{ expense?: { status?: string } }>("/api/expenses", { method: "POST", body: { expense_type_id: typeId, amount: parseFloat(amount), description } });
-      if (d.expense?.status === "PendingApproval") notify.success("Expense submitted", "It has been sent to a manager for approval.");
-      else notify.success("Expense added");
+      await apiFetch("/api/expenses", { method: "POST", body: { expense_type_id: typeId, amount: parseFloat(amount), description } });
+      notify.success("Expense added");
       setShowNew(false); setTypeId(""); setAmount(""); setDescription(""); load();
     } catch (e) {
       notify.error("Failed to add expense", e);
@@ -66,9 +64,9 @@ export default function ExpensesPage() {
   async function createType() {
     if (!newTypeName.trim()) { notify.error("Type Name is required"); return; }
     try {
-      await apiFetch("/api/expense-types", { method: "POST", body: { name: newTypeName.trim(), requires_approval: requiresApproval } });
+      await apiFetch("/api/expense-types", { method: "POST", body: { name: newTypeName.trim() } });
       notify.success(`Expense type "${newTypeName.trim()}" added`);
-      setShowNewType(false); setNewTypeName(""); setRequiresApproval(false); load();
+      setShowNewType(false); setNewTypeName(""); load();
     } catch (e) {
       notify.error("Failed to add expense type", e);
     }
@@ -76,8 +74,6 @@ export default function ExpensesPage() {
 
   const statusStyles: Record<string, string> = {
     Draft: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-    PendingApproval: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
-    Approved: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400",
     Posted: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
     Voided: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
   };
@@ -116,7 +112,7 @@ export default function ExpensesPage() {
         <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111113] shadow-md">
           <CardHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between">
             <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
-              <ShieldCheck className="h-5 w-5 text-primary" /> Add Expense Type
+              <Tags className="h-5 w-5 text-primary" /> Add Expense Type
             </CardTitle>
             <Button variant="ghost" size="sm" onClick={() => setShowNewType(false)} className="h-8 w-8 p-0">
               <X className="h-4 w-4" />
@@ -129,13 +125,6 @@ export default function ExpensesPage() {
                   <Label className="text-[13px] font-semibold">Type Name *</Label>
                   <Input value={newTypeName} onChange={(e) => setNewTypeName(e.target.value)} placeholder="e.g. Office Refreshments" className="h-10 text-[13px]" />
                 </div>
-                <label className="flex items-center gap-2.5 cursor-pointer pb-2.5">
-                  <input type="checkbox" checked={requiresApproval} onChange={(e) => setRequiresApproval(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
-                  <span className="text-[13px] font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    Requires Manager Approval
-                    <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
-                  </span>
-                </label>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <Button variant="outline" onClick={() => setShowNewType(false)}>Cancel</Button>
@@ -169,10 +158,7 @@ export default function ExpensesPage() {
                     <SelectContent>
                       {types.map((t) => (
                         <SelectItem key={t._id} value={t._id}>
-                          <span className="flex items-center gap-2">
-                            {t.name}
-                            {t.requires_approval && <ShieldCheck className="h-3 w-3 text-amber-500" />}
-                          </span>
+                          {t.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -224,7 +210,7 @@ export default function ExpensesPage() {
                       <TableCell className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{e.expense_type_id && typeof e.expense_type_id === "object" ? e.expense_type_id.name : "-"}</TableCell>
                       <TableCell className="text-[13px] text-gray-500">{e.description || "-"}</TableCell>
                       <TableCell className="text-right font-mono text-[13px] font-semibold text-gray-900 dark:text-gray-100">{e.amount.toLocaleString()}</TableCell>
-                      <TableCell><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusStyles[e.status] || ""}`}>{e.status === "PendingApproval" ? "Pending" : e.status}</span></TableCell>
+                      <TableCell><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusStyles[e.status] || ""}`}>{e.status}</span></TableCell>
                       <TableCell className="text-[13px] text-gray-500 font-mono">{formatDateDDMMYYYY(e.created_at)}</TableCell>
                     </TableRow>
                   ))}

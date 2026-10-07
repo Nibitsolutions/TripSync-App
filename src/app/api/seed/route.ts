@@ -92,10 +92,10 @@ export async function GET() {
 
   // Expense types
   await ExpenseType.insertMany([
-    { tenant_id: tenant._id, name: "Office Rent", requires_approval: false, created_by: owner._id },
-    { tenant_id: tenant._id, name: "Software Subscriptions", requires_approval: false, created_by: owner._id },
-    { tenant_id: tenant._id, name: "Travel Reimbursement", requires_approval: true, created_by: owner._id },
-    { tenant_id: tenant._id, name: "Marketing", requires_approval: true, created_by: owner._id },
+    { tenant_id: tenant._id, name: "Office Rent", created_by: owner._id },
+    { tenant_id: tenant._id, name: "Software Subscriptions", created_by: owner._id },
+    { tenant_id: tenant._id, name: "Travel Reimbursement", created_by: owner._id },
+    { tenant_id: tenant._id, name: "Marketing", created_by: owner._id },
   ]);
 
   // Tax codes

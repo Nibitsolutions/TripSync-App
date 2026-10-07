@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       return errorResponse(`Required fields missing: ${missing.join(", ")}`, 400);
     }
 
-    // Customer code is always system-assigned (CUST-000001, ...); any code sent by the client is ignored
+    // Customer code is always system-assigned (CUS-1, CUS-2, ...); any code sent by the client is ignored
     const code = await generateCustomerCode(user.tenant_id);
 
     const customer = await Customer.create({

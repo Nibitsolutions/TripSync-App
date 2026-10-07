@@ -23,7 +23,6 @@ import {
   Wallet,
   Receipt,
   TrendingUp,
-  CheckCircle,
   Landmark,
   BarChart3,
   LogOut,
@@ -104,7 +103,6 @@ const navSections: NavSection[] = [
       },
       { href: "/dashboard/commissions", label: "Commissions", icon: TrendingUp },
       { href: "/dashboard/tax-codes", label: "Tax Codes", icon: Landmark },
-      { href: "/dashboard/approvals", label: "Approvals", icon: CheckCircle },
     ],
   },
   {

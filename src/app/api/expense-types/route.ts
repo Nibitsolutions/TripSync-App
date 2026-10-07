@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
     const expenseType = await ExpenseType.create({
       tenant_id: user.tenant_id,
       name: body.name,
-      requires_approval: body.requires_approval || false,
       created_by: user.user_id,
     });
 

@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export type ExpenseStatus = "Draft" | "PendingApproval" | "Approved" | "Posted" | "Voided";
+export type ExpenseStatus = "Draft" | "Posted" | "Voided";
 
 export interface IExpense extends Document {
   tenant_id: Types.ObjectId;
@@ -8,7 +8,6 @@ export interface IExpense extends Document {
   amount: number;
   description: string;
   status: ExpenseStatus;
-  approval_request_id: Types.ObjectId | null;
   created_by: Types.ObjectId;
   updated_by: Types.ObjectId;
   created_at: Date;
@@ -21,8 +20,7 @@ const ExpenseSchema = new Schema<IExpense>(
     expense_type_id: { type: Schema.Types.ObjectId, ref: "ExpenseType", required: true },
     amount: { type: Number, required: true },
     description: { type: String, default: "" },
-    status: { type: String, enum: ["Draft", "PendingApproval", "Approved", "Posted", "Voided"], default: "Draft" },
-    approval_request_id: { type: Schema.Types.ObjectId, ref: "ApprovalRequest", default: null },
+    status: { type: String, enum: ["Draft", "Posted", "Voided"], default: "Draft" },
     created_by: { type: Schema.Types.ObjectId, ref: "User" },
     updated_by: { type: Schema.Types.ObjectId, ref: "User" },
   },

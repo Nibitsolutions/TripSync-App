@@ -1,5 +1,6 @@
 import { Customer } from "@/models";
 import mongoose, { Types } from "mongoose";
+import { nextCustomerCode } from "@/lib/numbering";
 
 /**
  * Required fields for a customer of the given type; returns the labels that are missing.
@@ -25,18 +26,15 @@ export function missingCustomerFields(f: {
 }
 
 /**
- * Generate next sequential Customer Code (e.g., CUST-000001, CUST-000002) for a given tenant.
+ * Next sequential Customer Code for a tenant (CUS-1, CUS-2, …). Taken from an atomic
+ * per-agency counter, so two customers created at the same time never share a code.
  */
 export async function generateCustomerCode(tenantId: Types.ObjectId | string): Promise<string> {
-  const count = await Customer.countDocuments({ tenant_id: tenantId });
-  let num = count + 1;
-  let code = `CUST-${String(num).padStart(6, "0")}`;
-
-  while (await Customer.findOne({ tenant_id: tenantId, code })) {
-    num++;
-    code = `CUST-${String(num).padStart(6, "0")}`;
+  let code = await nextCustomerCode(tenantId);
+  // Skip any code already taken (e.g. entered by hand before codes were system-assigned)
+  while (await Customer.exists({ tenant_id: tenantId, code })) {
+    code = await nextCustomerCode(tenantId);
   }
-
   return code;
 }
 

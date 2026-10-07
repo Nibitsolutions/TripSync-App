@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
           all: [{ $project: { status: 1, total_amount: 1 } }],
         },
       },
-    ]);
+    ]).collation({ locale: "en", numericOrdering: true }); // TCK-9 sorts before TCK-10
 
     const matching = (result?.all || []) as InvoiceSummaryInput[];
     const total = matching.length;

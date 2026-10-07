@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,8 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
 import { voucherBalanceError } from "@/lib/voucherBalance";
+import { BankAccountRecord, bankAccountLabel, CASH_IN_HAND_KEY } from "@/lib/bankAccounts";
+import { BulkUploadControls } from "@/components/bulk/BulkUploadControls";
 import { apiFetch, notify } from "@/lib/notify";
 import {
   Plus,
@@ -33,6 +36,7 @@ import {
   FileText,
   Save,
   X,
+  CheckSquare,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -104,11 +108,35 @@ function blankEntry(): VoucherEntry {
   };
 }
 
+// RV, PV and CD have a fixed real-world direction: the first row is the bank / cash row
+// filled from the header, every other row is the counter side. JV and DN stay manual.
+type EntrySide = "debit" | "credit";
+const BANK_SIDE: Partial<Record<VoucherType, EntrySide>> = { RV: "debit", PV: "credit", CD: "debit" };
+
+function lockedSide(type: VoucherType, idx: number): EntrySide | null {
+  const bank = BANK_SIDE[type];
+  if (!bank) return null;
+  if (idx === 0) return bank;
+  return bank === "debit" ? "credit" : "debit";
+}
+
+function enforceSides(type: VoucherType, entries: VoucherEntry[]): VoucherEntry[] {
+  return entries.map((e, i) => {
+    const side = lockedSide(type, i);
+    if (side === "debit" && e.credit) return { ...e, credit: 0 };
+    if (side === "credit" && e.debit) return { ...e, debit: 0 };
+    return e;
+  });
+}
+
+// Fallback text for the CD credit row until the agency's bank list has loaded
+const CASH_IN_HAND = "Cash in Hand";
+
 function todayStr() {
   return new Date().toISOString().split("T")[0];
 }
 
-function blankForm(type: VoucherType = "RV") {
+function blankForm(type: VoucherType = "RV", cashInHand: string = CASH_IN_HAND) {
   return {
     voucher_type: type,
     voucher_date: todayStr(),
@@ -118,7 +146,7 @@ function blankForm(type: VoucherType = "RV") {
     cheque_no: "",
     cheque_status: "",
     debit_account: "",
-    entries: [blankEntry()],
+    entries: [blankEntry(), type === "CD" ? { ...blankEntry(), account_code: cashInHand } : blankEntry()],
     amount_in_words: "",
     remarks: "",
     print_format: "In House",
@@ -128,17 +156,6 @@ function blankForm(type: VoucherType = "RV") {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-const BANK_ACCOUNTS = [
-  { name: "MBL - Meezan Bank Ltd", account: "MBL - 0101-0102030 (Operating)" },
-  { name: "HBL - Habib Bank Ltd", account: "HBL - 2341-998201 (Main Branch)" },
-  { name: "UBL - United Bank Ltd", account: "UBL - 1102-887410 (Corporate)" },
-  { name: "MCB - MCB Bank Ltd", account: "MCB - 5560-120934 (Collection)" },
-  { name: "BAFL - Bank Alfalah", account: "BAFL - 8890-001243 (Operations)" },
-  { name: "SCB - Standard Chartered", account: "SCB - 0122-998765 (Treasury)" },
-  { name: "ABL - Allied Bank Ltd", account: "ABL - 4432-119902 (Clearing)" },
-  { name: "Cash in Hand", account: "Cash in Hand - Main Vault" },
-  { name: "Petty Cash", account: "Petty Cash Account" },
-];
 
 function VouchersContent() {
   // Voucher type screen opened from the sidebar (?type=PV etc.); null on "All Vouchers"
@@ -168,8 +185,20 @@ function VouchersContent() {
 
   // Account suggestions & Invoices
   const [accountSuggestions, setAccountSuggestions] = useState<string[]>([]);
-  const [invoicesList, setInvoicesList] = useState<Array<{ invoice_number: string; customer_name: string; total_amount: number; due_amount: number }>>([]);
+  const [invoicesList, setInvoicesList] = useState<Array<{ invoice_number: string; customer_name: string; customer_code: string; total_amount: number; due_amount: number }>>([]);
   const [suggestionFor, setSuggestionFor] = useState<number | null>(null);
+  // Enabled entries from Agency Settings → Banks & Cash
+  const [bankAccounts, setBankAccounts] = useState<BankAccountRecord[]>([]);
+  const cashInHandLabel = (() => {
+    const c = bankAccounts.find((b) => b.system_key === CASH_IN_HAND_KEY);
+    return c ? bankAccountLabel(c) : CASH_IN_HAND;
+  })();
+
+  useEffect(() => {
+    apiFetch<{ bank_accounts?: BankAccountRecord[] }>("/api/bank-accounts?enabled=1")
+      .then((d) => setBankAccounts(d.bank_accounts || []))
+      .catch((e) => notify.error("Failed to load bank accounts", e));
+  }, []);
 
   const accountOptions: SearchOption[] = accountSuggestions.map((name) => ({
     value: name,
@@ -178,7 +207,8 @@ function VouchersContent() {
 
   const invoiceOptions: SearchOption[] = invoicesList.map((inv) => ({
     value: inv.invoice_number,
-    label: `${inv.invoice_number} - ${inv.customer_name}`,
+    // Number, customer and code together so invoices can be told apart while searching
+    label: `${inv.invoice_number} - ${inv.customer_name}${inv.customer_code ? ` (${inv.customer_code})` : ""}`,
     sublabel: `Due: PKR ${inv.due_amount.toLocaleString()}`,
   }));
 
@@ -213,6 +243,55 @@ function VouchersContent() {
     fetchVouchers();
   }, [fetchVouchers]);
 
+  // Batch posting (TS-0039): select vouchers on the current page and post them in one go
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchSelected, setBatchSelected] = useState<Set<string>>(new Set());
+  const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+  const [batchPosting, setBatchPosting] = useState(false);
+  const [batchResult, setBatchResult] = useState<{
+    posted: { id: string; voucher_number: string }[];
+    failed: { id: string; voucher_number: string; error: string }[];
+  } | null>(null);
+
+  const batchSelectable = vouchers.filter((v) => v.status === "Draft");
+  const allBatchSelected = batchSelectable.length > 0 && batchSelectable.every((v) => batchSelected.has(v._id));
+
+  const toggleBatchVoucher = (id: string) =>
+    setBatchSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const exitBatchMode = () => {
+    setBatchMode(false);
+    setBatchSelected(new Set());
+  };
+
+  useEffect(() => {
+    setBatchSelected(new Set());
+  }, [filterType, filterStatus, search, page]);
+
+  async function runBatchPost() {
+    setBatchConfirmOpen(false);
+    setBatchPosting(true);
+    try {
+      const result = await apiFetch<{
+        posted: { id: string; voucher_number: string }[];
+        failed: { id: string; voucher_number: string; error: string }[];
+      }>("/api/vouchers/batch-post", { method: "POST", body: { ids: [...batchSelected] } });
+      if (result.failed.length === 0) notify.success(`${result.posted.length} voucher(s) posted`);
+      else setBatchResult(result);
+      exitBatchMode();
+      fetchVouchers();
+    } catch (e) {
+      notify.error("Batch posting failed", e);
+    } finally {
+      setBatchPosting(false);
+    }
+  }
+
   // Fetch account code suggestions from customers + suppliers + invoices
   useEffect(() => {
     async function fetchSuggestions() {
@@ -220,7 +299,7 @@ function VouchersContent() {
         const [cr, sr, ir] = await Promise.all([
           apiFetch<{ customers?: { name: string }[] }>("/api/customers?limit=200"),
           apiFetch<{ suppliers?: { name: string }[] }>("/api/suppliers?limit=200"),
-          apiFetch<{ invoices?: { invoice_number: string; customer_id?: { name?: string } | string; total_amount?: number; due_amount?: number }[] }>("/api/invoices?limit=200"),
+          apiFetch<{ invoices?: { invoice_number: string; customer_id?: { name?: string; code?: string } | string; total_amount?: number; due_amount?: number }[] }>("/api/invoices?limit=200"),
         ]);
         const names: string[] = [
           ...(cr.customers || []).map((c: { name: string }) => c.name),
@@ -228,9 +307,10 @@ function VouchersContent() {
         ];
         setAccountSuggestions([...new Set(names)] as string[]);
 
-        const invs = (ir.invoices || []).map((inv: { invoice_number: string; customer_id?: { name?: string } | string; total_amount?: number; due_amount?: number }) => ({
+        const invs = (ir.invoices || []).map((inv: { invoice_number: string; customer_id?: { name?: string; code?: string } | string; total_amount?: number; due_amount?: number }) => ({
           invoice_number: inv.invoice_number,
           customer_name: typeof inv.customer_id === "object" ? inv.customer_id?.name || "" : String(inv.customer_id || ""),
+          customer_code: typeof inv.customer_id === "object" ? inv.customer_id?.code || "" : "",
           total_amount: inv.total_amount || 0,
           due_amount: inv.due_amount !== undefined ? inv.due_amount : inv.total_amount || 0,
         }));
@@ -274,7 +354,26 @@ function VouchersContent() {
         }
         return updated;
       });
-      return { ...prev, entries };
+      // The bank row's account is the header account
+      const debit_account = idx === 0 && field === "account_code" ? String(value) : prev.debit_account;
+      return { ...prev, debit_account, entries: enforceSides(prev.voucher_type, entries) };
+    });
+  }
+
+  // Header account / amount write straight into the bank row (row 0) on its locked side
+  function setHeaderAccount(account: string) {
+    setForm((prev) => {
+      if (!BANK_SIDE[prev.voucher_type]) return { ...prev, debit_account: account };
+      const entries = prev.entries.map((e, i) => (i === 0 ? { ...e, account_code: account } : e));
+      return { ...prev, debit_account: account, entries };
+    });
+  }
+
+  function setHeaderAmount(amount: number) {
+    setForm((prev) => {
+      const side = BANK_SIDE[prev.voucher_type] ?? "debit";
+      const entries = prev.entries.map((e, i) => (i === 0 ? { ...e, [side]: amount } : e));
+      return { ...prev, entries: enforceSides(prev.voucher_type, entries) };
     });
   }
 
@@ -300,11 +399,17 @@ function VouchersContent() {
         notify.info("Already balanced");
         return prev;
       }
-      const lastIdx = prev.entries.length - 1;
+      // Put the difference on the last row that is allowed to take that side
+      const needSide: EntrySide = diff > 0 ? "credit" : "debit";
+      let target = prev.entries.length - 1;
+      while (target > 0 && (lockedSide(prev.voucher_type, target) ?? needSide) !== needSide) target--;
+      if ((lockedSide(prev.voucher_type, target) ?? needSide) !== needSide) {
+        notify.warning("Add a row for the difference", `No row can take the ${needSide} side on this voucher type.`);
+        return prev;
+      }
       const entries = prev.entries.map((e, i) => {
-        if (i !== lastIdx) return e;
-        if (diff > 0) return { ...e, credit: (Number(e.credit) || 0) + diff };
-        return { ...e, debit: (Number(e.debit) || 0) + Math.abs(diff) };
+        if (i !== target) return e;
+        return { ...e, [needSide]: (Number(e[needSide]) || 0) + Math.abs(diff) };
       });
       return { ...prev, entries };
     });
@@ -324,7 +429,7 @@ function VouchersContent() {
   function openCreate(type: VoucherType = "RV") {
     setShowEdit(null);
     setCreateType(type);
-    setForm(blankForm(type));
+    setForm(blankForm(type, cashInHandLabel));
     setShowCreate(true);
   }
 
@@ -451,6 +556,10 @@ function VouchersContent() {
     const { totalDebit, totalCredit } = calcTotals(form.entries);
     const isPosted = editVoucher?.status === "Posted";
     const isBalanced = Math.abs(totalDebit - totalCredit) <= 0.01 && totalDebit > 0;
+    // PV pays out of the bank, so its header account sits on the Credit side
+    const headerSide: EntrySide = BANK_SIDE[form.voucher_type] ?? "debit";
+    const headerAccountLabel = headerSide === "credit" ? "Credit Account" : "Debit Account";
+    const headerAmountLabel = headerSide === "credit" ? "Credit Amount" : "Debit Amount";
 
     return (
       <div className="space-y-4">
@@ -513,16 +622,14 @@ function VouchersContent() {
             />
           </div>
 
-...
-
           <div>
-            <Label className="text-xs font-medium text-gray-500 mb-1.5 block">Debit Account <span className="text-red-500">*</span></Label>
+            <Label className="text-xs font-medium text-gray-500 mb-1.5 block">{headerAccountLabel} <span className="text-red-500">*</span></Label>
             <TypeToSearch
               className="h-9 text-sm font-medium text-primary"
               placeholder="Associated account"
               value={form.debit_account}
-              onChange={(val) => setForm((p) => ({ ...p, debit_account: val }))}
-              onSelectOption={(opt) => setForm((p) => ({ ...p, debit_account: opt.value }))}
+              onChange={(val) => setHeaderAccount(val)}
+              onSelectOption={(opt) => setHeaderAccount(opt.value)}
               options={accountOptions}
               disabled={isPosted}
             />
@@ -544,45 +651,51 @@ function VouchersContent() {
           <div>
             <Label className="text-xs font-medium text-gray-500 mb-1.5 block">Bank / Source <span className="text-red-500">*</span></Label>
             <Select
+              value={bankAccounts.find((b) => bankAccountLabel(b) === form.debit_account)?._id ?? null}
               onValueChange={(v) => {
-                const b = BANK_ACCOUNTS.find((item) => item.name === v);
-                if (b) setForm((p) => ({ ...p, debit_account: b.account }));
+                const b = bankAccounts.find((item) => item._id === v);
+                if (b) setHeaderAccount(bankAccountLabel(b));
               }}
               disabled={isPosted}
             >
               <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Select Bank / Cash" />
+                <SelectValue placeholder="Select Bank / Cash">
+                  {(id: string | null) => {
+                    const b = bankAccounts.find((item) => item._id === id);
+                    return b ? bankAccountLabel(b) : "Select Bank / Cash";
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {BANK_ACCOUNTS.map((b) => (
-                  <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>
+                {bankAccounts.length === 0 && (
+                  <div className="px-2 py-1.5 text-xs text-gray-500">No banks enabled. Add them in Agency Settings → Banks &amp; Cash.</div>
+                )}
+                {bankAccounts.map((b) => (
+                  <SelectItem key={b._id} value={b._id}>{bankAccountLabel(b)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="text-xs font-medium text-gray-500 mb-1.5 block">Debit Account <span className="text-red-500">*</span></Label>
+            <Label className="text-xs font-medium text-gray-500 mb-1.5 block">{headerAccountLabel} <span className="text-red-500">*</span></Label>
             <TypeToSearch
               className="h-9 text-sm font-medium text-primary"
               placeholder="Associated account"
               value={form.debit_account}
-              onChange={(val) => setForm((p) => ({ ...p, debit_account: val }))}
-              onSelectOption={(opt) => setForm((p) => ({ ...p, debit_account: opt.value }))}
+              onChange={(val) => setHeaderAccount(val)}
+              onSelectOption={(opt) => setHeaderAccount(opt.value)}
               options={accountOptions}
               disabled={isPosted}
             />
           </div>
           <div>
-            <Label className="text-xs font-medium text-gray-500 mb-1.5 block">Debit Amount <span className="text-red-500">*</span></Label>
+            <Label className="text-xs font-medium text-gray-500 mb-1.5 block">{headerAmountLabel} <span className="text-red-500">*</span></Label>
             <Input
               type="number"
               className="h-9 text-sm font-mono font-bold"
               placeholder="0.00"
-              value={form.entries[0]?.debit || (totalDebit > 0 ? totalDebit : "")}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value) || 0;
-                updateEntry(0, "debit", val);
-              }}
+              value={form.entries[0]?.[headerSide] || ""}
+              onChange={(e) => setHeaderAmount(parseFloat(e.target.value) || 0)}
               disabled={isPosted}
             />
           </div>
@@ -672,6 +785,7 @@ function VouchersContent() {
                       onChange={(val) => updateEntry(idx, "ref_no", val)}
                       onSelectOption={(opt) => updateEntry(idx, "ref_no", opt.value)}
                       options={invoiceOptions}
+                      panelMinWidth={460}
                       disabled={isPosted}
                     />
                     <DatePicker
@@ -704,7 +818,8 @@ function VouchersContent() {
                       placeholder="0.00"
                       value={entry.debit || ""}
                       onChange={(e) => updateEntry(idx, "debit", parseFloat(e.target.value) || 0)}
-                      disabled={isPosted}
+                      disabled={isPosted || lockedSide(form.voucher_type, idx) === "credit"}
+                      title={lockedSide(form.voucher_type, idx) === "credit" ? "This row only takes Credit on this voucher type" : undefined}
                     />
                     <Input
                       type="number"
@@ -712,10 +827,11 @@ function VouchersContent() {
                       placeholder="0.00"
                       value={entry.credit || ""}
                       onChange={(e) => updateEntry(idx, "credit", parseFloat(e.target.value) || 0)}
-                      disabled={isPosted}
+                      disabled={isPosted || lockedSide(form.voucher_type, idx) === "debit"}
+                      title={lockedSide(form.voucher_type, idx) === "debit" ? "This row only takes Debit on this voucher type" : undefined}
                     />
                     <div className="flex justify-center">
-                      {!isPosted && form.entries.length > 1 && (
+                      {!isPosted && form.entries.length > 1 && !(idx === 0 && BANK_SIDE[form.voucher_type]) && (
                         <Button
                           type="button"
                           variant="ghost"
@@ -1027,7 +1143,76 @@ function VouchersContent() {
             <Button size="sm" variant="ghost" className="h-9 w-9 p-0" onClick={fetchVouchers}>
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
+            <div className="ml-auto flex items-center gap-2">
+              {!batchMode ? (
+                <>
+                  {/* Upload is per voucher type, so only on a type's own screen */}
+                  {routeType && routeTypeInfo && (
+                    <BulkUploadControls kind="voucher" type={routeType} label={`${routeTypeInfo.label}s`} onDone={fetchVouchers} />
+                  )}
+                  <Button size="sm" variant="outline" className="h-9 text-xs gap-1.5" onClick={() => setBatchMode(true)}>
+                    <CheckSquare className="h-3.5 w-3.5" /> Batch Posting
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs text-gray-500">{batchSelected.size} selected</span>
+                  <Button size="sm" variant="outline" className="h-9 text-xs" onClick={exitBatchMode} disabled={batchPosting}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" className="h-9 text-xs gap-1.5" disabled={batchSelected.size === 0 || batchPosting} onClick={() => setBatchConfirmOpen(true)}>
+                    {batchPosting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckSquare className="h-3.5 w-3.5" />}
+                    Post Selected ({batchSelected.size})
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
+
+          {/* Batch posting: confirm */}
+          <Dialog open={batchConfirmOpen} onOpenChange={setBatchConfirmOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Post vouchers</DialogTitle>
+              </DialogHeader>
+              <p className="text-[13px] text-gray-600 dark:text-gray-300">{batchSelected.size} voucher(s) will be posted, continue?</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setBatchConfirmOpen(false)}>Cancel</Button>
+                <Button onClick={runBatchPost}>Post {batchSelected.size}</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Batch posting: per-voucher outcome when some failed */}
+          <Dialog open={!!batchResult} onOpenChange={(open) => !open && setBatchResult(null)}>
+            <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Batch posting result</DialogTitle>
+              </DialogHeader>
+              {batchResult && (
+                <div className="space-y-3 text-[13px]">
+                  <p>
+                    <span className="font-semibold text-emerald-600">{batchResult.posted.length} posted</span>
+                    {" · "}
+                    <span className="font-semibold text-rose-600">{batchResult.failed.length} not posted</span>
+                  </p>
+                  <ul className="space-y-1.5">
+                    {batchResult.failed.map((f) => (
+                      <li key={f.id} className="rounded-md border border-rose-200 dark:border-rose-900/50 bg-rose-50/60 dark:bg-rose-950/20 px-2.5 py-1.5">
+                        <span className="font-mono font-semibold">{f.voucher_number}</span>: {f.error}
+                      </li>
+                    ))}
+                  </ul>
+                  {batchResult.posted.length > 0 && (
+                    <p className="text-[12px] text-gray-500">Posted: {batchResult.posted.map((p) => p.voucher_number).join(", ")}</p>
+                  )}
+                  <div className="flex justify-end">
+                    <Button onClick={() => setBatchResult(null)}>Close</Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* Vouchers table */}
           <div className="bg-white dark:bg-[#111113] rounded-xl border border-gray-200 dark:border-[#1e1e21] overflow-hidden shadow-sm">
@@ -1035,6 +1220,19 @@ function VouchersContent() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-[#1e1e21] bg-gray-50 dark:bg-[#0d0d0f]">
+                    {batchMode && (
+                      <th className="w-8 pl-4 py-3">
+                        <input
+                          type="checkbox"
+                          aria-label="Select all draft vouchers on this page"
+                          title="Select all draft vouchers on this page"
+                          checked={allBatchSelected}
+                          disabled={batchSelectable.length === 0}
+                          onChange={() => setBatchSelected(allBatchSelected ? new Set() : new Set(batchSelectable.map((v) => v._id)))}
+                          className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                      </th>
+                    )}
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Voucher #</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
@@ -1048,14 +1246,14 @@ function VouchersContent() {
                 <tbody className="divide-y divide-gray-50 dark:divide-[#1a1a1d]">
                   {loading ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-16 text-gray-400">
+                      <td colSpan={batchMode ? 9 : 8} className="text-center py-16 text-gray-400">
                         <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
                         Loading vouchers...
                       </td>
                     </tr>
                   ) : vouchers.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-16 text-gray-400">
+                      <td colSpan={batchMode ? 9 : 8} className="text-center py-16 text-gray-400">
                         <div className="text-4xl mb-3">🧾</div>
                         <p className="text-sm font-medium text-gray-500">No vouchers found</p>
                         <p className="text-xs text-gray-400 mt-1">Create your first voucher by clicking a Voucher Type above</p>
@@ -1070,6 +1268,19 @@ function VouchersContent() {
                           className="hover:bg-gray-50/60 dark:hover:bg-[#111113]/60 cursor-pointer transition-colors"
                           onClick={() => openEdit(v)}
                         >
+                          {batchMode && (
+                            <td className="w-8 pl-4 py-3" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                aria-label={`Select ${v.voucher_number}`}
+                                title={v.status === "Draft" ? undefined : "Only draft vouchers can be posted"}
+                                checked={batchSelected.has(v._id)}
+                                disabled={v.status !== "Draft"}
+                                onChange={() => toggleBatchVoucher(v._id)}
+                                className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-30"
+                              />
+                            </td>
+                          )}
                           <td className="px-4 py-3 font-mono text-sm font-semibold text-gray-900 dark:text-gray-100">
                             {v.voucher_number}
                           </td>

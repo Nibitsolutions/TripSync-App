@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Plus, Send, Ban, CreditCard, Trash2, History, Loader2, Pencil,
   Printer, Plane, FileText, Calculator, Search, X, RotateCcw, AlertTriangle, Check, Layers,
-  ArrowLeft, Copy, CheckCircle2, Save, ChevronLeft, ChevronRight
+  ArrowLeft, Copy, CheckCircle2, Save, ChevronLeft, ChevronRight, CheckSquare, RefreshCw
 } from "lucide-react";
 import { CITY_AIRPORT_CODES, IATA_AIRLINES, formatTicketNumber, getAirlineByTicketNumber, incrementTicketNumber } from "@/lib/iataAirlines";
 import { validateInvoiceForPosting, validateInvoiceForDraft } from "@/lib/invoiceValidation";
@@ -27,6 +27,8 @@ import { InvoiceType, taxCodeLabel, taxCodesForInvoiceType } from "@/lib/taxCode
 import { ServiceDetails, PaxEntry, SERVICE_LABELS, createDefaultServiceItem, fromStoredServiceItem } from "@/lib/serviceInvoice";
 import { ServiceInvoiceEditor } from "./ServiceInvoiceEditor";
 import { AllInvoicesView } from "./AllInvoicesDashboard";
+import { calculateTicketTotals } from "@/lib/ticketCalc";
+import { BulkUploadControls } from "@/components/bulk/BulkUploadControls";
 import { apiFetch, getErrorMessage, notify } from "@/lib/notify";
 
 interface Invoice {
@@ -533,6 +535,63 @@ function InvoicesPageContent() {
     return () => clearTimeout(timer);
   }, [loadInvoices]);
 
+  // Batch posting (TS-0038): only on an invoice type's own page, one type per batch,
+  // selection limited to the invoices currently listed.
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchSelected, setBatchSelected] = useState<Set<string>>(new Set());
+  const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+  const [batchPosting, setBatchPosting] = useState(false);
+  const [batchResult, setBatchResult] = useState<{
+    posted: { id: string; invoice_number: string }[];
+    failed: { id: string; invoice_number: string; error: string }[];
+  } | null>(null);
+
+  useEffect(() => {
+    setBatchMode(false);
+    setBatchSelected(new Set());
+  }, [typeFilter]);
+
+  const batchSelectable = invoices.filter((inv) => inv.status === "Draft");
+  const allBatchSelected = batchSelectable.length > 0 && batchSelectable.every((inv) => batchSelected.has(inv._id));
+
+  const toggleBatchInvoice = (id: string) =>
+    setBatchSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const toggleBatchAll = () =>
+    setBatchSelected(allBatchSelected ? new Set() : new Set(batchSelectable.map((inv) => inv._id)));
+
+  const exitBatchMode = () => {
+    setBatchMode(false);
+    setBatchSelected(new Set());
+  };
+
+  async function runBatchPost() {
+    setBatchConfirmOpen(false);
+    setBatchPosting(true);
+    try {
+      const result = await apiFetch<{
+        posted: { id: string; invoice_number: string }[];
+        failed: { id: string; invoice_number: string; error: string }[];
+      }>("/api/invoices/batch-post", { method: "POST", body: { type: typeFilter, ids: [...batchSelected] } });
+      if (result.failed.length === 0) {
+        notify.success(`${result.posted.length} invoice(s) posted`);
+      } else {
+        setBatchResult(result);
+      }
+      exitBatchMode();
+      loadInvoices();
+    } catch (e) {
+      notify.error("Batch posting failed", e);
+    } finally {
+      setBatchPosting(false);
+    }
+  }
+
   const loadCustomers = useCallback(() => {
     apiFetch<{ customers?: typeof customers }>("/api/customers")
       .then((d) => setCustomers(d.customers || []))
@@ -621,143 +680,6 @@ function InvoicesPageContent() {
     }
   }
 
-  // Dual-Sided Travel Accounting Calculations (Live auto-calculation)
-  function calculateTicketTotals(item: LineItemInput, lastEditedField?: string): LineItemInput {
-    const baseFare = parseFloat(item.base_fare || "0") || 0;
-    
-    // Dynamic Airline City Tax Sum (Liability)
-    const airlineCityTaxSum = (item.airline_city_taxes || []).reduce(
-      (sum, t) => sum + (parseFloat(t.amount || "0") || 0), 0
-    );
-
-    // Dynamic City Tax Sum (Income/Service)
-    const cityTaxSum = (item.city_taxes || []).reduce(
-      (sum, t) => sum + (parseFloat(t.amount || "0") || 0), 0
-    );
-
-    let taxes = 0;
-    if (item.trip_type === "Domestic") {
-      // Domestic Fixed Taxes (SP, CED, PK, YR, PB, YQ, DOF, XZ, YD, YI, RN, etc.)
-      taxes = (parseFloat(item.tax_sp || "0") || 0) +
-        (parseFloat(item.tax_ced || "0") || 0) +
-        (parseFloat(item.tax_pk || "0") || 0) +
-        (parseFloat(item.tax_yr || "0") || 0) +
-        (parseFloat(item.tax_pb || "0") || 0) +
-        (parseFloat(item.tax_yq || "0") || 0) +
-        (parseFloat(item.tax_dof || "0") || 0) +
-        (parseFloat(item.tax_xz || "0") || 0) +
-        (parseFloat(item.tax_yd || "0") || 0) +
-        (parseFloat(item.tax_yi || "0") || 0) +
-        (parseFloat(item.tax_rn || "0") || 0) +
-        (parseFloat(item.tax_gst_dom || "0") || 0) +
-        (parseFloat(item.tax_ast || "0") || 0) +
-        (parseFloat(item.tax_apt || "0") || 0) +
-        (parseFloat(item.other_taxes || "0") || 0) +
-        airlineCityTaxSum +
-        cityTaxSum;
-    } else {
-      // Fixed International Taxes (SP, RG, PK, YR, YQ, DOF, XZ, YD, YI, RN)
-      taxes = (parseFloat(item.tax_sp || "0") || 0) +
-        (parseFloat(item.tax_rg || "0") || 0) +
-        (parseFloat(item.tax_pk || "0") || 0) +
-        (parseFloat(item.tax_yr || "0") || 0) +
-        (parseFloat(item.tax_yq || "0") || 0) +
-        (parseFloat(item.tax_dof || "0") || 0) +
-        (parseFloat(item.tax_xz || "0") || 0) +
-        (parseFloat(item.tax_yd || "0") || 0) +
-        (parseFloat(item.tax_yi || "0") || 0) +
-        (parseFloat(item.tax_rn || "0") || 0) +
-        (parseFloat(item.tax_apt || "0") || 0) +
-        (parseFloat(item.tax_kbr || "0") || 0) +
-        (parseFloat(item.tax_kbp || "0") || 0) +
-        (parseFloat(item.tax_pb || "0") || 0) +
-        (parseFloat(item.other_taxes || "0") || 0) +
-        airlineCityTaxSum +
-        cityTaxSum;
-    }
-
-    const grossFare = baseFare + taxes;
-    const fareBase = baseFare > 0 ? baseFare : grossFare;
-    
-    const updated = { ...item };
-
-    // Helper for bidirectional calculation (% <-> Amount)
-    const calcPair = (
-      pctField: keyof LineItemInput,
-      amtField: keyof LineItemInput,
-      base: number
-    ) => {
-      const u = updated as Record<string, any>;
-      let pct = parseFloat(String(u[pctField] || "0")) || 0;
-      let amt = parseFloat(String(u[amtField] || "0")) || 0;
-
-      if (lastEditedField === amtField) {
-        pct = base > 0 ? (amt / base) * 100 : 0;
-        u[pctField] = pct > 0 ? (pct % 1 === 0 ? pct.toString() : pct.toFixed(2)) : "";
-      } else if (lastEditedField === pctField) {
-        amt = (base * pct) / 100;
-        u[amtField] = amt > 0 ? (amt % 1 === 0 ? amt.toString() : amt.toFixed(2)) : "0.00";
-      } else {
-        if (pct === 0 && amt > 0) {
-          pct = base > 0 ? (amt / base) * 100 : 0;
-          u[pctField] = pct > 0 ? (pct % 1 === 0 ? pct.toString() : pct.toFixed(2)) : "";
-        } else if (pct > 0) {
-          amt = (base * pct) / 100;
-          u[amtField] = amt > 0 ? (amt % 1 === 0 ? amt.toString() : amt.toFixed(2)) : "0.00";
-        }
-      }
-      return { pct, amt };
-    };
-
-    // 1. Commission on Base Fare (COM)
-    const { amt: commAmt } = calcPair("commission_percent", "commission_amount", fareBase);
-
-    // 2. Withholding Tax on Commission (WHT)
-    const { amt: whtAmt } = calcPair("wht_percent", "wht_amount", commAmt);
-
-    // 3. Discount 1 (DIS)
-    const { amt: disAmt } = calcPair("discount_percent", "discount_amount", fareBase);
-
-    // 4. Discount 2 (DIS2)
-    const { amt: dis2Amt } = calcPair("discount2_percent", "discount2_amount", fareBase);
-
-    // 5. Passenger Service Fee % (PSF/P)
-    const { amt: psfPAmt } = calcPair("psf_p_percent", "psf_p_amount", fareBase);
-
-    // 5b. Passenger Service Fee (PSF)
-    const { amt: psfAmt } = calcPair("psf_percent", "psf_amount", fareBase);
-
-    const totalPsf = psfPAmt + psfAmt;
-
-    // 6. GST on PSF/service fee (GST)
-    const { amt: gstAmt } = calcPair("gst_percent", "gst_amount", totalPsf > 0 ? totalPsf : fareBase);
-
-    // 7. SEG (Segment Fee)
-    const { amt: segAmt } = calcPair("seg_percent", "seg_amount", fareBase);
-
-    // 8. WHT_C (Customer Withholding Tax)
-    const { amt: whtCAmt } = calcPair("wht_c_percent", "wht_c_amount", fareBase);
-
-    const customerGross = grossFare + totalPsf + segAmt;
-    const customerNet = customerGross - disAmt - dis2Amt + gstAmt + whtCAmt;
-
-    const supplierGross = grossFare;
-    const supplierNet = supplierGross - commAmt + whtAmt;
-    const supplierGrossWoWht = supplierGross - whtAmt;
-
-    const margin = customerNet - supplierNet;
-
-    return {
-      ...updated,
-      customer_gross: Math.round(customerGross),
-      customer_net: Math.round(customerNet),
-      supplier_gross: Math.round(supplierGross),
-      supplier_net: Math.round(supplierNet),
-      supplier_gross_wo_wht: Math.round(supplierGrossWoWht),
-      agency_margin: Math.round(margin),
-      amount: String(Math.round(customerNet)),
-    };
-  }
 
   const DUPLICATE_TICKET_MSG = "This ticket number has already been used and cannot be used again. To find the existing ticket, please search for it in the search box.";
 
@@ -3338,17 +3260,20 @@ function InvoicesPageContent() {
                 {typeFilter ? "Manage ticket sales, airline billing, and travel invoices" : "All invoices across Ticket, Hotel, Umrah, Hajj, Visa, Transport and General"}
               </p>
             </div>
-            <Button
-              onClick={() => {
-                setEditInvoiceId(null);
-                setLineItems([createDefaultItem(defaultType)]);
-                setActiveTicketTab(0);
-                setShowNew(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors cursor-pointer"
-            >
-              <Plus className="h-4 w-4" /> {defaultType === "Ticket" ? "New Invoice / Ticket Sale" : `New ${serviceLabel} Invoice`}
-            </Button>
+            {/* New invoices are created from an invoice type's own page, never from All Invoices */}
+            {typeFilter && (
+              <Button
+                onClick={() => {
+                  setEditInvoiceId(null);
+                  setLineItems([createDefaultItem(defaultType)]);
+                  setActiveTicketTab(0);
+                  setShowNew(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors cursor-pointer"
+              >
+                <Plus className="h-4 w-4" /> {defaultType === "Ticket" ? "New Invoice / Ticket Sale" : `New ${serviceLabel} Invoice`}
+              </Button>
+            )}
           </div>
 
           {/* All Invoices: summary cards + filterable, sortable, paginated grid */}
@@ -3504,6 +3429,32 @@ function InvoicesPageContent() {
               {invoices.length} {invoices.length === 1 ? "invoice" : "invoices"}
             </Badge>
           </CardTitle>
+          {!batchMode ? (
+            <div className="flex items-center gap-2">
+              {typeFilter && (
+                <BulkUploadControls kind="invoice" type={typeFilter} label={`${serviceLabel} invoices`} onDone={loadInvoices} />
+              )}
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={() => setBatchMode(true)}>
+                <CheckSquare className="h-3.5 w-3.5" /> Batch Posting
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] text-gray-500">{batchSelected.size} selected</span>
+              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={exitBatchMode} disabled={batchPosting}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                disabled={batchSelected.size === 0 || batchPosting}
+                onClick={() => setBatchConfirmOpen(true)}
+              >
+                {batchPosting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckSquare className="h-3.5 w-3.5" />}
+                Post Selected ({batchSelected.size})
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="px-6 pb-5">
           {loading ? (
@@ -3515,6 +3466,19 @@ function InvoicesPageContent() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-gray-100 dark:border-[#1e1e21]">
+                    {batchMode && (
+                      <TableHead className="w-8">
+                        <input
+                          type="checkbox"
+                          aria-label="Select all draft invoices on this page"
+                          title="Select all draft invoices on this page"
+                          checked={allBatchSelected}
+                          disabled={batchSelectable.length === 0}
+                          onChange={toggleBatchAll}
+                          className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Invoice #</TableHead>
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Customer</TableHead>
                     <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Doc Status</TableHead>
@@ -3529,7 +3493,7 @@ function InvoicesPageContent() {
                 <TableBody>
                   {invoices.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12 text-[13px] text-gray-400">
+                      <TableCell colSpan={batchMode ? 10 : 9} className="text-center py-12 text-[13px] text-gray-400">
                         {hasActiveFilters ? "No invoices found matching your filters. Try clearing filters." : "No invoices recorded yet."}
                       </TableCell>
                     </TableRow>
@@ -3540,6 +3504,19 @@ function InvoicesPageContent() {
                       className="border-gray-100 dark:border-[#1e1e21] hover:bg-gray-100/80 dark:hover:bg-[#1a1a1d] cursor-pointer transition-colors select-none"
                       title="Double-click to view/edit invoice details"
                     >
+                      {batchMode && (
+                        <TableCell className="w-8" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${inv.invoice_number}`}
+                            title={inv.status === "Draft" ? undefined : "Only draft invoices can be posted"}
+                            checked={batchSelected.has(inv._id)}
+                            disabled={inv.status !== "Draft"}
+                            onChange={() => toggleBatchInvoice(inv._id)}
+                            className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-30"
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="font-mono text-[13px] font-semibold text-gray-900 dark:text-gray-100">
                         {inv.invoice_number}
                       </TableCell>
@@ -3585,6 +3562,55 @@ function InvoicesPageContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Batch posting: confirm */}
+      <Dialog open={batchConfirmOpen} onOpenChange={setBatchConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Post invoices</DialogTitle>
+          </DialogHeader>
+          <p className="text-[13px] text-gray-600 dark:text-gray-300">
+            {batchSelected.size} invoice(s) will be posted, continue?
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setBatchConfirmOpen(false)}>Cancel</Button>
+            <Button onClick={runBatchPost}>Post {batchSelected.size}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch posting: per-invoice outcome when some failed */}
+      <Dialog open={!!batchResult} onOpenChange={(open) => !open && setBatchResult(null)}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Batch posting result</DialogTitle>
+          </DialogHeader>
+          {batchResult && (
+            <div className="space-y-3 text-[13px]">
+              <p>
+                <span className="font-semibold text-emerald-600">{batchResult.posted.length} posted</span>
+                {" · "}
+                <span className="font-semibold text-rose-600">{batchResult.failed.length} not posted</span>
+              </p>
+              <ul className="space-y-1.5">
+                {batchResult.failed.map((f) => (
+                  <li key={f.id} className="rounded-md border border-rose-200 dark:border-rose-900/50 bg-rose-50/60 dark:bg-rose-950/20 px-2.5 py-1.5">
+                    <span className="font-mono font-semibold">{f.invoice_number}</span>: {f.error}
+                  </li>
+                ))}
+              </ul>
+              {batchResult.posted.length > 0 && (
+                <p className="text-[12px] text-gray-500">
+                  Posted: {batchResult.posted.map((p) => p.invoice_number).join(", ")}
+                </p>
+              )}
+              <div className="flex justify-end">
+                <Button onClick={() => setBatchResult(null)}>Close</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
           </>
           )}
         </div>

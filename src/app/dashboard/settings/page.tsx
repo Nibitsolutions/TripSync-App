@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Settings, Save, Loader2, CheckCircle, Building2, Globe, Phone, Mail, MapPin, FileText } from "lucide-react";
 import { apiFetch, notify } from "@/lib/notify";
+import { BankAccountsCard } from "@/components/settings/BankAccountsCard";
 
 interface AgencySettings {
   name: string;
@@ -21,13 +22,12 @@ interface AgencySettings {
   tagline: string;
   invoice_notes: string;
   base_currency: string;
-  invoice_prefix: string;
 }
 
 const empty: AgencySettings = {
   name: "", logo_url: "", address: "", city: "", contact_person: "",
   contact_email: "", contact_phone: "", website: "", tagline: "",
-  invoice_notes: "", base_currency: "PKR", invoice_prefix: "INV",
+  invoice_notes: "", base_currency: "PKR",
 };
 
 export default function SettingsPage() {
@@ -112,11 +112,8 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+            {/* Invoice numbers use a fixed prefix per invoice type (TCK-, HTL-, …), so there is no prefix setting */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-[13px]">Invoice Prefix</Label>
-                <Input value={form.invoice_prefix} onChange={(e) => set("invoice_prefix", e.target.value)} placeholder="INV" className="h-10 font-mono" />
-              </div>
               <div className="space-y-1.5">
                 <Label className="text-[13px]">Base Currency</Label>
                 <Input value={form.base_currency} onChange={(e) => set("base_currency", e.target.value)} placeholder="PKR" className="h-10 font-mono" />
@@ -163,6 +160,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Banks & Cash (voucher Bank / Source list) — saves on its own, not with the form */}
+        <BankAccountsCard />
 
         {/* Invoice Footer Notes */}
         <Card className="bg-white dark:bg-[#111113] border-gray-200/80 dark:border-[#1e1e21] shadow-sm">

@@ -26,6 +26,8 @@ interface TypeToSearchProps {
   /** When set, a "create new" entry is offered if the typed text matches no suggestion. */
   onCreateNew?: (query: string) => void;
   createNewLabel?: string;
+  /** Minimum width of the suggestion panel, for narrow fields whose suggestions carry more text. */
+  panelMinWidth?: number;
 }
 
 export function TypeToSearch({
@@ -41,6 +43,7 @@ export function TypeToSearch({
   name,
   onCreateNew,
   createNewLabel = "Create New",
+  panelMinWidth = 0,
 }: TypeToSearchProps) {
   const [inputValue, setInputValue] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
@@ -64,7 +67,9 @@ export function TypeToSearch({
     }
     const update = () => {
       const r = el.getBoundingClientRect();
-      setPanelPos({ top: r.bottom + 4, left: r.left, width: r.width });
+      const width = Math.max(r.width, panelMinWidth);
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
+      setPanelPos({ top: r.bottom + 4, left, width });
     };
     update();
     window.addEventListener("scroll", update, true);
@@ -73,7 +78,7 @@ export function TypeToSearch({
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [isOpen]);
+  }, [isOpen, panelMinWidth]);
 
   // Click outside listener
   useEffect(() => {
@@ -207,7 +212,7 @@ export function TypeToSearch({
       {isOpen && itemCount > 0 && mountPanel(
         <ul
           ref={listRef}
-          style={panelPos ? { position: "fixed", top: panelPos.top, left: panelPos.left, width: panelPos.width } : undefined}
+          style={panelPos ? { position: "fixed", top: panelPos.top, left: panelPos.left, width: panelPos.width } : panelMinWidth ? { minWidth: panelMinWidth } : undefined}
           className={cn(
             "z-[60] max-h-56 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#161619] py-1 shadow-lg text-xs select-none",
             !panelPos && "absolute left-0 right-0 mt-1"

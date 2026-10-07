@@ -2,6 +2,8 @@
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Booking, Invoice, InvoiceLineItem, Tenant } from "@/models";
 import { logChanges } from "@/lib/audit";
+import { nextInvoiceNumber } from "@/lib/numbering";
+import { invoiceTypeOf } from "@/lib/taxCodes";
 
 // POST /api/bookings/[id]/invoice — generate an invoice draft from a confirmed booking
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -17,17 +19,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const tenant = await Tenant.findById(user.tenant_id);
     if (!tenant) return errorResponse("Tenant not found", 404);
 
-    // Generate sequential invoice number
-    const lastInvoice = await Invoice.findOne({ tenant_id: user.tenant_id })
-      .sort({ created_at: -1 })
-      .lean();
-
-    let nextNum = 1;
-    if (lastInvoice) {
-      const match = lastInvoice.invoice_number.match(/(\d+)$/);
-      if (match) nextNum = parseInt(match[1]) + 1;
-    }
-    const invoice_number = `${tenant.invoice_prefix}-${String(nextNum).padStart(6, "0")}`;
+    // Sequential number per invoice type (TCK-1, HTL-1, …)
+    const invoice_number = await nextInvoiceNumber(user.tenant_id, invoiceTypeOf(booking.service_type));
 
     // Create Invoice
     const invoice = await Invoice.create({

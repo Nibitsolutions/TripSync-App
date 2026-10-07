@@ -69,7 +69,7 @@ export default function DashboardPage() {
   ];
 
   const quickActions = [
-    { href: "/dashboard/invoices", label: "Create New Invoice", desc: "Generate a draft invoice", icon: FileText, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-500/10" },
+    { href: "/dashboard/invoices?type=Ticket", label: "Create New Invoice", desc: "Generate a draft invoice", icon: FileText, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-500/10" },
     { href: "/dashboard/payments", label: "Record Payment", desc: "Log a customer payment", icon: Wallet, color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-100 dark:bg-violet-500/10" },
     { href: "/dashboard/expenses", label: "Add Expense", desc: "Submit a new expense", icon: Receipt, color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-100 dark:bg-rose-500/10" },
     { href: "/dashboard/customers", label: "Add Customer", desc: "Register a new customer", icon: Users, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-500/10" },

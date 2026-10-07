@@ -18,7 +18,7 @@ export async function PATCH(req: NextRequest) {
     const allowed = [
       "name", "logo_url", "address", "city", "contact_person",
       "contact_email", "contact_phone", "website", "tagline",
-      "invoice_notes", "base_currency", "invoice_prefix",
+      "invoice_notes", "base_currency",
     ];
     const update: Record<string, string> = {};
     for (const key of allowed) {
