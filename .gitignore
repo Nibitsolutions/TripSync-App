@@ -45,3 +45,7 @@ next-env.d.ts
 
 # local research notes
 /docs/zipaccounts-feature-gap.md
+
+# Markdown notes and reports stay local. Already-tracked docs (README, AGENTS.md,
+# CLAUDE.md, spec, docs/*) are unaffected; add a new one on purpose with `git add -f`.
+*.md
