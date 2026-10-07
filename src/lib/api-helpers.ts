@@ -38,11 +38,18 @@ export async function withAuth(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Agency users pass through the maintenance + subscription access guard.
-  if (user.tenant_id && !isPlatformRole(user.role)) {
-    const denied = await enforceTenantAccess(user, options);
-    if (denied) return denied;
+  // Agency endpoints are scoped by tenant_id. Platform staff have none, and a missing
+  // tenant filter would match every agency's records, so they are refused outright.
+  if (!user.tenant_id || isPlatformRole(user.role)) {
+    return NextResponse.json(
+      { error: "This is a platform admin account. Agency features are only available to agency users." },
+      { status: 403 }
+    );
   }
+
+  // Agency users pass through the maintenance + subscription access guard.
+  const denied = await enforceTenantAccess(user, options);
+  if (denied) return denied;
 
   if (requiredRoles && !requiredRoles.includes(user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

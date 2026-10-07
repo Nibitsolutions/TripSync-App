@@ -15,6 +15,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { TenantGate } from "@/components/platform/tenant-gate";
+import { isPlatformRole } from "@/lib/platform/permissions";
 import {
   LayoutDashboard,
   FileText,
@@ -153,16 +154,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     });
   };
 
+  // The agency workspace is only for agency users; platform staff belong in /admin.
+  const isPlatformUser = isPlatformRole((session?.user as { role?: string } | undefined)?.role);
+
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-  }, [status, router]);
+    else if (status === "authenticated" && isPlatformUser) router.replace("/admin");
+  }, [status, isPlatformUser, router]);
 
   useEffect(() => {
     setOpen(false);
     setIsHovered(false);
   }, [pathname]);
 
-  if (status === "loading") {
+  if (status === "loading" || isPlatformUser) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-[#0a0a0b]">
         <div className="flex flex-col items-center gap-3">
