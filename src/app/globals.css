@@ -49,8 +49,8 @@
 }
 
 :root {
-  --scrollbar-thumb: oklch(0.82 0 0);
-  --scrollbar-thumb-hover: oklch(0.68 0 0);
+  --scrollbar-thumb: oklch(0.78 0 0);
+  --scrollbar-thumb-hover: oklch(0.64 0 0);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -86,8 +86,8 @@
 }
 
 .dark {
-  --scrollbar-thumb: oklch(1 0 0 / 14%);
-  --scrollbar-thumb-hover: oklch(1 0 0 / 26%);
+  --scrollbar-thumb: oklch(1 0 0 / 20%);
+  --scrollbar-thumb-hover: oklch(1 0 0 / 32%);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -146,8 +146,8 @@
 
   /* Themed scrollbars: thin, rounded, no arrow buttons, colours follow light/dark */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
   }
   ::-webkit-scrollbar-track,
   ::-webkit-scrollbar-corner {
@@ -178,7 +178,7 @@
 /* Sidebar nav: scrollbar stays hidden until the sidebar is hovered */
 @layer components {
   .sidebar-scroll::-webkit-scrollbar {
-    width: 6px;
+    width: 10px;
   }
   .sidebar-scroll::-webkit-scrollbar-thumb {
     background-color: transparent;
