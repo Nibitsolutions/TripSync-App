@@ -42,3 +42,6 @@ next-env.d.ts
 
 # platform archive snapshots (encrypted agency data)
 /storage/
+
+# local research notes
+/docs/zipaccounts-feature-gap.md
