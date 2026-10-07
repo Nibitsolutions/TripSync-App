@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
+import { apiFetch, notify } from "@/lib/notify";
 
 interface Commission {
   _id: string;
@@ -21,7 +22,10 @@ export default function CommissionsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/commissions").then((r) => r.json()).then((d) => { setCommissions(d.commissions || []); setLoading(false); });
+    apiFetch<{ commissions?: typeof commissions }>("/api/commissions")
+      .then((d) => setCommissions(d.commissions || []))
+      .catch((e) => notify.error("Failed to load commissions", e))
+      .finally(() => setLoading(false));
   }, []);
 
   const statusStyles: Record<string, string> = {

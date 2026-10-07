@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Plus, FileText, Trash2, X } from "lucide-react";
+import { apiFetch, notify } from "@/lib/notify";
 
 interface Customer { _id: string; name: string; }
 interface Supplier { _id: string; name: string; }
@@ -56,23 +57,31 @@ export default function BookingsPage() {
   const [passengers, setPassengers] = useState<Passenger[]>([{ name: "" }]);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/bookings");
-    const data = await res.json();
-    setBookings(data.bookings || []);
-    setLoading(false);
+    try {
+      const data = await apiFetch<{ bookings?: Booking[] }>("/api/bookings");
+      setBookings(data.bookings || []);
+    } catch (e) {
+      notify.error("Failed to load bookings", e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     load();
-    fetch("/api/customers").then((r) => r.json()).then((d) => setCustomers(d.customers || []));
-    fetch("/api/suppliers").then((r) => r.json()).then((d) => setSuppliers(d.suppliers || []));
+    apiFetch<{ customers?: Customer[] }>("/api/customers")
+      .then((d) => setCustomers(d.customers || []))
+      .catch((e) => notify.error("Failed to load customers", e));
+    apiFetch<{ suppliers?: Supplier[] }>("/api/suppliers")
+      .then((d) => setSuppliers(d.suppliers || []))
+      .catch((e) => notify.error("Failed to load suppliers", e));
   }, [load]);
 
   async function create() {
-    const res = await fetch("/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      await apiFetch("/api/bookings", {
+        method: "POST",
+        body: {
         customer_id: customerId,
         supplier_id: supplierId,
         service_type: serviceType,
@@ -82,9 +91,9 @@ export default function BookingsPage() {
         total_cost: parseFloat(cost) || 0,
         total_price: parseFloat(price) || 0,
         passenger_details: passengers.filter(p => p.name.trim() !== ""),
-      }),
-    });
-    if (res.ok) {
+        },
+      });
+      notify.success("Booking created");
       setShowNew(false);
       setCustomerId("");
       setSupplierId("");
@@ -96,20 +105,18 @@ export default function BookingsPage() {
       setPrice("");
       setPassengers([{ name: "" }]);
       load();
-    } else {
-      const d = await res.json();
-      alert(d.error || "Failed to create booking");
+    } catch (e) {
+      notify.error("Failed to create booking", e);
     }
   }
 
   async function generateInvoice(bookingId: string) {
-    const res = await fetch(`/api/bookings/${bookingId}/invoice`, { method: "POST" });
-    if (res.ok) {
-      alert("Invoice draft generated successfully!");
+    try {
+      await apiFetch(`/api/bookings/${bookingId}/invoice`, { method: "POST" });
+      notify.success("Invoice draft generated", "You can find it under Invoices.");
       load();
-    } else {
-      const d = await res.json();
-      alert(d.error || "Failed to generate invoice");
+    } catch (e) {
+      notify.error("Failed to generate invoice", e);
     }
   }
 

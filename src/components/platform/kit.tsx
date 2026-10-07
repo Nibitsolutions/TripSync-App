@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { friendlyStatusMessage, getErrorMessage, notify } from "@/lib/notify";
 
 // ---------------------------------------------------------------------------
 // Fetch helpers
@@ -18,13 +19,18 @@ export class FetchError extends Error {
 }
 
 export async function api<T = Record<string, unknown>>(url: string, init?: { method?: string; body?: unknown }): Promise<T> {
-  const res = await fetch(url, {
-    method: init?.method ?? (init?.body !== undefined ? "POST" : "GET"),
-    headers: init?.body !== undefined ? { "Content-Type": "application/json" } : undefined,
-    body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: init?.method ?? (init?.body !== undefined ? "POST" : "GET"),
+      headers: init?.body !== undefined ? { "Content-Type": "application/json" } : undefined,
+      body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
+    });
+  } catch (e) {
+    throw new FetchError(0, "NETWORK", getErrorMessage(e));
+  }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new FetchError(res.status, data.code || "ERROR", data.message || data.error || `Request failed (${res.status})`);
+  if (!res.ok) throw new FetchError(res.status, data.code || "ERROR", friendlyStatusMessage(res.status, data.message || data.error));
   return data as T;
 }
 
@@ -321,6 +327,8 @@ export interface ActionSpec {
   danger?: boolean;
   run: (values: Record<string, string | boolean>) => Promise<unknown>;
   onDone?: (result: unknown) => void;
+  /** Toast shown when `run` succeeds; defaults to "Done: <title>". Pass false to skip it. */
+  successMessage?: string | false;
 }
 
 export function ActionDialog({ spec, onClose }: { spec: ActionSpec | null; onClose: () => void }) {
@@ -345,10 +353,12 @@ export function ActionDialog({ spec, onClose }: { spec: ActionSpec | null; onClo
     setError(null);
     try {
       const result = await spec.run(values);
+      if (spec.successMessage !== false) notify.success(spec.successMessage || `Done: ${spec.title}`);
       spec.onDone?.(result);
       onClose();
     } catch (e) {
       setError((e as Error).message);
+      notify.error(`${spec.title} failed`, e);
     } finally {
       setBusy(false);
     }

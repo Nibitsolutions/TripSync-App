@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorNote, Loading, NativeSelect, PageHeader, Panel, StatusBadge, api, ago, dmy, label, qs, useCan, useDebounced, useMe } from "@/components/platform/kit";
+import { notify } from "@/lib/notify";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const STATUSES = ["OPEN", "IN_PROGRESS", "WAITING_ON_CUSTOMER", "RESOLVED", "CLOSED"];
@@ -50,11 +51,13 @@ function Thread({ id, onChanged }: { id: string; onChanged: () => void }) {
     setError(null);
     try {
       await api(`/api/admin/tickets/${id}/messages`, { body: { body } });
+      notify.success("Reply sent");
       setBody("");
       await load();
       onChanged();
     } catch (e) {
       setError((e as Error).message);
+      notify.error("Failed to send reply", e);
     } finally {
       setBusy(false);
     }
@@ -62,10 +65,12 @@ function Thread({ id, onChanged }: { id: string; onChanged: () => void }) {
   async function patch(change: Record<string, unknown>) {
     try {
       await api(`/api/admin/tickets/${id}`, { method: "PATCH", body: change });
+      notify.success("Ticket updated");
       await load();
       onChanged();
     } catch (e) {
       setError((e as Error).message);
+      notify.error("Failed to update ticket", e);
     }
   }
 

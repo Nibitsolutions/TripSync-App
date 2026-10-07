@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Receipt, ShieldCheck, X } from "lucide-react";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
+import { apiFetch, notify } from "@/lib/notify";
 
 interface Expense {
   _id: string;
@@ -32,21 +33,45 @@ export default function ExpensesPage() {
   const [requiresApproval, setRequiresApproval] = useState(false);
 
   const load = useCallback(async () => {
-    const [expRes, typeRes] = await Promise.all([fetch("/api/expenses"), fetch("/api/expense-types")]);
-    const [expData, typeData] = await Promise.all([expRes.json(), typeRes.json()]);
-    setExpenses(expData.expenses || []); setTypes(typeData.expense_types || []); setLoading(false);
+    try {
+      const [expData, typeData] = await Promise.all([
+        apiFetch<{ expenses?: Expense[] }>("/api/expenses"),
+        apiFetch<{ expense_types?: { _id: string; name: string; requires_approval: boolean }[] }>("/api/expense-types"),
+      ]);
+      setExpenses(expData.expenses || []); setTypes(typeData.expense_types || []);
+    } catch (e) {
+      notify.error("Failed to load expenses", e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   async function create() {
-    const res = await fetch("/api/expenses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expense_type_id: typeId, amount: parseFloat(amount), description }) });
-    if (res.ok) { setShowNew(false); setTypeId(""); setAmount(""); setDescription(""); load(); }
+    const missing: string[] = [];
+    if (!typeId) missing.push("Expense Type");
+    if (!(parseFloat(amount) > 0)) missing.push("Amount (must be greater than 0)");
+    if (missing.length) { notify.error("Please fill in all required fields", missing); return; }
+    try {
+      const d = await apiFetch<{ expense?: { status?: string } }>("/api/expenses", { method: "POST", body: { expense_type_id: typeId, amount: parseFloat(amount), description } });
+      if (d.expense?.status === "PendingApproval") notify.success("Expense submitted", "It has been sent to a manager for approval.");
+      else notify.success("Expense added");
+      setShowNew(false); setTypeId(""); setAmount(""); setDescription(""); load();
+    } catch (e) {
+      notify.error("Failed to add expense", e);
+    }
   }
 
   async function createType() {
-    const res = await fetch("/api/expense-types", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newTypeName, requires_approval: requiresApproval }) });
-    if (res.ok) { setShowNewType(false); setNewTypeName(""); setRequiresApproval(false); load(); }
+    if (!newTypeName.trim()) { notify.error("Type Name is required"); return; }
+    try {
+      await apiFetch("/api/expense-types", { method: "POST", body: { name: newTypeName.trim(), requires_approval: requiresApproval } });
+      notify.success(`Expense type "${newTypeName.trim()}" added`);
+      setShowNewType(false); setNewTypeName(""); setRequiresApproval(false); load();
+    } catch (e) {
+      notify.error("Failed to add expense type", e);
+    }
   }
 
   const statusStyles: Record<string, string> = {

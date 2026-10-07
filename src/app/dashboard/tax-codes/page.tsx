@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Landmark, X, Edit, Check, Power } from "lucide-react";
 import { INVOICE_TYPES, InvoiceType, normalizeInvoiceTypes } from "@/lib/taxCodes";
+import { apiFetch, notify } from "@/lib/notify";
 
 export type TaxCategory = "Income Tax" | "WHT" | "Airline Tax" | "Other Taxes";
 
@@ -40,11 +41,10 @@ export default function TaxCodesPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/tax-codes");
-      const data = await res.json();
+      const data = await apiFetch<{ tax_codes?: TaxCode[] }>("/api/tax-codes");
       setTaxCodes(data.tax_codes || []);
     } catch (err) {
-      console.error(err);
+      notify.error("Failed to load tax codes", err);
     } finally {
       setLoading(false);
     }
@@ -82,9 +82,13 @@ export default function TaxCodesPage() {
   };
 
   async function handleSubmit() {
-    if (!name.trim() || !code.trim() || !category) return;
-    if (applicableTypes.length === 0) {
-      alert("Please select at least one Applicable Invoice Type.");
+    const missing: string[] = [];
+    if (!name.trim()) missing.push("Name");
+    if (!code.trim()) missing.push("Code");
+    if (!category) missing.push("Category");
+    if (applicableTypes.length === 0) missing.push("At least one Applicable Invoice Type");
+    if (missing.length) {
+      notify.error("Please fill in all required fields", missing);
       return;
     }
 
@@ -96,43 +100,26 @@ export default function TaxCodesPage() {
       applicable_invoice_types: applicableTypes,
     };
 
-    if (editingId) {
-      const res = await fetch(`/api/tax-codes/${editingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    try {
+      await apiFetch(editingId ? `/api/tax-codes/${editingId}` : "/api/tax-codes", {
+        method: editingId ? "PATCH" : "POST",
+        body: payload,
       });
-      if (res.ok) {
-        resetForm();
-        load();
-      } else {
-        const d = await res.json();
-        alert(d.error || "Failed to update tax code");
-      }
-    } else {
-      const res = await fetch("/api/tax-codes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        resetForm();
-        load();
-      } else {
-        const d = await res.json();
-        alert(d.error || "Failed to create tax code");
-      }
+      notify.success(editingId ? `Tax code ${payload.code} updated` : `Tax code ${payload.code} created`);
+      resetForm();
+      load();
+    } catch (e) {
+      notify.error(editingId ? "Failed to update tax code" : "Failed to create tax code", e);
     }
   }
 
   async function toggleActive(t: TaxCode) {
-    const res = await fetch(`/api/tax-codes/${t._id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !t.active }),
-    });
-    if (res.ok) {
+    try {
+      await apiFetch(`/api/tax-codes/${t._id}`, { method: "PATCH", body: { active: !t.active } });
+      notify.success(`Tax code ${t.code} ${t.active ? "deactivated" : "activated"}`);
       load();
+    } catch (e) {
+      notify.error(`Failed to ${t.active ? "deactivate" : "activate"} tax code ${t.code}`, e);
     }
   }
 

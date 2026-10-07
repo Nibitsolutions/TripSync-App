@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { formatDateDDMMYYYY, parseDDMMYYYYToYYYYMMDD, formatYYYYMMDD } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,10 @@ const MONTH_NAMES = [
 
 const WEEKDAY_NAMES = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
+const POPUP_WIDTH = 256; // w-64
+const POPUP_GAP = 4;
+const VIEWPORT_MARGIN = 8;
+
 export function DatePicker({
   value = "",
   onChange,
@@ -38,6 +43,12 @@ export function DatePicker({
   const [displayValue, setDisplayValue] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  // The calendar is portalled out of the field so tables / cards with overflow can't clip it.
+  // Inside a dialog it stays in the dialog, otherwise clicking a day would count as an outside
+  // click and close the dialog.
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null);
 
   // Parse prop value to Date for calendar navigation
   const getInitialViewDate = (val?: string) => {
@@ -65,16 +76,67 @@ export function DatePicker({
     }
   }, [value]);
 
-  // Click outside to close popup
+  // Click outside (field and calendar both count as inside) closes the popup
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target) || popupRef.current?.contains(target)) return;
+      setIsOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setIsOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen]);
+
+  // Place the calendar under the field, or above it when there isn't room below, kept inside
+  // the viewport. Coordinates are viewport-based (position: fixed); if an ancestor creates a
+  // containing block for fixed elements (e.g. a transformed dialog) the measured offset is
+  // subtracted so the popup still lands next to the field.
+  const positionPopup = useCallback(() => {
+    const anchor = containerRef.current;
+    const popup = popupRef.current;
+    if (!anchor || !popup) return;
+    const a = anchor.getBoundingClientRect();
+    const h = popup.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const spaceBelow = vh - a.bottom - VIEWPORT_MARGIN;
+    const spaceAbove = a.top - VIEWPORT_MARGIN;
+    let top = spaceBelow >= h || spaceBelow >= spaceAbove ? a.bottom + POPUP_GAP : a.top - h - POPUP_GAP;
+    top = Math.max(VIEWPORT_MARGIN, Math.min(top, vh - h - VIEWPORT_MARGIN));
+    const left = Math.max(VIEWPORT_MARGIN, Math.min(a.left, vw - POPUP_WIDTH - VIEWPORT_MARGIN));
+
+    // Correct for a non-viewport containing block
+    popup.style.top = "0px";
+    popup.style.left = "0px";
+    const origin = popup.getBoundingClientRect();
+    setPopupPos({ top: top - origin.top, left: left - origin.left });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPopupPos(null);
+      return;
+    }
+    if (!portalTarget) {
+      setPortalTarget((containerRef.current?.closest('[role="dialog"]') as HTMLElement | null) ?? document.body);
+      return;
+    }
+    positionPopup();
+    // Follow the field while any scroll container moves or the window resizes
+    window.addEventListener("scroll", positionPopup, true);
+    window.addEventListener("resize", positionPopup);
+    return () => {
+      window.removeEventListener("scroll", positionPopup, true);
+      window.removeEventListener("resize", positionPopup);
+    };
+  }, [isOpen, portalTarget, positionPopup]);
 
   // Format typing input as DD-MM-YYYY automatically
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -202,7 +264,7 @@ export function DatePicker({
   }
 
   return (
-    <div ref={containerRef} className="relative inline-block w-full">
+    <div ref={containerRef} className="relative block w-full min-w-0">
       <div className="relative flex items-center">
         <input
           id={id}
@@ -244,9 +306,13 @@ export function DatePicker({
         </div>
       </div>
 
-      {/* Calendar Popup Dropdown */}
-      {isOpen && !disabled && !readOnly && (
-        <div className="absolute left-0 z-50 mt-1 w-64 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#161619] p-2.5 shadow-xl text-xs select-none">
+      {/* Calendar Popup Dropdown (portalled; see portalTarget) */}
+      {isOpen && !disabled && !readOnly && portalTarget && createPortal(
+        <div
+          ref={popupRef}
+          style={{ position: "fixed", top: popupPos?.top ?? 0, left: popupPos?.left ?? 0, visibility: popupPos ? "visible" : "hidden" }}
+          className="pointer-events-auto z-[100] w-64 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#161619] p-2.5 shadow-xl text-xs select-none"
+        >
           {/* Calendar Header */}
           <div className="flex items-center justify-between gap-1 mb-2 border-b border-slate-100 dark:border-slate-800 pb-2">
             <button
@@ -347,7 +413,8 @@ export function DatePicker({
             </button>
             <span className="text-[10px] text-slate-400 font-mono">Format: DD-MM-YYYY</span>
           </div>
-        </div>
+        </div>,
+        portalTarget
       )}
     </div>
   );

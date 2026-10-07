@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +19,8 @@ import { numberToWords } from "@/lib/numberToWords";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
+import { voucherBalanceError } from "@/lib/voucherBalance";
+import { apiFetch, notify } from "@/lib/notify";
 import {
   Plus,
   Trash2,
@@ -191,12 +192,11 @@ function VouchersContent() {
         page: String(page),
         limit: "20",
       });
-      const res = await fetch(`/api/vouchers?${params}`);
-      const data = await res.json();
+      const data = await apiFetch<{ vouchers?: Voucher[]; total?: number }>(`/api/vouchers?${params}`);
       setVouchers(data.vouchers || []);
       setTotal(data.total || 0);
-    } catch {
-      toast.add({ title: "Failed to load vouchers", type: "error" });
+    } catch (e) {
+      notify.error("Failed to load vouchers", e);
     } finally {
       setLoading(false);
     }
@@ -218,9 +218,9 @@ function VouchersContent() {
     async function fetchSuggestions() {
       try {
         const [cr, sr, ir] = await Promise.all([
-          fetch("/api/customers?limit=200").then((r) => r.json()),
-          fetch("/api/suppliers?limit=200").then((r) => r.json()),
-          fetch("/api/invoices?limit=200").then((r) => r.json()),
+          apiFetch<{ customers?: { name: string }[] }>("/api/customers?limit=200"),
+          apiFetch<{ suppliers?: { name: string }[] }>("/api/suppliers?limit=200"),
+          apiFetch<{ invoices?: { invoice_number: string; customer_id?: { name?: string } | string; total_amount?: number; due_amount?: number }[] }>("/api/invoices?limit=200"),
         ]);
         const names: string[] = [
           ...(cr.customers || []).map((c: { name: string }) => c.name),
@@ -235,8 +235,8 @@ function VouchersContent() {
           due_amount: inv.due_amount !== undefined ? inv.due_amount : inv.total_amount || 0,
         }));
         setInvoicesList(invs);
-      } catch {
-        // ignore
+      } catch (e) {
+        notify.warning("Account and invoice suggestions could not be loaded", (e as Error)?.message);
       }
     }
     fetchSuggestions();
@@ -297,7 +297,7 @@ function VouchersContent() {
       const { totalDebit, totalCredit } = calcTotals(prev.entries);
       const diff = totalDebit - totalCredit;
       if (Math.abs(diff) <= 0.01) {
-        toast.add({ title: "Already balanced", type: "info" });
+        notify.info("Already balanced");
         return prev;
       }
       const lastIdx = prev.entries.length - 1;
@@ -351,33 +351,28 @@ function VouchersContent() {
   // Save (Create)
   async function handleCreate() {
     if (!form.name_on_voucher.trim()) {
-      toast.add({ title: "Name on Voucher is required", type: "error" });
+      notify.error("Name on Voucher is required");
+      return;
+    }
+    const balanceError = voucherBalanceError(form.entries);
+    if (balanceError) {
+      notify.error("Voucher must be balanced before saving", balanceError);
       return;
     }
     const { totalDebit, totalCredit } = calcTotals(form.entries);
 
     setSaving(true);
     try {
-      const res = await fetch("/api/vouchers", {
+      const data = await apiFetch<{ voucher: Voucher }>("/api/vouchers", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          total_debit: totalDebit,
-          total_credit: totalCredit,
-        }),
+        body: { ...form, total_debit: totalDebit, total_credit: totalCredit },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
 
-      toast.add({
-        title: `Voucher ${data.voucher.voucher_number} created (Draft)`,
-        type: "success",
-      });
+      notify.success(`Voucher ${data.voucher.voucher_number} created (Draft)`);
       setShowCreate(false);
       fetchVouchers();
     } catch (e) {
-      toast.add({ title: String(e), type: "error" });
+      notify.error("Failed to save voucher", e);
     } finally {
       setSaving(false);
     }
@@ -387,33 +382,28 @@ function VouchersContent() {
   async function handleUpdate() {
     if (!showEdit) return;
     if (!form.name_on_voucher.trim()) {
-      toast.add({ title: "Name on Voucher is required", type: "error" });
+      notify.error("Name on Voucher is required");
+      return;
+    }
+    const balanceError = voucherBalanceError(form.entries);
+    if (balanceError) {
+      notify.error("Voucher must be balanced before saving", balanceError);
       return;
     }
     const { totalDebit, totalCredit } = calcTotals(form.entries);
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/vouchers/${showEdit._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          total_debit: totalDebit,
-          total_credit: totalCredit,
-        }),
+      const data = await apiFetch<{ voucher: Voucher }>(`/api/vouchers/${showEdit._id}`, {
+        method: "PATCH",
+        body: { ...form, total_debit: totalDebit, total_credit: totalCredit },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
 
-      toast.add({
-        title: `Voucher ${data.voucher.voucher_number} updated`,
-        type: "success",
-      });
+      notify.success(`Voucher ${data.voucher.voucher_number} updated`);
       setShowEdit(null);
       fetchVouchers();
     } catch (e) {
-      toast.add({ title: String(e), type: "error" });
+      notify.error("Failed to save voucher changes", e);
     } finally {
       setSaving(false);
     }
@@ -421,25 +411,24 @@ function VouchersContent() {
 
   // Post voucher
   async function handlePost(id: string, voucherNo: string) {
-    const { totalDebit, totalCredit } = calcTotals(form.entries);
-
-    if (Math.abs(totalDebit - totalCredit) > 0.01 || totalDebit === 0) {
-      toast.add({
-        title: "Voucher must be balanced before posting",
-        type: "error",
-      });
-      return;
+    // The form only reflects this voucher when it is the one open for editing; posting from the
+    // list relies on the server's balance check instead.
+    if (showEdit?._id === id) {
+      const balanceError = voucherBalanceError(form.entries);
+      if (balanceError) {
+        notify.error("Voucher must be balanced before posting", balanceError);
+        return;
+      }
     }
 
     setPosting(true);
     try {
-      const res = await fetch(`/api/vouchers/${id}/post`, { method: "POST" });
-      if (!res.ok) throw new Error((await res.json()).error);
-      toast.add({ title: `Voucher ${voucherNo} posted successfully`, type: "success" });
+      await apiFetch(`/api/vouchers/${id}/post`, { method: "POST" });
+      notify.success(`Voucher ${voucherNo} posted successfully`);
       setShowEdit(null);
       fetchVouchers();
     } catch (e) {
-      toast.add({ title: String(e), type: "error" });
+      notify.error(`Failed to post voucher ${voucherNo}`, e);
     } finally {
       setPosting(false);
     }
@@ -449,12 +438,11 @@ function VouchersContent() {
   async function handleDelete(id: string, voucherNo: string) {
     if (!confirm(`Delete voucher ${voucherNo}? This cannot be undone.`)) return;
     try {
-      const res = await fetch(`/api/vouchers/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error((await res.json()).error);
-      toast.add({ title: `Voucher ${voucherNo} deleted`, type: "success" });
+      await apiFetch(`/api/vouchers/${id}`, { method: "DELETE" });
+      notify.success(`Voucher ${voucherNo} deleted`);
       fetchVouchers();
     } catch (e) {
-      toast.add({ title: String(e), type: "error" });
+      notify.error(`Failed to delete voucher ${voucherNo}`, e);
     }
   }
 

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Wallet, Coins, Loader2, Printer, X, ArrowLeft } from "lucide-react";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
+import { apiFetch, notify } from "@/lib/notify";
 
 interface Payment {
   _id: string;
@@ -73,32 +74,41 @@ export default function PaymentsPage() {
   const [submittingAllocation, setSubmittingAllocation] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/payments");
-    const data = await res.json();
-    setPayments(data.payments || []);
-    setLoading(false);
+    try {
+      const data = await apiFetch<{ payments?: Payment[] }>("/api/payments");
+      setPayments(data.payments || []);
+    } catch (e) {
+      notify.error("Failed to load payments", e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     load();
-    fetch("/api/customers").then((r) => r.json()).then((d) => setCustomers(d.customers || []));
+    apiFetch<{ customers?: typeof customers }>("/api/customers")
+      .then((d) => setCustomers(d.customers || []))
+      .catch((e) => notify.error("Failed to load customers", e));
   }, [load]);
 
   async function create() {
-    const res = await fetch("/api/payments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customer_id: customerId, amount: parseFloat(amount), currency, payment_method: method }),
-    });
-    if (res.ok) {
+    const missing: string[] = [];
+    if (!customerId) missing.push("Customer");
+    if (!(parseFloat(amount) > 0)) missing.push("Amount (must be greater than 0)");
+    if (missing.length) { notify.error("Please fill in all required fields", missing); return; }
+    try {
+      await apiFetch("/api/payments", {
+        method: "POST",
+        body: { customer_id: customerId, amount: parseFloat(amount), currency, payment_method: method },
+      });
+      notify.success("Payment recorded");
       setShowNew(false);
       setCustomerId("");
       setAmount("");
       setMethod("");
       load();
-    } else {
-      const d = await res.json();
-      alert(d.error);
+    } catch (e) {
+      notify.error("Failed to record payment", e);
     }
   }
 
@@ -111,8 +121,7 @@ export default function PaymentsPage() {
     
     const custId = payment.customer_id && typeof payment.customer_id === "object" ? payment.customer_id._id : (typeof payment.customer_id === "string" ? payment.customer_id : "");
     try {
-      const res = await fetch(`/api/customers/${custId}/ledger`);
-      const data = await res.json();
+      const data = await apiFetch<{ entries?: LedgerEntry[]; allocations?: AllocationEntry[] }>(`/api/customers/${custId}/ledger`);
       
       const invoices = (data.entries || []).filter((e: LedgerEntry) => e.type === "invoice" && e.status === "Posted");
       const allocations = (data.allocations || []) as AllocationEntry[];
@@ -137,9 +146,9 @@ export default function PaymentsPage() {
       }).filter((row: InvoiceAllocationRow) => row.balance > 0);
       
       setAllocationRows(rows);
+      if (rows.length === 0) notify.info("No outstanding invoices", "This customer has no unpaid posted invoices to allocate against.");
     } catch (err) {
-      console.error(err);
-      alert("Failed to load customer outstanding invoices");
+      notify.error("Failed to load customer's outstanding invoices", err);
     } finally {
       setLoadingInvoices(false);
     }
@@ -163,34 +172,38 @@ export default function PaymentsPage() {
       .filter(a => a.amount > 0);
       
     if (allocationsToSubmit.length === 0) {
-      alert("Please enter a valid amount for at least one invoice.");
+      notify.error("Enter an amount for at least one invoice");
       setSubmittingAllocation(false);
       return;
     }
     
+    const overBalance = allocationsToSubmit
+      .map((a) => ({ a, row: allocationRows.find((r) => r.invoice_id === a.invoice_id) }))
+      .filter(({ a, row }) => row && a.amount > row.balance + 0.01)
+      .map(({ a, row }) => `Invoice ${row!.invoice_number}: ${a.amount.toLocaleString()} is more than its balance ${row!.balance.toLocaleString()}`);
+    if (overBalance.length) {
+      notify.error("Allocation is more than the invoice balance", overBalance);
+      setSubmittingAllocation(false);
+      return;
+    }
+
     const totalAllocated = allocationsToSubmit.reduce((sum, a) => sum + a.amount, 0);
     if (totalAllocated > allocatingPayment.unallocated_amount) {
-      alert(`Allocated total (${totalAllocated.toLocaleString()}) cannot exceed the unallocated payment balance (${allocatingPayment.unallocated_amount.toLocaleString()})`);
+      notify.error("Allocation is more than the payment balance", `Allocated total ${totalAllocated.toLocaleString()} cannot exceed the unallocated payment balance ${allocatingPayment.unallocated_amount.toLocaleString()}.`);
       setSubmittingAllocation(false);
       return;
     }
     
     try {
-      const res = await fetch(`/api/payments/${allocatingPayment._id}/allocate`, {
+      await apiFetch(`/api/payments/${allocatingPayment._id}/allocate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ allocations: allocationsToSubmit }),
+        body: { allocations: allocationsToSubmit },
       });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Failed to submit allocation");
-      } else {
-        setAllocatingPayment(null);
-        load();
-      }
+      notify.success("Payment allocated", `${totalAllocated.toLocaleString()} allocated to ${allocationsToSubmit.length} invoice(s).`);
+      setAllocatingPayment(null);
+      load();
     } catch (err) {
-      console.error(err);
-      alert("An error occurred");
+      notify.error("Failed to allocate payment", err);
     } finally {
       setSubmittingAllocation(false);
     }

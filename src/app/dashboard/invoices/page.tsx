@@ -27,6 +27,7 @@ import { InvoiceType, taxCodeLabel, taxCodesForInvoiceType } from "@/lib/taxCode
 import { ServiceDetails, PaxEntry, SERVICE_LABELS, createDefaultServiceItem, fromStoredServiceItem } from "@/lib/serviceInvoice";
 import { ServiceInvoiceEditor } from "./ServiceInvoiceEditor";
 import { AllInvoicesView } from "./AllInvoicesDashboard";
+import { apiFetch, getErrorMessage, notify } from "@/lib/notify";
 
 interface Invoice {
   _id: string;
@@ -298,10 +299,10 @@ function InvoicesPageContent() {
 
   const loadTaxCodes = useCallback(async () => {
     try {
-      const res = await fetch("/api/tax-codes");
-      const data = await res.json();
-      if (data.tax_codes) {
-        setConfiguredTaxCodes(data.tax_codes);
+      const data = await apiFetch<{ tax_codes?: ConfiguredTaxCode[] }>("/api/tax-codes");
+      const taxCodes = data.tax_codes;
+      if (taxCodes) {
+        setConfiguredTaxCodes(taxCodes);
         setLineItems((prev) => {
           if (
             prev.length === 1 &&
@@ -310,13 +311,13 @@ function InvoicesPageContent() {
             !prev[0].ticket_number &&
             (prev[0].amount === "0" || prev[0].amount === "")
           ) {
-            return [createDefaultTicketItem(data.tax_codes)];
+            return [createDefaultTicketItem(taxCodes)];
           }
           return prev;
         });
       }
     } catch (err) {
-      console.error(err);
+      notify.error("Failed to load tax codes", err);
     }
   }, []);
 
@@ -492,11 +493,10 @@ function InvoicesPageContent() {
     setAuditDialogInvoice(invoice);
     setLoadingLogs(true);
     try {
-      const res = await fetch(`/api/audit-log?entity_type=Invoice&entity_id=${invoice._id}`);
-      const data = await res.json();
+      const data = await apiFetch<{ audit_logs?: typeof auditLogs }>(`/api/audit-log?entity_type=Invoice&entity_id=${invoice._id}`);
       setAuditLogs(data.audit_logs || []);
     } catch (err) {
-      console.error(err);
+      notify.error("Failed to load invoice history", err);
     } finally {
       setLoadingLogs(false);
     }
@@ -516,10 +516,14 @@ function InvoicesPageContent() {
     if (customerFilter && customerFilter !== "all") params.set("customer_id", customerFilter);
 
     const url = `/api/invoices?${params.toString()}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    setInvoices(data.invoices || []);
-    setLoading(false);
+    try {
+      const data = await apiFetch<{ invoices?: Invoice[] }>(url);
+      setInvoices(data.invoices || []);
+    } catch (e) {
+      notify.error("Failed to load invoices", e);
+    } finally {
+      setLoading(false);
+    }
   }, [typeFilter, searchQuery, dateRangeFilter, paymentStatusFilter, statusFilter, customerFilter]);
 
   useEffect(() => {
@@ -530,13 +534,19 @@ function InvoicesPageContent() {
   }, [loadInvoices]);
 
   const loadCustomers = useCallback(() => {
-    fetch("/api/customers").then((r) => r.json()).then((d) => setCustomers(d.customers || []));
+    apiFetch<{ customers?: typeof customers }>("/api/customers")
+      .then((d) => setCustomers(d.customers || []))
+      .catch((e) => notify.error("Failed to load customers", e));
   }, []);
 
   useEffect(() => {
     loadCustomers();
-    fetch("/api/suppliers").then((r) => r.json()).then((d) => setSuppliers(d.suppliers || []));
-    fetch("/api/users").then((r) => r.json()).then((d) => setStaffUsers(d.users || []));
+    apiFetch<{ suppliers?: typeof suppliers }>("/api/suppliers")
+      .then((d) => setSuppliers(d.suppliers || []))
+      .catch((e) => notify.error("Failed to load suppliers", e));
+    apiFetch<{ users?: typeof staffUsers }>("/api/users")
+      .then((d) => setStaffUsers(d.users || []))
+      .catch((e) => notify.error("Failed to load staff list", e));
   }, [loadCustomers]);
 
   // Open the print view in a fully separate tab. `noopener` puts it in its own browsing
@@ -600,17 +610,12 @@ function InvoicesPageContent() {
     if (!deleteInvoiceId) return;
     setDeleteLoading(true);
     try {
-      const res = await fetch(`/api/invoices/${deleteInvoiceId}`, { method: "DELETE" });
-      if (res.ok) {
-        setDeleteInvoiceId(null);
-        loadInvoices();
-      } else {
-        const d = await res.json();
-        alert(d.error || "Failed to delete invoice");
-      }
+      await apiFetch(`/api/invoices/${deleteInvoiceId}`, { method: "DELETE" });
+      notify.success("Invoice deleted");
+      setDeleteInvoiceId(null);
+      loadInvoices();
     } catch (err) {
-      console.error(err);
-      alert("Error deleting invoice");
+      notify.error("Failed to delete invoice", err);
     } finally {
       setDeleteLoading(false);
     }
@@ -764,23 +769,20 @@ function InvoicesPageContent() {
     // 1. Check local duplicate within current form tabs
     const isLocalDuplicate = list.some((item, idx) => idx !== currentIndex && item.ticket_number && item.ticket_number.trim() === clean);
     if (isLocalDuplicate) {
-      alert(DUPLICATE_TICKET_MSG);
+      notify.error(`Ticket number ${clean} is repeated`, "The same ticket number is entered more than once on this invoice.");
       return true;
     }
 
     // 2. Check duplicate in database via API
     try {
       const excludeId = isEdit ? editInvoiceId || "" : "";
-      const res = await fetch(`/api/invoices/check-ticket?ticket_number=${encodeURIComponent(clean)}&exclude_invoice_id=${excludeId}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.exists) {
-          alert(DUPLICATE_TICKET_MSG);
-          return true;
-        }
+      const data = await apiFetch<{ exists?: boolean }>(`/api/invoices/check-ticket?ticket_number=${encodeURIComponent(clean)}&exclude_invoice_id=${excludeId}`);
+      if (data.exists) {
+        notify.error(`Ticket number ${clean} already used`, DUPLICATE_TICKET_MSG);
+        return true;
       }
     } catch (err) {
-      console.error("Ticket uniqueness check failed:", err);
+      notify.warning("Could not check ticket number for duplicates", getErrorMessage(err));
     }
     return false;
   }
@@ -936,7 +938,7 @@ function InvoicesPageContent() {
           line_items: lineItems,
         });
         if (valErrors.length > 0) {
-          alert(`Cannot post invoice. Please fill in all compulsory (*) fields:\n\n• ${valErrors.join("\n• ")}`);
+          notify.error("Cannot post invoice. Please fill in all compulsory (*) fields", valErrors);
           setIsCreating(false);
           return null;
         }
@@ -946,7 +948,7 @@ function InvoicesPageContent() {
           line_items: lineItems,
         });
         if (draftErrors.length > 0) {
-          alert(`Cannot save draft invoice. Please fill in required field(s):\n\n• ${draftErrors.join("\n• ")}`);
+          notify.error("Cannot save draft invoice. Please fill in required field(s)", draftErrors);
           setIsCreating(false);
           return null;
         }
@@ -964,10 +966,9 @@ function InvoicesPageContent() {
         }
       }
 
-      const res = await fetch("/api/invoices", {
+      const data = await apiFetch<{ invoice?: Invoice }>("/api/invoices", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           customer_id: newCustomerId,
           currency: newCurrency,
           bsp_flag: newBsp,
@@ -986,26 +987,22 @@ function InvoicesPageContent() {
           custom_invoice_number: newCustomInvoiceNumber,
           status: newDocStatus || "Draft",
           line_items: lineItems,
-        }),
+        },
       });
-      if (res.ok) {
-        const data = await res.json();
-        const createdInv = data.invoice;
-        setShowNew(false);
-        setNewCustomInvoiceNumber("");
-        if (createdInv && createdInv._id) {
-          openEditDialog(createdInv);
-        }
-        loadInvoices();
-        return createdInv?._id || null;
-      } else {
-        const d = await res.json();
-        alert(d.error || "Failed to create invoice");
-        return null;
+      const createdInv = data.invoice;
+      notify.success(
+        createdInv?.invoice_number ? `Invoice ${createdInv.invoice_number} created` : "Invoice created",
+        createdInv?.status === "Posted" ? "The invoice has been posted." : "Saved as draft."
+      );
+      setShowNew(false);
+      setNewCustomInvoiceNumber("");
+      if (createdInv && createdInv._id) {
+        openEditDialog(createdInv);
       }
+      loadInvoices();
+      return createdInv?._id || null;
     } catch (err) {
-      console.error(err);
-      alert("An unexpected error occurred while creating invoice.");
+      notify.error("Failed to create invoice", err);
       return null;
     } finally {
       setIsCreating(false);
@@ -1023,50 +1020,63 @@ function InvoicesPageContent() {
         line_items: editLineItems,
       });
       if (valErrors.length > 0) {
-        alert(`Cannot post invoice. Please fill in all compulsory (*) fields:\n\n• ${valErrors.join("\n• ")}`);
+        notify.error("Cannot post invoice. Please fill in all compulsory (*) fields", valErrors);
         return;
       }
     }
-    const res = await fetch(`/api/invoices/${id}/post`, { method: "POST" });
-    if (res.ok) {
+    try {
+      await apiFetch(`/api/invoices/${id}/post`, { method: "POST" });
+      notify.success("Invoice posted");
       if (editInvoiceId === id) {
         setEditDocStatus("Posted");
         setEditSavedStatus("Posted");
       }
       loadInvoices();
-    } else {
-      const d = await res.json();
-      alert(d.error || "Failed to post invoice");
+    } catch (e) {
+      notify.error("Failed to post invoice", e);
     }
   }
 
   async function unpostInvoice(id: string) {
-    const res = await fetch(`/api/invoices/${id}/unpost`, { method: "POST" });
-    if (res.ok) {
+    try {
+      await apiFetch(`/api/invoices/${id}/unpost`, { method: "POST" });
+      notify.success("Invoice unposted", "It is back in Draft and can be edited.");
       if (editInvoiceId === id) {
         setEditDocStatus("Draft");
         setEditSavedStatus("Draft");
       }
       loadInvoices();
-    } else {
-      const d = await res.json();
-      alert(d.error || "Failed to unpost invoice");
+    } catch (e) {
+      notify.error("Failed to unpost invoice", e);
     }
   }
 
   async function voidInvoice() {
     if (!voidDialog) return;
-    const res = await fetch(`/api/invoices/${voidDialog}/void`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: voidReason }) });
-    if (!res.ok) { const d = await res.json(); alert(d.error); }
-    else if (voidDialog === editInvoiceId) setEditSavedStatus("Voided");
-    setVoidDialog(null); setVoidReason(""); loadInvoices();
+    if (!voidReason.trim()) { notify.error("Please enter a reason for voiding this invoice"); return; }
+    try {
+      await apiFetch(`/api/invoices/${voidDialog}/void`, { method: "POST", body: { reason: voidReason.trim() } });
+      notify.success("Invoice voided");
+      if (voidDialog === editInvoiceId) setEditSavedStatus("Voided");
+      setVoidDialog(null); setVoidReason(""); loadInvoices();
+    } catch (e) {
+      notify.error("Failed to void invoice", e);
+    }
   }
 
   async function issueCreditNote() {
     if (!creditDialog) return;
-    const res = await fetch(`/api/invoices/${creditDialog}/credit-notes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: parseFloat(creditAmount), reason: creditReason }) });
-    if (!res.ok) { const d = await res.json(); alert(d.error); }
-    setCreditDialog(null); setCreditAmount(""); setCreditReason(""); loadInvoices();
+    const missing: string[] = [];
+    if (!(parseFloat(creditAmount) > 0)) missing.push("Amount (must be greater than 0)");
+    if (!creditReason.trim()) missing.push("Reason");
+    if (missing.length) { notify.error("Please fill in all required fields", missing); return; }
+    try {
+      await apiFetch(`/api/invoices/${creditDialog}/credit-notes`, { method: "POST", body: { amount: parseFloat(creditAmount), reason: creditReason.trim() } });
+      notify.success("Credit note issued", `Amount ${parseFloat(creditAmount).toLocaleString()}`);
+      setCreditDialog(null); setCreditAmount(""); setCreditReason(""); loadInvoices();
+    } catch (e) {
+      notify.error("Failed to issue credit note", e);
+    }
   }
 
   async function openEditDialog(inv: Invoice) {
@@ -1074,8 +1084,16 @@ function InvoicesPageContent() {
     setEditSavedStatus(null);
     setEditInvoiceNumber(inv.invoice_number || "");
     setEditLoading(true);
-    const res = await fetch(`/api/invoices/${inv._id}`);
-    const data = await res.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- loosely-typed invoice detail payload
+    let data: any;
+    try {
+      data = await apiFetch(`/api/invoices/${inv._id}`);
+    } catch (e) {
+      notify.error("Failed to open invoice", e);
+      setEditInvoiceId(null);
+      setEditLoading(false);
+      return;
+    }
     const customerId = inv.customer_id && typeof inv.customer_id === "object" ? inv.customer_id._id : (typeof inv.customer_id === "string" ? inv.customer_id : "");
     setEditCustomerId(customerId);
     setEditCurrency(inv.currency);
@@ -1202,7 +1220,7 @@ function InvoicesPageContent() {
           line_items: editLineItems,
         });
         if (valErrors.length > 0) {
-          alert(`Cannot post invoice. Please fill in all compulsory (*) fields:\n\n• ${valErrors.join("\n• ")}`);
+          notify.error("Cannot post invoice. Please fill in all compulsory (*) fields", valErrors);
           setIsSavingEdit(false);
           return false;
         }
@@ -1212,7 +1230,7 @@ function InvoicesPageContent() {
           line_items: editLineItems,
         });
         if (draftErrors.length > 0) {
-          alert(`Cannot save draft invoice. Please fill in required field(s):\n\n• ${draftErrors.join("\n• ")}`);
+          notify.error("Cannot save draft invoice. Please fill in required field(s)", draftErrors);
           setIsSavingEdit(false);
           return false;
         }
@@ -1230,10 +1248,9 @@ function InvoicesPageContent() {
         }
       }
 
-      const res = await fetch(`/api/invoices/${editInvoiceId}`, {
+      const saved = await apiFetch<{ invoice?: { status?: string } }>(`/api/invoices/${editInvoiceId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           customer_id: editCustomerId,
           currency: editCurrency,
           bsp_flag: editBsp,
@@ -1252,18 +1269,16 @@ function InvoicesPageContent() {
           custom_invoice_number: editCustomInvoiceNumber,
           status: editDocStatus,
           line_items: editLineItems,
-        }),
+        },
       });
-      const saved = await res.json();
-      if (!res.ok) { alert(saved.error || "Failed to save"); return false; }
       if (saved.invoice?.status) setEditSavedStatus(saved.invoice.status);
+      notify.success(editInvoiceNumber ? `Invoice ${editInvoiceNumber} saved` : "Invoice saved");
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
       loadInvoices();
       return true;
     } catch (err) {
-      console.error(err);
-      alert("Error saving invoice changes");
+      notify.error("Failed to save invoice changes", err);
       return false;
     } finally {
       setIsSavingEdit(false);

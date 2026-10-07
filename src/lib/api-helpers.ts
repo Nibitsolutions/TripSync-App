@@ -26,7 +26,12 @@ export async function withAuth(
   requiredRoles?: string[],
   options: { allowWhenExpired?: boolean } = {}
 ): Promise<NextResponse> {
-  await connectDB();
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error("[api] database connection failed", err);
+    return errorResponse("Could not connect to the database. Please try again shortly.", 503);
+  }
   const user = await getAuthSession();
 
   if (!user) {
@@ -43,7 +48,29 @@ export async function withAuth(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return handler(user);
+  try {
+    return await handler(user);
+  } catch (err) {
+    return unexpectedErrorResponse(err);
+  }
+}
+
+// Turn an uncaught error inside a route into a JSON error the UI can show, instead of an
+// empty 500 page that surfaces as a confusing "unexpected response" on the client.
+export function unexpectedErrorResponse(err: unknown) {
+  const e = err as { name?: string; code?: number; message?: string; keyValue?: Record<string, unknown>; errors?: Record<string, { message?: string }> };
+  if (e?.name === "ValidationError") {
+    const messages = Object.values(e.errors || {}).map((x) => x.message).filter(Boolean);
+    return errorResponse(messages.length ? messages.join(", ") : "Some fields have invalid values", 400);
+  }
+  if (e?.name === "CastError") return errorResponse("Invalid value or ID in the request", 400);
+  if (e?.code === 11000) {
+    const field = Object.keys(e.keyValue || {})[0];
+    return errorResponse(field ? `A record with this ${field.replace(/_/g, " ")} already exists` : "A record with the same value already exists", 409);
+  }
+  if (e instanceof SyntaxError) return errorResponse("Invalid request data", 400);
+  console.error("[api] unhandled error", err);
+  return errorResponse("Something went wrong on the server. Please try again.", 500);
 }
 
 export function errorResponse(message: string, status: number = 400) {

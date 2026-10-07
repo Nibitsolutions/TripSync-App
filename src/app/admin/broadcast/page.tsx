@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   DataTable, ErrorNote, Field, Loading, NativeSelect, PageHeader, Pager, Panel, StatusBadge, Td, Th, api, dmy, fromPktInput, label, qs, useApi, useCan,
 } from "@/components/platform/kit";
+import { notify } from "@/lib/notify";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const SAMPLE_VARS: Record<string, string> = {
@@ -63,10 +64,12 @@ function Composer({ id, onBack }: { id: string | null; onBack: () => void }) {
       await fn();
     } catch (e) {
       setError((e as Error).message);
+      notify.error("Broadcast action failed", e);
     } finally {
       setBusy(null);
     }
   }
+  useEffect(() => { if (msg) notify.success(msg); }, [msg]);
   const save = async () => {
     const body = { subject: b.subject, type: b.type, html_body: b.html_body, audience_filter: audiencePayload() };
     if (savedId) {

@@ -12,6 +12,7 @@ import {
   TrendingUp, Wallet, Scale, FileText, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, RotateCcw,
 } from "lucide-react";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
+import { apiFetch, notify } from "@/lib/notify";
 
 export interface AllInvoiceRow {
   _id: string;
@@ -316,16 +317,15 @@ export function AllInvoicesView({ refreshKey, onOpen }: {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/invoices/grid?${query}&page=${page}&limit=${PAGE_SIZE}`)
-      .then((r) => r.json())
+    apiFetch<{ invoices?: typeof rows; total?: number; pages?: number; summary?: typeof summary }>(`/api/invoices/grid?${query}&page=${page}&limit=${PAGE_SIZE}`)
       .then((d) => {
-        if (cancelled || d.error) return;
+        if (cancelled) return;
         setRows(d.invoices || []);
         setTotal(d.total || 0);
         setPages(d.pages || 1);
         setSummary(d.summary || null);
       })
-      .catch(() => {})
+      .catch((e) => { if (!cancelled) notify.error("Failed to load invoices", e); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [query, page, refreshKey]);
@@ -411,7 +411,7 @@ export function AllInvoicesView({ refreshKey, onOpen }: {
                     <Input value={filters.invoice_number} onChange={(e) => setFilter("invoice_number", e.target.value)} placeholder="Search #" className={filterInput} />
                   </TableHead>
                   <TableHead className="py-2 align-top min-w-[140px]">
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <DatePicker value={filters.date_from} onChange={(v) => setFilter("date_from", v || "")} placeholder="From" className={filterInput} />
                       <DatePicker value={filters.date_to} onChange={(v) => setFilter("date_to", v || "")} placeholder="To" className={filterInput} />
                     </div>
@@ -431,7 +431,7 @@ export function AllInvoicesView({ refreshKey, onOpen }: {
                     <Input value={filters.customer} onChange={(e) => setFilter("customer", e.target.value)} placeholder="Search customer" className={filterInput} />
                   </TableHead>
                   <TableHead className="py-2 align-top min-w-[110px]">
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <Input type="number" value={filters.amount_min} onChange={(e) => setFilter("amount_min", e.target.value)} placeholder="Min" className={`${filterInput} text-right`} />
                       <Input type="number" value={filters.amount_max} onChange={(e) => setFilter("amount_max", e.target.value)} placeholder="Max" className={`${filterInput} text-right`} />
                     </div>

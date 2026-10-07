@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, successResponse, errorResponse } from "@/lib/api-helpers";
 import { Voucher } from "@/models";
+import { voucherBalanceError, voucherTotals } from "@/lib/voucherBalance";
 
 // GET /api/vouchers?type=RV&status=Draft&page=1&limit=20&search=
 export async function GET(req: NextRequest) {
@@ -46,6 +47,10 @@ export async function POST(req: NextRequest) {
       return errorResponse("voucher_type and voucher_date are required");
     }
 
+    const balanceError = voucherBalanceError(body.entries);
+    if (balanceError) return errorResponse(`Cannot save voucher: ${balanceError}`);
+    const { totalDebit, totalCredit } = voucherTotals(body.entries);
+
     const prefixMap: Record<string, string> = { RV: "R", PV: "P", JV: "J", DN: "DN", CD: "CD" };
     const prefix = prefixMap[body.voucher_type] || "V";
     const count = await Voucher.countDocuments({ tenant_id: user.tenant_id, voucher_type: body.voucher_type });
@@ -53,6 +58,8 @@ export async function POST(req: NextRequest) {
 
     const voucher = await Voucher.create({
       ...body,
+      total_debit: totalDebit,
+      total_credit: totalCredit,
       tenant_id: user.tenant_id,
       voucher_number: voucherNumber,
       created_by: user.user_id,

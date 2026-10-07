@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Users, Wallet, Receipt, ArrowRight, BarChart3, Clock, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import Link from "next/link";
+import { apiFetch, notify } from "@/lib/notify";
 
 interface Stats {
   invoices: number;
@@ -17,15 +18,19 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
-      const [invRes, custRes, payRes, expRes] = await Promise.all([
-        fetch("/api/invoices?limit=1"),
-        fetch("/api/customers?limit=1"),
-        fetch("/api/payments?limit=1"),
-        fetch("/api/expenses?limit=1"),
-      ]);
-      const [inv, cust, pay, exp] = await Promise.all([
-        invRes.json(), custRes.json(), payRes.json(), expRes.json(),
-      ]);
+      type Count = { total?: number };
+      let inv: Count, cust: Count, pay: Count, exp: Count;
+      try {
+        [inv, cust, pay, exp] = await Promise.all([
+          apiFetch<Count>("/api/invoices?limit=1"),
+          apiFetch<Count>("/api/customers?limit=1"),
+          apiFetch<Count>("/api/payments?limit=1"),
+          apiFetch<Count>("/api/expenses?limit=1"),
+        ]);
+      } catch (e) {
+        notify.error("Failed to load dashboard figures", e);
+        return;
+      }
       setStats({
         invoices: inv.total || 0,
         customers: cust.total || 0,

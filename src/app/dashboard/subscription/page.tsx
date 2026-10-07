@@ -6,6 +6,7 @@ import { Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable, ErrorNote, Field, Loading, NativeSelect, PageHeader, Panel, StatusBadge, Td, Th, api, dmy, label, pkr, useApi, useDebounced } from "@/components/platform/kit";
+import { notify } from "@/lib/notify";
 import { QuoteBreakdown, QuoteView } from "@/components/platform/order-form";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -48,17 +49,25 @@ export default function SubscriptionPage() {
     try {
       const r = await api<any>("/api/tenant/orders", { body: { upgrade: f.upgrade, seats: Number(f.seats), branches: Number(f.branches), term_quarters: Number(f.term_quarters), promo_code: f.promo_code || undefined } });
       setPlaced(r);
+      notify.success("Order placed", "Follow the payment instructions to complete it.");
       sub.reload();
       orders.reload();
     } catch (e) {
       setErr((e as Error).message);
+      notify.error("Failed to place order", e);
     } finally {
       setBusy(false);
     }
   }
   async function cancel(id: string) {
     if (!confirm("Cancel this pending order?")) return;
-    await api(`/api/tenant/orders/${id}`, { body: {} }).catch((e) => alert(e.message));
+    try {
+      await api(`/api/tenant/orders/${id}`, { body: {} });
+      notify.success("Order cancelled");
+    } catch (e) {
+      notify.error("Failed to cancel order", e);
+      return;
+    }
     setPlaced(null);
     sub.reload();
     orders.reload();

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable, ErrorNote, Field, Loading, PageHeader, Panel, Tabs, Td, Th, api, dmy, useApi } from "@/components/platform/kit";
+import { notify } from "@/lib/notify";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type FieldDef = { key: string; label: string; type?: "text" | "number" | "password" | "checkbox" | "textarea" | "list"; hint?: string };
@@ -40,14 +41,16 @@ function Section({ def, value, canWrite }: { def: (typeof SECTIONS)[number]; val
     try {
       await api(`/api/admin/settings/${def.key}`, { method: "PUT", body: { value: v } });
       setMsg("Saved");
-    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+      notify.success(`${def.title} settings saved`);
+    } catch (e) { setErr((e as Error).message); notify.error(`Failed to save ${def.title} settings`, e); } finally { setBusy(false); }
   }
   async function test() {
     setBusy(true); setMsg(null); setErr(null);
     try {
       const r = await api<any>("/api/admin/settings/smtp", { body: {} });
       setMsg(`Test email sent to ${r.sent_to}`);
-    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+      notify.success("Test email sent", `Sent to ${r.sent_to}`);
+    } catch (e) { setErr((e as Error).message); notify.error("Test email failed", e); } finally { setBusy(false); }
   }
 
   return (
@@ -108,7 +111,7 @@ function Jobs({ canWrite }: { canWrite: boolean }) {
                 <Td className="text-[12px]">{dmy(j.last_finished_at, true)}</Td>
                 <Td>{j.consecutive_failures ?? 0}</Td>
                 <Td className="text-[11px] text-red-600 max-w-[260px]">{j.last_error ?? ""}</Td>
-                {canWrite && <Td><Button size="sm" variant="outline" className="h-7 gap-1 text-[11px]" disabled={running === j.name} onClick={async () => { setRunning(j.name); await api("/api/admin/jobs", { body: { name: j.name } }).catch((e) => alert(e.message)); setRunning(null); reload(); }}><Play className="h-3 w-3" /> Run</Button></Td>}
+                {canWrite && <Td><Button size="sm" variant="outline" className="h-7 gap-1 text-[11px]" disabled={running === j.name} onClick={async () => { setRunning(j.name); await api("/api/admin/jobs", { body: { name: j.name } }).then(() => notify.success(`Job "${j.name}" started`)).catch((e) => notify.error(`Failed to run job "${j.name}"`, e)); setRunning(null); reload(); }}><Play className="h-3 w-3" /> Run</Button></Td>}
               </tr>
             ))}
           </DataTable>

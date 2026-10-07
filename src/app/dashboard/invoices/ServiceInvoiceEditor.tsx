@@ -18,6 +18,7 @@ import {
   calculateServiceTotals, createDefaultServiceItem, getQuantityFactor, paxCount,
 } from "@/lib/serviceInvoice";
 import { invoiceTypeOf, taxCodeLabel, taxCodesForInvoiceType } from "@/lib/taxCodes";
+import { apiFetch, notify } from "@/lib/notify";
 
 interface ServiceTaxCode {
   _id: string;
@@ -128,16 +129,15 @@ export function ServiceInvoiceEditor<T extends ServiceLineItem>({
   async function fetchRate(currency: string, details: ServiceDetails) {
     setFetchingRate(true);
     try {
-      const res = await fetch(`/api/exchange-rates/latest?from=${encodeURIComponent(currency)}&to=PKR`);
-      if (res.ok) {
-        const data = await res.json();
-        const rate = data.exchange_rate?.rate;
-        if (rate) {
-          recalc({ ...item, service_details: { ...details, exc_rate: String(Math.round(rate * 10000) / 10000) } });
-        }
+      const data = await apiFetch<{ exchange_rate?: { rate?: number } }>(`/api/exchange-rates/latest?from=${encodeURIComponent(currency)}&to=PKR`);
+      const rate = data.exchange_rate?.rate;
+      if (rate) {
+        recalc({ ...item, service_details: { ...details, exc_rate: String(Math.round(rate * 10000) / 10000) } });
+      } else {
+        notify.warning(`No exchange rate saved for ${currency}`, "Please enter the exchange rate manually.");
       }
     } catch (err) {
-      console.error("Exchange rate fetch failed:", err);
+      notify.warning(`Could not fetch ${currency} exchange rate`, `${(err as Error)?.message || ""} Please enter it manually.`.trim());
     } finally {
       setFetchingRate(false);
     }

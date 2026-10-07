@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Settings, Save, Loader2, CheckCircle, Building2, Globe, Phone, Mail, MapPin, FileText } from "lucide-react";
+import { apiFetch, notify } from "@/lib/notify";
 
 interface AgencySettings {
   name: string;
@@ -36,11 +37,11 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
+    apiFetch<{ settings?: Partial<AgencySettings> }>("/api/settings")
       .then((d) => {
         if (d.settings) setForm({ ...empty, ...d.settings });
       })
+      .catch((e) => notify.error("Failed to load agency settings", e))
       .finally(() => setLoading(false));
   }, []);
 
@@ -51,14 +52,16 @@ export default function SettingsPage() {
 
   async function save() {
     setSaving(true);
-    await fetch("/api/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      await apiFetch("/api/settings", { method: "PATCH", body: form });
+      notify.success("Agency settings saved");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      notify.error("Failed to save agency settings", e);
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) return (

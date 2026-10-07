@@ -10,6 +10,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
 import { SupplierForm, SupplierRecord } from "@/components/suppliers/SupplierForm";
+import { apiFetch, notify } from "@/lib/notify";
 
 type Supplier = SupplierRecord;
 
@@ -44,10 +45,14 @@ export default function SuppliersPage() {
   }));
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/suppliers");
-    const data = await res.json();
-    setSuppliers(data.suppliers || []);
-    setLoading(false);
+    try {
+      const data = await apiFetch<{ suppliers?: Supplier[] }>("/api/suppliers");
+      setSuppliers(data.suppliers || []);
+    } catch (e) {
+      notify.error("Failed to load suppliers", e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -69,10 +74,14 @@ export default function SuppliersPage() {
     if (from) params.set("from", from);
     if (to) params.set("to", to);
 
-    const res = await fetch(`/api/reports/supplier-ledger?${params.toString()}`);
-    const data = await res.json();
-    setSupplierBookings(data.entries || []);
-    setLoadingBookings(false);
+    try {
+      const data = await apiFetch<{ entries?: typeof supplierBookings }>(`/api/reports/supplier-ledger?${params.toString()}`);
+      setSupplierBookings(data.entries || []);
+    } catch (e) {
+      notify.error("Failed to load supplier ledger", e);
+    } finally {
+      setLoadingBookings(false);
+    }
   }
 
   return (

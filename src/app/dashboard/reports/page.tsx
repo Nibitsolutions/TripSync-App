@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, Clock, TrendingUp, TrendingDown, Loader2, Printer, FileText, UserCheck, FileSpreadsheet, BookOpen, Search, ArrowUpRight, ArrowDownRight, RotateCcw, Building2 } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
+import { apiFetch, notify } from "@/lib/notify";
 import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
 
 interface Customer { _id: string; name: string; }
@@ -226,8 +227,12 @@ function ReportsPageContent() {
   }));
 
   useEffect(() => {
-    fetch("/api/customers").then((r) => r.json()).then((d) => setCustomers(d.customers || []));
-    fetch("/api/suppliers").then((r) => r.json()).then((d) => setSuppliers(d.suppliers || []));
+    apiFetch<{ customers?: typeof customers }>("/api/customers")
+      .then((d) => setCustomers(d.customers || []))
+      .catch((e) => notify.error("Failed to load customers", e));
+    apiFetch<{ suppliers?: typeof suppliers }>("/api/suppliers")
+      .then((d) => setSuppliers(d.suppliers || []))
+      .catch((e) => notify.error("Failed to load suppliers", e));
   }, []);
 
   const loadCustomerLedger = useCallback(async () => {
@@ -249,11 +254,15 @@ function ReportsPageContent() {
       params.set("to", ledgerToDate);
     }
 
-    const res = await fetch(`/api/reports/customer-ledger?${params.toString()}`);
-    const data = await res.json();
-    setLedgerEntries(data.entries || []);
-    setLedgerSummary(data.summary || null);
-    setLoadingLedger(false);
+    try {
+      const data = await apiFetch<{ entries?: typeof ledgerEntries; summary?: typeof ledgerSummary }>(`/api/reports/customer-ledger?${params.toString()}`);
+      setLedgerEntries(data.entries || []);
+      setLedgerSummary(data.summary || null);
+    } catch (e) {
+      notify.error("Failed to load customer ledger", e);
+    } finally {
+      setLoadingLedger(false);
+    }
   }, [selectedLedgerCustomerId, customerSearchQuery, ledgerInvoiceNumber, ledgerFromDate, ledgerToDate]);
 
   const loadSupplierLedger = useCallback(async () => {
@@ -272,11 +281,15 @@ function ReportsPageContent() {
       params.set("to", supplierToDate);
     }
 
-    const res = await fetch(`/api/reports/supplier-ledger?${params.toString()}`);
-    const data = await res.json();
-    setSupplierLedgerEntries(data.entries || []);
-    setSupplierLedgerSummary(data.summary || null);
-    setLoadingSupplierLedger(false);
+    try {
+      const data = await apiFetch<{ entries?: typeof supplierLedgerEntries; summary?: typeof supplierLedgerSummary }>(`/api/reports/supplier-ledger?${params.toString()}`);
+      setSupplierLedgerEntries(data.entries || []);
+      setSupplierLedgerSummary(data.summary || null);
+    } catch (e) {
+      notify.error("Failed to load supplier ledger", e);
+    } finally {
+      setLoadingSupplierLedger(false);
+    }
   }, [selectedLedgerSupplierId, supplierSearchQuery, supplierFromDate, supplierToDate]);
 
   useEffect(() => {
@@ -304,17 +317,25 @@ function ReportsPageContent() {
 
   async function loadPnl() {
     setLoadingPnl(true);
-    const res = await fetch(`/api/reports/pnl?from=${fromDate}&to=${toDate}`);
-    setPnl(await res.json());
-    setLoadingPnl(false);
+    try {
+      setPnl(await apiFetch(`/api/reports/pnl?from=${fromDate}&to=${toDate}`));
+    } catch (e) {
+      notify.error("Failed to load Profit & Loss report", e);
+    } finally {
+      setLoadingPnl(false);
+    }
   }
 
   async function loadAging() {
     setLoadingAging(true);
-    const res = await fetch(`/api/reports/dues-aging?as_of_date=${new Date().toISOString()}`);
-    const data = await res.json();
-    setAging(data.aging || []);
-    setLoadingAging(false);
+    try {
+      const data = await apiFetch<{ aging?: typeof aging }>(`/api/reports/dues-aging?as_of_date=${new Date().toISOString()}`);
+      setAging(data.aging || []);
+    } catch (e) {
+      notify.error("Failed to load dues aging report", e);
+    } finally {
+      setLoadingAging(false);
+    }
   }
 
   async function loadInvoiceAging() {
@@ -324,10 +345,13 @@ function ReportsPageContent() {
       from: fromDate,
       to: toDate,
     });
-    const res = await fetch(`/api/reports/invoice-aging?${params.toString()}`);
-    const data = await res.json();
-    setInvoiceAgingData(data);
-    setLoadingInvoiceAging(false);
+    try {
+      setInvoiceAgingData(await apiFetch(`/api/reports/invoice-aging?${params.toString()}`));
+    } catch (e) {
+      notify.error("Failed to load invoice aging report", e);
+    } finally {
+      setLoadingInvoiceAging(false);
+    }
   }
 
   function printReport() {

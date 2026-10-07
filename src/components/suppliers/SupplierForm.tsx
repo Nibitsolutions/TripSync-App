@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, MapPin, UserCheck, Check, Plus, Trash2, Plane, Hotel, Bus, Stamp, Layers, Landmark } from "lucide-react";
+import { apiFetch, notify } from "@/lib/notify";
 
 export interface SupplierContactPerson {
   name: string;
@@ -142,7 +143,7 @@ export function SupplierForm({ editSupplier, onSaved, onCancel }: SupplierFormPr
     if (hasContact && !contact.name.trim()) missing.push("Contact Person Name");
 
     if (missing.length > 0) {
-      alert(`Cannot save supplier. Please fill in all required (*) fields:\n\n• ${missing.join("\n• ")}`);
+      notify.error("Please fill in all required (*) fields", missing);
       return;
     }
 
@@ -173,21 +174,14 @@ export function SupplierForm({ editSupplier, onSaved, onCancel }: SupplierFormPr
         vendors,
       };
 
-      const res = await fetch(editId ? `/api/suppliers/${editId}` : "/api/suppliers", {
+      const d = await apiFetch<{ supplier?: SupplierRecord }>(editId ? `/api/suppliers/${editId}` : "/api/suppliers", {
         method: editId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: payload,
       });
-      const d = await res.json().catch(() => ({}));
-
-      if (res.ok) {
-        onSaved((d.supplier || { ...payload, _id: editId || "" }) as SupplierRecord);
-      } else {
-        alert(d.error || "Failed to save supplier");
-      }
+      notify.success(editId ? `Supplier "${payload.name}" updated` : `Supplier "${payload.name}" created`);
+      onSaved((d.supplier || { ...payload, _id: editId || "" }) as SupplierRecord);
     } catch (err) {
-      console.error(err);
-      alert("An unexpected error occurred while saving supplier.");
+      notify.error("Failed to save supplier", err);
     } finally {
       setSaving(false);
     }

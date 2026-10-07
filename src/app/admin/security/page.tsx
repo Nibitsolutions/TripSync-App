@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorNote, Field, PageHeader, Panel, api, useMe } from "@/components/platform/kit";
+import { notify } from "@/lib/notify";
 
 export default function SecurityPage() {
   const me = useMe();
@@ -23,8 +24,10 @@ export default function SecurityPage() {
       ok(await api("/api/admin/security", { body }));
     } catch (e) {
       setErr((e as Error).message);
+      notify.error("Security update failed", e);
     }
   };
+  useEffect(() => { if (msg) notify.success(msg); }, [msg]);
 
   return (
     <div className="max-w-2xl">

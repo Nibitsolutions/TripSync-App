@@ -4,6 +4,7 @@ import "./globals.css";
 import AuthProvider from "@/lib/auth-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/toast";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,7 +31,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col font-[family-name:var(--font-inter)]">
         <ThemeProvider>
           <AuthProvider>
-            <TooltipProvider>{children}</TooltipProvider>
+            <Toaster>
+              <TooltipProvider>{children}</TooltipProvider>
+            </Toaster>
           </AuthProvider>
         </ThemeProvider>
       </body>

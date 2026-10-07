@@ -285,7 +285,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main content */}
-      <main className={`flex-1 min-h-screen transition-[margin-left] duration-300 ease-in-out ${
+      <main className={`flex-1 min-w-0 min-h-screen transition-[margin-left] duration-300 ease-in-out ${
         isCollapsed ? "lg:ml-16" : "lg:ml-[220px]"
       }`}>
         <div className="max-w-[1400px] mx-auto p-4 md:p-8">

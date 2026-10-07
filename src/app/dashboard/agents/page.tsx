@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserCog, Loader2, X } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { apiFetch, notify } from "@/lib/notify";
 
 interface User {
   _id: string;
@@ -28,10 +29,14 @@ export default function AgentsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/users");
-    const data = await res.json();
-    setUsers(data.users || []);
-    setLoading(false);
+    try {
+      const data = await apiFetch<{ users?: User[] }>("/api/users");
+      setUsers(data.users || []);
+    } catch (e) {
+      notify.error("Failed to load team members", e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -47,19 +52,19 @@ export default function AgentsPage() {
   async function update() {
     if (!editingUser) return;
     setSubmitting(true);
-    const res = await fetch(`/api/users/${editingUser._id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role, default_commission_rate: rate === "" ? null : parseFloat(rate) }),
-    });
-    if (res.ok) {
+    try {
+      await apiFetch(`/api/users/${editingUser._id}`, {
+        method: "PUT",
+        body: { role, default_commission_rate: rate === "" ? null : parseFloat(rate) },
+      });
+      notify.success(`${editingUser.name} updated`);
       setEditingUser(null);
       load();
-    } else {
-      const d = await res.json();
-      alert(d.error);
+    } catch (e) {
+      notify.error(`Failed to update ${editingUser.name}`, e);
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   }
 
   const currentUserRole = (session?.user as { role?: string })?.role;

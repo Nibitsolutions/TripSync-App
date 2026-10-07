@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   ActionDialog, Badge, DataTable, ErrorNote, LinkNotice, Loading, PageHeader, Panel, StatusBadge, Tabs, Td, Th, api, dmy, label, pkr, useApi, useCan, useMe,
 } from "@/components/platform/kit";
+import { notify } from "@/lib/notify";
 import { AccessCell, AgencyRow, useAgencyActions } from "@/components/platform/agency-shared";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -103,8 +104,9 @@ export default function AgencyDetailPage() {
     try {
       const r = await api<{ set_password_link: string }>(`/api/admin/agencies/${id}/resend-invite`, { body: {} });
       setLink(r.set_password_link);
+      notify.success("Invite link regenerated");
     } catch (e) {
-      alert((e as Error).message);
+      notify.error("Failed to resend invite", e);
     }
   };
 

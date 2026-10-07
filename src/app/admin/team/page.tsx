@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   ActionDialog, ActionSpec, Badge, DataTable, ErrorNote, LinkNotice, Loading, PageHeader, Panel, Td, Th, api, dmy, useApi, useMe,
 } from "@/components/platform/kit";
+import { notify } from "@/lib/notify";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const ROLES = [
@@ -84,7 +85,7 @@ export default function TeamPage() {
                     {u.is_active ? (
                       u._id !== me?.user.id && <Button size="sm" variant="outline" className="h-7 text-[11px] text-red-600" onClick={() => deactivate(u)}>Deactivate</Button>
                     ) : (
-                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => api(`/api/admin/team/${u._id}`, { method: "PATCH", body: { is_active: true } }).then(reload).catch((e) => alert(e.message))}>Reactivate</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => api(`/api/admin/team/${u._id}`, { method: "PATCH", body: { is_active: true } }).then(() => { notify.success(`${u.name} reactivated`); reload(); }).catch((e) => notify.error(`Failed to reactivate ${u.name}`, e))}>Reactivate</Button>
                     )}
                     <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => action(u, "reset-password", "Reset password")}>Reset password</Button>
                     {u.totp_enabled && <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => action(u, "reset-2fa", "Reset 2FA")}>Reset 2FA</Button>}

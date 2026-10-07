@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Check, X, Receipt, Loader2, Clock, CheckCircle } from "lucide-react";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
+import { apiFetch, notify } from "@/lib/notify";
 
 interface ApprovalRequest {
   _id: string;
@@ -32,11 +33,10 @@ export default function ApprovalsPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/approval-requests");
-      const data = await res.json();
+      const data = await apiFetch<{ approval_requests?: ApprovalRequest[] }>("/api/approval-requests");
       setRequests(data.approval_requests || []);
     } catch (err) {
-      console.error("Failed to load approval requests:", err);
+      notify.error("Failed to load approval requests", err);
     } finally {
       setLoading(false);
     }
@@ -49,20 +49,11 @@ export default function ApprovalsPage() {
   async function resolve(id: string, decision: "approve" | "reject") {
     setResolvingId(id);
     try {
-      const res = await fetch(`/api/approval-requests/${id}/resolve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Failed to resolve request");
-      } else {
-        load();
-      }
+      await apiFetch(`/api/approval-requests/${id}/resolve`, { method: "POST", body: { decision } });
+      notify.success(decision === "approve" ? "Request approved" : "Request rejected");
+      load();
     } catch (err) {
-      console.error(err);
-      alert("An error occurred");
+      notify.error(`Failed to ${decision} request`, err);
     } finally {
       setResolvingId(null);
     }

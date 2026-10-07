@@ -15,6 +15,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateDDMMYYYY } from "@/lib/date-utils";
 import { TypeToSearch, SearchOption } from "@/components/ui/type-to-search";
 import { CustomerForm, CustomerRecord, customerTypeLabel } from "@/components/customers/CustomerForm";
+import { apiFetch, notify } from "@/lib/notify";
 
 type Customer = CustomerRecord;
 
@@ -44,11 +45,10 @@ export default function CustomersPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/customers");
-      const data = await res.json();
+      const data = await apiFetch<{ customers?: Customer[] }>("/api/customers");
       setCustomers(data.customers || []);
     } catch (err) {
-      console.error(err);
+      notify.error("Failed to load customers", err);
     } finally {
       setLoading(false);
     }
@@ -71,16 +71,11 @@ export default function CustomersPage() {
   async function handleDelete(id: string, custName: string) {
     if (!confirm(`Are you sure you want to delete customer "${custName}"?`)) return;
     try {
-      const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        load();
-      } else {
-        const d = await res.json();
-        alert(d.error || "Failed to delete customer");
-      }
+      await apiFetch(`/api/customers/${id}`, { method: "DELETE" });
+      notify.success(`Customer "${custName}" deleted`);
+      load();
     } catch (err) {
-      console.error(err);
-      alert("Error deleting customer");
+      notify.error(`Failed to delete customer "${custName}"`, err);
     }
   }
 
@@ -92,6 +87,8 @@ export default function CustomersPage() {
       const found = customers.find((c) => c.name.toLowerCase().includes(q) || (c.code && c.code.toLowerCase().includes(q)));
       if (found) {
         targetId = found._id;
+      } else {
+        notify.warning("No customer matches your search", "Showing the ledger of the currently selected customer.");
       }
     } else {
       const currentCust = customers.find((c) => c._id === id);
@@ -106,10 +103,9 @@ export default function CustomersPage() {
     if (to) params.set("to", to);
 
     try {
-      const res = await fetch(`/api/customers/${targetId}/ledger?${params.toString()}`);
-      setLedgerData(await res.json());
+      setLedgerData(await apiFetch(`/api/customers/${targetId}/ledger?${params.toString()}`));
     } catch (err) {
-      console.error(err);
+      notify.error("Failed to load customer ledger", err);
     } finally {
       setLoadingLedgerFilter(false);
     }

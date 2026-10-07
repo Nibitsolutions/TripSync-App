@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, MapPin, UserCheck, FileText, Check, Landmark, Store, Briefcase, Footprints } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
+import { apiFetch, notify } from "@/lib/notify";
 
 export interface CustomerRecord {
   _id: string;
@@ -204,7 +205,7 @@ export function CustomerForm({ customers, editCustomer, initialName = "", onSave
     if (isAccount && !spoName.trim()) missing.push("SPO (*)");
 
     if (missing.length > 0) {
-      alert(`Cannot save customer profile. Please fill in all required (*) fields:\n\n• ${missing.join("\n• ")}`);
+      notify.error("Please fill in all required (*) fields", missing);
       return;
     }
 
@@ -249,22 +250,11 @@ export function CustomerForm({ customers, editCustomer, initialName = "", onSave
       const url = editId ? `/api/customers/${editId}` : "/api/customers";
       const method = editId ? "PATCH" : "POST";
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        const d = await res.json().catch(() => ({}));
-        onSaved((d.customer || { ...payload, _id: editId || "" }) as CustomerRecord);
-      } else {
-        const d = await res.json();
-        alert(d.error || "Failed to save customer");
-      }
+      const d = await apiFetch<{ customer?: CustomerRecord }>(url, { method, body: payload });
+      notify.success(editId ? `Customer "${payload.name}" updated` : `Customer "${payload.name}" created`);
+      onSaved((d.customer || { ...payload, _id: editId || "" }) as CustomerRecord);
     } catch (err) {
-      console.error(err);
-      alert("An unexpected error occurred while saving customer.");
+      notify.error("Failed to save customer", err);
     } finally {
       setSaving(false);
     }

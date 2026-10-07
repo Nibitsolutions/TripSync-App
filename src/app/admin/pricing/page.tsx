@@ -8,6 +8,7 @@ import {
   ActionDialog, ActionSpec, DataTable, ErrorNote, Field, Loading, NativeSelect, PageHeader, Panel, StatusBadge, Tabs, Td, Th,
   api, dmy, label, pkr, qs, useApi, useCan, useDebounced,
 } from "@/components/platform/kit";
+import { notify } from "@/lib/notify";
 import { QuoteBreakdown, QuoteView } from "@/components/platform/order-form";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -115,7 +116,13 @@ export default function PricingPage() {
       onDone: promos.reload,
     });
   const toggle = async (p: any) => {
-    await api(`/api/admin/promotions/${p.id}`, { method: "PATCH", body: { is_disabled: p.status !== "DISABLED" } }).catch((e) => alert(e.message));
+    const enabling = p.status === "DISABLED";
+    try {
+      await api(`/api/admin/promotions/${p.id}`, { method: "PATCH", body: { is_disabled: !enabling } });
+      notify.success(enabling ? `"${p.title}" enabled` : `"${p.title}" disabled`);
+    } catch (e) {
+      notify.error(enabling ? `Failed to enable "${p.title}"` : `Failed to disable "${p.title}"`, e);
+    }
     promos.reload();
   };
 
