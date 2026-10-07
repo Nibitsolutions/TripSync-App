@@ -110,6 +110,8 @@ export interface IInvoiceLineItem extends Document {
   supplier_net: number;
   supplier_gross_wo_wht: number;
   agency_margin: number;
+  fbr_payable: number;
+  entry_modes: Record<string, string>;
 
   // Non-ticket services (Hotel / Transport / Visa / General): type-specific fields
   service_details: Record<string, unknown>;
@@ -238,6 +240,10 @@ const InvoiceLineItemSchema = new Schema<IInvoiceLineItem>(
     supplier_net: { type: Number, default: 0 },
     supplier_gross_wo_wht: { type: Number, default: 0 },
     agency_margin: { type: Number, default: 0 },
+    // GST collected for FBR on ticket lines (pass-through, never agency income)
+    fbr_payable: { type: Number, default: 0 },
+    // Ticket % / amount pairs: which side the user entered ("pct" | "amt"), keyed by amount field
+    entry_modes: { type: Schema.Types.Mixed, default: {} },
 
     // Non-ticket services (Hotel / Transport / Visa / General): type-specific fields
     service_details: { type: Schema.Types.Mixed, default: {} },

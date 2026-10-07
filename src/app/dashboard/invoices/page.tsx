@@ -29,6 +29,9 @@ import { ServiceInvoiceEditor } from "./ServiceInvoiceEditor";
 import { AllInvoicesView } from "./AllInvoicesDashboard";
 import { calculateTicketTotals } from "@/lib/ticketCalc";
 import { BulkUploadControls } from "@/components/bulk/BulkUploadControls";
+
+const fmtMoney = (n: number | string | undefined) =>
+  (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 import { apiFetch, getErrorMessage, notify } from "@/lib/notify";
 
 interface Invoice {
@@ -168,6 +171,8 @@ interface LineItemInput {
   supplier_net?: number;
   supplier_gross_wo_wht?: number;
   agency_margin?: number;
+  fbr_payable?: number;
+  entry_modes?: Record<string, "pct" | "amt">;
 
   // Non-ticket services (Hotel / Transport / Visa / General)
   service_details?: ServiceDetails;
@@ -443,6 +448,7 @@ function InvoicesPageContent() {
       supplier_net: 0,
       supplier_gross_wo_wht: 0,
       agency_margin: 0,
+      fbr_payable: 0,
     };
   };
 
@@ -1118,6 +1124,8 @@ function InvoicesPageContent() {
       supplier_net: Number(li.supplier_net) || 0,
       supplier_gross_wo_wht: Number(li.supplier_gross_wo_wht) || 0,
       agency_margin: Number(li.agency_margin) || 0,
+      fbr_payable: Number(li.fbr_payable) || 0,
+      entry_modes: (li.entry_modes && typeof li.entry_modes === "object" ? li.entry_modes : {}) as Record<string, "pct" | "amt">,
     }));
     setEditLineItems(items.length > 0 ? items : [createDefaultTicketItem()]);
     setActiveEditTicketTab(0);
@@ -2217,68 +2225,50 @@ function InvoicesPageContent() {
               </div>
             </div>
 
-            {/* Totals Summary */}
+            {/* Totals Summary: who receives / is owed each part of what the customer pays */}
             <div className="p-3 bg-slate-900 text-white rounded-lg font-mono text-[11px] space-y-1 shadow">
               <div className="grid grid-cols-2 gap-x-4 border-b border-slate-800 pb-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                <span>Receivables &amp; Gross</span>
-                <span className="text-right">Payables &amp; Net</span>
+                <span>Customer</span>
+                <span className="text-right">Payables &amp; Profit</span>
               </div>
 
               <div className="grid grid-cols-2 gap-x-4 pt-1">
-                <div className="flex justify-between text-slate-300">
+                <div className="flex justify-between text-slate-300" title="Base Fare + all taxes and charges billed to the customer">
                   <span>Customer Gross:</span>
-                  <span className="font-bold">{item.customer_gross?.toLocaleString() || "0.00"}</span>
+                  <span className="font-bold">{fmtMoney(item.customer_gross)}</span>
                 </div>
-                <div className="flex justify-between text-emerald-400 font-bold">
+                <div className="flex justify-between text-amber-400 font-bold" title="(Base Fare − COM) + PSF/P + WHT + Airline Tax + SEG + other airline taxes">
+                  <span>Supplier Payable:</span>
+                  <span>{fmtMoney(item.supplier_net)}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-4">
+                <div className="flex justify-between text-emerald-400 font-bold" title="Customer Gross − DIS − DIS2">
                   <span>Customer Net:</span>
-                  <span>{item.customer_net?.toLocaleString() || "0.00"}</span>
+                  <span>{fmtMoney(item.customer_net)}</span>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-x-4">
-                <div className="flex justify-between text-slate-400 text-[10px]">
-                  <span>Invoice Rec. Gross:</span>
-                  <span>{item.customer_gross?.toLocaleString() || "0.00"}</span>
-                </div>
-                <div className="flex justify-between text-slate-300 text-[10px]">
-                  <span>Invoice Rec. Net:</span>
-                  <span>{item.customer_net?.toLocaleString() || "0.00"}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-x-4 border-t border-slate-800/80 pt-1">
-                <div className="flex justify-between text-slate-300">
-                  <span>Supplier Gross:</span>
-                  <span className="font-bold">{item.supplier_gross?.toLocaleString() || "0.00"}</span>
-                </div>
-                <div className="flex justify-between text-amber-400 font-bold">
-                  <span>Supplier Net:</span>
-                  <span>{item.supplier_net?.toLocaleString() || "0.00"}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-x-4">
-                <div className="flex justify-between text-slate-400 text-[10px]">
-                  <span>Invoice Pay. Gross:</span>
-                  <span>{item.supplier_gross?.toLocaleString() || "0.00"}</span>
-                </div>
-                <div className="flex justify-between text-slate-300 text-[10px]">
-                  <span>Invoice Pay. Net:</span>
-                  <span>{item.supplier_net?.toLocaleString() || "0.00"}</span>
+                <div className="flex justify-between text-rose-300 font-bold" title="GST, a pass-through to FBR (not income)">
+                  <span>FBR Payable:</span>
+                  <span>{fmtMoney(item.fbr_payable)}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-x-4 border-t border-slate-800 pt-1">
                 <div className="flex justify-between text-slate-400 text-[10px]">
-                  <span>Supplier Gross W/o WHT:</span>
-                  <span>{item.supplier_gross_wo_wht?.toLocaleString() || item.supplier_gross?.toLocaleString() || "0.00"}</span>
+                  <span>Less DIS + DIS2:</span>
+                  <span>{fmtMoney((Number(item.discount_amount) || 0) + (Number(item.discount2_amount) || 0))}</span>
                 </div>
-                <div className="flex justify-between text-right">
+                <div className="flex justify-between text-right" title="COM + PSF + City Tax + (WHT_C − WHT) − DIS − DIS2">
                   <span className="text-slate-400 uppercase font-bold text-[10px]">Agency Profit:</span>
-                  <span className="font-bold text-blue-400 text-[12px]">
-                    + {item.agency_margin?.toLocaleString() || "0.00"}
+                  <span className={`font-bold text-[12px] ${(item.agency_margin || 0) < 0 ? "text-red-400" : "text-blue-400"}`}>
+                    {fmtMoney(item.agency_margin)}
                   </span>
                 </div>
+              </div>
+
+              <div className="text-[9px] text-slate-500 text-right pt-0.5">
+                Customer Net − Supplier Payable − FBR Payable = Agency Profit
               </div>
             </div>
 
@@ -2869,8 +2859,8 @@ function InvoicesPageContent() {
                       <span>Combined Invoice: <strong>{lineItems.length} Passenger Tickets</strong></span>
                     </div>
                     <div className="flex items-center gap-4 font-mono">
-                      <span>Grand Total Due: <strong className="text-primary text-sm">PKR {lineItems.reduce((sum, item) => sum + (item.customer_net || 0), 0).toLocaleString()}</strong></span>
-                      <span>Total Agency Margin: <strong className="text-blue-600 dark:text-blue-400">PKR {lineItems.reduce((sum, item) => sum + (item.agency_margin || 0), 0).toLocaleString()}</strong></span>
+                      <span>Grand Total Due: <strong className="text-primary text-sm">PKR {fmtMoney(lineItems.reduce((sum, item) => sum + (item.customer_net || 0), 0))}</strong></span>
+                      <span>Total Agency Margin: <strong className="text-blue-600 dark:text-blue-400">PKR {fmtMoney(lineItems.reduce((sum, item) => sum + (item.agency_margin || 0), 0))}</strong></span>
                     </div>
                   </div>
                 )}
@@ -3208,8 +3198,8 @@ function InvoicesPageContent() {
                             <span>Combined Invoice: <strong>{editLineItems.length} Passenger Tickets</strong></span>
                           </div>
                           <div className="flex items-center gap-4 font-mono">
-                            <span>Grand Total Due: <strong className="text-primary text-sm">PKR {editLineItems.reduce((sum, item) => sum + (item.customer_net || 0), 0).toLocaleString()}</strong></span>
-                            <span>Total Agency Margin: <strong className="text-blue-600 dark:text-blue-400">PKR {editLineItems.reduce((sum, item) => sum + (item.agency_margin || 0), 0).toLocaleString()}</strong></span>
+                            <span>Grand Total Due: <strong className="text-primary text-sm">PKR {fmtMoney(editLineItems.reduce((sum, item) => sum + (item.customer_net || 0), 0))}</strong></span>
+                            <span>Total Agency Margin: <strong className="text-blue-600 dark:text-blue-400">PKR {fmtMoney(editLineItems.reduce((sum, item) => sum + (item.agency_margin || 0), 0))}</strong></span>
                           </div>
                         </div>
                       )}

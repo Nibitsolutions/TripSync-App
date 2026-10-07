@@ -5,6 +5,7 @@ import { resolveOrCreateCustomer } from "@/lib/customer-utils";
 import { validateInvoiceForPosting, validateInvoiceForDraft } from "@/lib/invoiceValidation";
 import { nextInvoiceNumber } from "@/lib/numbering";
 import { invoiceTypeOf } from "@/lib/taxCodes";
+import { recomputeTicketLine } from "@/lib/ticketCalc";
 import type { SessionUser } from "@/lib/api-helpers";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -34,10 +35,12 @@ export async function createInvoice(
   options: { allowRapidRepeat?: boolean } = {}
 ): Promise<CreateInvoiceResult> {
   const {
-    customer_id, currency, line_items, status, bsp_flag, bsp_billing_period,
+    customer_id, currency, line_items: rawLineItems, status, bsp_flag, bsp_billing_period,
     payment_mode, remarks, internal_remarks, customer_remarks, visit_type, spo_id, supplier_id,
     print_name, cost_center, adj_date, our_xo, client_xo, custom_invoice_number,
   } = body;
+  // Ticket totals are always recomputed here so stored figures follow the accounting rules
+  const line_items = Array.isArray(rawLineItems) ? rawLineItems.map((li: any) => recomputeTicketLine(li)) : rawLineItems;
 
   if (!customer_id || !line_items?.length) {
     return { ok: false, status: 400, error: "customer_id and line_items are required" };
@@ -261,6 +264,8 @@ export async function createInvoice(
       supplier_net: parseFloat(String(item.supplier_net || 0)) || 0,
       supplier_gross_wo_wht: parseFloat(String(item.supplier_gross_wo_wht || 0)) || 0,
       agency_margin: parseFloat(String(item.agency_margin || 0)) || 0,
+      fbr_payable: parseFloat(String(item.fbr_payable || 0)) || 0,
+      entry_modes: item.entry_modes && typeof item.entry_modes === "object" ? item.entry_modes : {},
 
       // Non-ticket service details
       service_details: item.service_details && typeof item.service_details === "object" ? item.service_details : {},

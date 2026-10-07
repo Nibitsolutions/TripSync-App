@@ -4,6 +4,7 @@ import { Invoice, InvoiceLineItem } from "@/models";
 import { resolveOrCreateCustomer } from "@/lib/customer-utils";
 import { validateInvoiceForPosting, validateInvoiceForDraft } from "@/lib/invoiceValidation";
 import mongoose from "mongoose";
+import { recomputeTicketLine } from "@/lib/ticketCalc";
 
 // GET /api/invoices/[id]
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -130,7 +131,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (Array.isArray(line_items)) {
       await InvoiceLineItem.deleteMany({ invoice_id: id });
       let total = 0;
-      for (const li of line_items) {
+      for (const rawLi of line_items) {
+        // Ticket totals are always recomputed here so stored figures follow the accounting rules
+        const li = recomputeTicketLine(rawLi);
         const amt = li.customer_net !== undefined && li.customer_net > 0 ? li.customer_net : (parseFloat(String(li.amount)) || 0);
         total += amt;
         await InvoiceLineItem.create({
@@ -228,6 +231,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           supplier_net: parseFloat(li.supplier_net) || 0,
           supplier_gross_wo_wht: parseFloat(li.supplier_gross_wo_wht) || 0,
           agency_margin: parseFloat(li.agency_margin) || 0,
+          fbr_payable: parseFloat(li.fbr_payable) || 0,
+          entry_modes: li.entry_modes && typeof li.entry_modes === "object" ? li.entry_modes : {},
 
           // Non-ticket service details
           service_details: li.service_details && typeof li.service_details === "object" ? li.service_details : {},
